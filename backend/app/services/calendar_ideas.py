@@ -25,13 +25,18 @@ def latest_scores(session: Session) -> dict[int, float]:
 
 
 def seed_ideas(session: Session, occ: Occurrence, scores: dict[int, float]) -> list[CalendarIdea]:
-    if not occ.event.theme_words:
+    event = occ.event
+    if not event.theme_words or not event.cross_seeds:
         return []
-    lead = occ.event.theme_words[0]
-    seed_texts = set(session.scalars(select(Seed.keyword)))
+    lead = event.theme_words[0]
+    lead_tokens = _tokens(lead)
+    active = list(session.scalars(select(Seed).where(Seed.active.is_(True)).order_by(Seed.id)))
+    seed_texts = {normalize_keyword(s.keyword) for s in active}
     ideas = []
-    for seed in session.scalars(select(Seed).where(Seed.active.is_(True)).order_by(Seed.id)):
-        text = normalize_keyword(f"{lead} {seed.keyword}")
+    for seed in active:
+        if _tokens(seed.keyword) <= lead_tokens:
+            continue
+        text = normalize_keyword(event.idea_template.format(lead=lead, seed=seed.keyword))
         keyword = session.scalar(select(Keyword).where(Keyword.text == text)) or session.scalar(
             select(Keyword).where(Keyword.text == canonical_keyword(text))
         )

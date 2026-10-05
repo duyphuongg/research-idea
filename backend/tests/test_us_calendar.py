@@ -42,6 +42,9 @@ def test_date_helpers():
         ("labor_day", date(2026, 9, 7)),
         ("super_bowl", date(2026, 2, 8)),
         ("teacher_appreciation_week", date(2026, 5, 4)),
+        ("mardi_gras", date(2026, 2, 17)),
+        ("grandparents_day", date(2026, 9, 13)),
+        ("juneteenth", date(2026, 6, 19)),
         ("easter", date(2026, 4, 5)),
         ("sale_11_11", date(2026, 11, 11)),
         ("sale_12_12", date(2026, 12, 12)),
@@ -66,13 +69,14 @@ def test_occurrences_next_120_days():
     defs, _ = load_calendar()
     keys = [o.event.key for o in occurrences(defs, TODAY, 120)]
     assert keys == [
-        "breast_cancer_awareness", "halloween", "sale_11_11", "veterans_day",
-        "thanksgiving",
+        "hispanic_heritage_month", "breast_cancer_awareness", "halloween",
+        "dia_de_los_muertos", "sale_11_11", "veterans_day", "thanksgiving",
         "black_friday", "cyber_monday", "sale_12_12", "christmas", "new_year",
         "black_history_month",
     ]
-    month = occurrences(defs, TODAY, 120)[0]
-    assert (month.start, month.end) == (date(2026, 10, 1), date(2026, 10, 31))
+    occs = occurrences(defs, TODAY, 120)
+    assert (occs[1].start, occs[1].end) == (date(2026, 10, 1), date(2026, 10, 31))
+    assert (occs[0].start, occs[0].end) == (date(2026, 9, 15), date(2026, 10, 15))
 
 
 def test_recently_ended_event_is_kept_for_seven_days():
@@ -111,4 +115,73 @@ def test_cutoff_and_after():
 def test_unknown_rule_kind_raises():
     bad = EventDef(key="x", name="X", type="holiday", rule={"kind": "lunar"})
     with pytest.raises(ValueError):
+        event_start(bad, 2026, {"x": bad})
+
+
+def test_nth_weekday_min_day():
+    assert nth_weekday(2023, 5, 0, 1, min_day=2) == date(2023, 5, 8)
+    assert nth_weekday(2026, 5, 0, 1, min_day=2) == date(2026, 5, 4)
+    assert nth_weekday(2028, 5, 0, 1, min_day=2) == date(2028, 5, 8)
+    assert nth_weekday(2026, 5, 0, 1) == date(2026, 5, 4)
+
+
+@pytest.mark.parametrize(
+    "year,expected",
+    [(2023, date(2023, 5, 8)), (2026, date(2026, 5, 4)), (2028, date(2028, 5, 8))],
+)
+def test_teacher_appreciation_week_is_first_full_week(year, expected):
+    _, by_key = defs_by_key()
+    assert event_start(by_key["teacher_appreciation_week"], year, by_key) == expected
+
+
+def test_occurrences_cover_years_through_horizon():
+    defs, _ = load_calendar()
+    occs = occurrences(defs, TODAY, 800)  # horizon ends Dec 2028
+    assert any(o.event.key == "thanksgiving" and o.start == date(2028, 11, 23) for o in occs)
+
+
+def test_removed_theme_words():
+    _, by_key = defs_by_key()
+    assert "2027" not in by_key["new_year"].theme_words
+    assert "juneteenth" not in by_key["black_history_month"].theme_words
+
+
+def _patch_yaml(monkeypatch, events):
+    monkeypatch.setattr(
+        "app.analysis.us_calendar.load_yaml", lambda name: {"events": events}
+    )
+
+
+@pytest.mark.parametrize(
+    "event,match",
+    [
+        ({"name": "A", "rule": {"kind": "easter"}}, "key"),
+        ({"key": "a", "rule": {"kind": "easter"}}, "a"),
+        ({"key": "a", "name": "A"}, "a"),
+    ],
+)
+def test_load_calendar_missing_field(monkeypatch, event, match):
+    _patch_yaml(monkeypatch, [event])
+    with pytest.raises(ValueError, match=match):
+        load_calendar()
+
+
+def test_load_calendar_duplicate_keys(monkeypatch):
+    ev = {"key": "dup", "name": "D", "rule": {"kind": "easter"}}
+    _patch_yaml(monkeypatch, [ev, dict(ev)])
+    with pytest.raises(ValueError, match="dup"):
+        load_calendar()
+
+
+def test_event_start_unknown_offset_target_raises_value_error():
+    bad = EventDef(
+        key="x", name="X", type="holiday", rule={"kind": "offset", "of": "nope", "days": 1}
+    )
+    with pytest.raises(ValueError, match="nope"):
+        event_start(bad, 2026, {"x": bad})
+
+
+def test_event_start_missing_rule_field_raises_value_error():
+    bad = EventDef(key="x", name="X", type="holiday", rule={"kind": "fixed", "month": 1})
+    with pytest.raises(ValueError, match="x"):
         event_start(bad, 2026, {"x": bad})

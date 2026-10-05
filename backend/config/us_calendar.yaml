@@ -3,15 +3,15 @@
 # theme_words: từ đầu tiên dùng để ghép ngách với seed (vd "halloween nurse").
 fulfillment_days: 10
 events:
-  - {key: new_year, name: "New Year", type: holiday, rule: {kind: fixed, month: 1, day: 1}, theme_words: [new year, "2027", cheers]}
-  - {key: black_history_month, name: "Black History Month", type: awareness, rule: {kind: month, month: 2}, theme_words: [black history, melanin, juneteenth]}
+  - {key: new_year, name: "New Year", type: holiday, rule: {kind: fixed, month: 1, day: 1}, theme_words: [new year, cheers]}
+  - {key: black_history_month, name: "Black History Month", type: awareness, rule: {kind: month, month: 2}, theme_words: [black history, melanin]}
   - {key: super_bowl, name: "Super Bowl", type: occasion, rule: {kind: nth_weekday, month: 2, weekday: sun, n: 2}, theme_words: [game day, football, super bowl]}
   - {key: valentines, name: "Valentine's Day", type: holiday, rule: {kind: fixed, month: 2, day: 14}, theme_words: [valentine, love, heart, galentine]}
   - {key: st_patricks, name: "St. Patrick's Day", type: holiday, rule: {kind: fixed, month: 3, day: 17}, theme_words: [st patrick, lucky, shamrock, irish]}
   - {key: autism_awareness_month, name: "Autism Awareness Month", type: awareness, rule: {kind: month, month: 4}, theme_words: [autism, puzzle, neurodiverse]}
   - {key: easter, name: "Easter", type: holiday, rule: {kind: easter}, theme_words: [easter, bunny, he is risen]}
-  - {key: teacher_appreciation_week, name: "Teacher Appreciation Week", type: occasion, rule: {kind: nth_weekday, month: 5, weekday: mon, n: 1}, duration_days: 5, theme_words: [teacher appreciation, teacher, school]}
-  - {key: nurses_week, name: "Nurses Week", type: occasion, rule: {kind: fixed, month: 5, day: 6}, duration_days: 7, theme_words: [nurse week, nurse appreciation, nurse]}
+  - {key: teacher_appreciation_week, name: "Teacher Appreciation Week", type: occasion, rule: {kind: nth_weekday, month: 5, weekday: mon, n: 1, min_day: 2}, duration_days: 5, cross_seeds: false, theme_words: [teacher appreciation, teacher, school]}
+  - {key: nurses_week, name: "Nurses Week", type: occasion, rule: {kind: fixed, month: 5, day: 6}, duration_days: 7, cross_seeds: false, theme_words: [nurse week, nurse appreciation, nurse]}
   - {key: mothers_day, name: "Mother's Day", type: holiday, rule: {kind: nth_weekday, month: 5, weekday: sun, n: 2}, theme_words: [mothers day, mom, mama]}
   - {key: graduation, name: "Graduation season", type: occasion, rule: {kind: fixed, month: 5, day: 15}, duration_days: 31, theme_words: [graduation, senior, class of]}
   - {key: memorial_day, name: "Memorial Day", type: holiday, rule: {kind: last_weekday, month: 5, weekday: mon}, theme_words: [memorial day, patriotic, usa]}
@@ -23,9 +23,17 @@ events:
   - {key: breast_cancer_awareness, name: "Breast Cancer Awareness Month", type: awareness, rule: {kind: month, month: 10}, theme_words: [pink, breast cancer, awareness, in october we wear pink]}
   - {key: halloween, name: "Halloween", type: holiday, rule: {kind: fixed, month: 10, day: 31}, theme_words: [halloween, spooky, ghost, pumpkin, skeleton, witch, boo]}
   - {key: veterans_day, name: "Veterans Day", type: holiday, rule: {kind: fixed, month: 11, day: 11}, theme_words: [veteran, veterans day, patriotic]}
-  - {key: sale_11_11, name: "TikTok Shop 11.11 Sale", type: sale, ship_by: false, rule: {kind: fixed, month: 11, day: 11}, theme_words: [gift, christmas gift]}
+  - {key: sale_11_11, name: "TikTok Shop 11.11 Sale", type: sale, ship_by: false, idea_template: "{seed} gift", rule: {kind: fixed, month: 11, day: 11}, theme_words: [gift, christmas gift]}
   - {key: thanksgiving, name: "Thanksgiving", type: holiday, rule: {kind: nth_weekday, month: 11, weekday: thu, n: 4}, theme_words: [thanksgiving, thankful, turkey, fall]}
-  - {key: black_friday, name: "Black Friday", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: 1}, theme_words: [christmas gift, gift]}
-  - {key: cyber_monday, name: "Cyber Monday", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: 4}, theme_words: [christmas gift, gift]}
-  - {key: sale_12_12, name: "TikTok Shop 12.12 Sale", type: sale, ship_by: false, rule: {kind: fixed, month: 12, day: 12}, theme_words: [christmas gift, christmas]}
+  - {key: black_friday, idea_template: "{seed} christmas gift", name: "Black Friday", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: 1}, theme_words: [christmas gift, gift]}
+  - {key: cyber_monday, idea_template: "{seed} christmas gift", name: "Cyber Monday", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: 4}, theme_words: [christmas gift, gift]}
+  - {key: sale_12_12, idea_template: "{seed} christmas gift", name: "TikTok Shop 12.12 Sale", type: sale, ship_by: false, rule: {kind: fixed, month: 12, day: 12}, theme_words: [christmas gift, christmas]}
   - {key: christmas, name: "Christmas", type: holiday, rule: {kind: fixed, month: 12, day: 25}, theme_words: [christmas, xmas, santa, ugly sweater, family christmas]}
+  - {key: womens_history_month, name: "Women's History Month", type: awareness, rule: {kind: month, month: 3}, theme_words: [women history, feminist, girl power]}
+  - {key: earth_day, name: "Earth Day", type: occasion, rule: {kind: fixed, month: 4, day: 22}, theme_words: [earth day, planet, nature]}
+  - {key: cinco_de_mayo, name: "Cinco de Mayo", type: holiday, rule: {kind: fixed, month: 5, day: 5}, theme_words: [cinco de mayo, fiesta, taco]}
+  - {key: mardi_gras, name: "Mardi Gras", type: holiday, rule: {kind: offset, of: easter, days: -47}, theme_words: [mardi gras, nola]}
+  - {key: juneteenth, name: "Juneteenth", type: holiday, rule: {kind: fixed, month: 6, day: 19}, theme_words: [juneteenth, freedom, black history]}
+  - {key: grandparents_day, name: "Grandparents Day", type: holiday, rule: {kind: offset, of: labor_day, days: 6}, theme_words: [grandparents day, grandma, grandpa, nana]}
+  - {key: hispanic_heritage_month, name: "Hispanic Heritage Month", type: awareness, rule: {kind: fixed, month: 9, day: 15}, duration_days: 31, theme_words: [hispanic heritage, latina, latino]}
+  - {key: dia_de_los_muertos, name: "Dia de los Muertos", type: holiday, rule: {kind: fixed, month: 11, day: 1}, duration_days: 2, theme_words: [dia de los muertos, day of the dead, sugar skull]}

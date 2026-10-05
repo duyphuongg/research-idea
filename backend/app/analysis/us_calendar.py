@@ -66,6 +66,8 @@ class EventDef:
     ship_by: bool = True
     theme_words: tuple[str, ...] = ()
     note: str = ""
+    idea_template: str = "{lead} {seed}"
+    cross_seeds: bool = True
 
 
 @dataclass(frozen=True)
@@ -83,8 +85,11 @@ class Milestones:
     ship_by: date | None
 
 
-def nth_weekday(year: int, month: int, weekday: int, n: int) -> date:
-    first = date(year, month, 1)
+def nth_weekday(
+    year: int, month: int, weekday: int, n: int, min_day: int = 1
+) -> date:
+    """n-th given weekday on or after day `min_day` of the month."""
+    first = date(year, month, min_day)
     return first + timedelta(days=(weekday - first.weekday()) % 7 + 7 * (n - 1))
 
 
@@ -109,13 +114,26 @@ def easter(year: int) -> date:
 
 
 def event_start(defn: EventDef, year: int, by_key: dict[str, EventDef]) -> date:
+    try:
+        return _event_start(defn, year, by_key)
+    except KeyError as exc:
+        raise ValueError(
+            f"Calendar event {defn.key!r}: missing or unknown {exc.args[0]!r} in rule"
+        ) from exc
+
+
+def _event_start(defn: EventDef, year: int, by_key: dict[str, EventDef]) -> date:
     rule = defn.rule
     kind = rule.get("kind")
     if kind == "fixed":
         return date(year, rule["month"], rule["day"])
     if kind == "nth_weekday":
         return nth_weekday(
-            year, rule["month"], WEEKDAYS[rule["weekday"]], rule["n"]
+            year,
+            rule["month"],
+            WEEKDAYS[rule["weekday"]],
+            rule["n"],
+            rule.get("min_day", 1),
         )
     if kind == "last_weekday":
         return last_weekday(year, rule["month"], WEEKDAYS[rule["weekday"]])
@@ -124,7 +142,7 @@ def event_start(defn: EventDef, year: int, by_key: dict[str, EventDef]) -> date:
     if kind == "month":
         return date(year, rule["month"], 1)
     if kind == "offset":
-        return event_start(by_key[rule["of"]], year, by_key) + timedelta(
+        return _event_start(by_key[rule["of"]], year, by_key) + timedelta(
             days=rule["days"]
         )
     raise ValueError(f"Unknown calendar rule kind for {defn.key}: {kind!r}")
@@ -140,21 +158,35 @@ def event_end(defn: EventDef, start: date) -> date:
     return start + timedelta(days=max(1, defn.duration_days) - 1)
 
 
+def _parse_event(e: Any) -> EventDef:
+    if not isinstance(e, dict):
+        raise ValueError(f"Calendar event must be a mapping, got {e!r}")
+    label = e.get("key") or e.get("name") or "<unnamed>"
+    for field in ("key", "name", "rule"):
+        if not e.get(field):
+            raise ValueError(f"Calendar event {label!r} is missing {field!r}")
+    return EventDef(
+        key=str(e["key"]),
+        name=str(e["name"]),
+        type=str(e.get("type", "holiday")),
+        rule=dict(e["rule"]),
+        duration_days=int(e.get("duration_days", 1)),
+        ship_by=bool(e.get("ship_by", True)),
+        theme_words=tuple(str(w).lower() for w in e.get("theme_words") or ()),
+        note=str(e.get("note", "")),
+        idea_template=str(e.get("idea_template", "{lead} {seed}")),
+        cross_seeds=bool(e.get("cross_seeds", True)),
+    )
+
+
 def load_calendar() -> tuple[list[EventDef], int]:
     data = load_yaml("us_calendar.yaml")
-    events = [
-        EventDef(
-            key=str(e["key"]),
-            name=str(e["name"]),
-            type=str(e.get("type", "holiday")),
-            rule=dict(e["rule"]),
-            duration_days=int(e.get("duration_days", 1)),
-            ship_by=bool(e.get("ship_by", True)),
-            theme_words=tuple(str(w).lower() for w in e.get("theme_words") or ()),
-            note=str(e.get("note", "")),
-        )
-        for e in data.get("events") or []
-    ]
+    events = [_parse_event(e) for e in data.get("events") or []]
+    seen: set[str] = set()
+    for e in events:
+        if e.key in seen:
+            raise ValueError(f"Duplicate calendar event key {e.key!r}")
+        seen.add(e.key)
     return events, int(data.get("fulfillment_days", DEFAULT_FULFILLMENT_DAYS))
 
 
@@ -163,7 +195,8 @@ def occurrences(
 ) -> list[Occurrence]:
     by_key = {d.key: d for d in defs}
     out = []
-    for year in (today.year - 1, today.year, today.year + 1):
+    last_year = (today + timedelta(days=horizon_days)).year + 1
+    for year in range(today.year - 1, last_year + 1):
         for defn in defs:
             start = event_start(defn, year, by_key)
             end = event_end(defn, start)
