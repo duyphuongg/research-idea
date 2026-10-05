@@ -4,14 +4,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.api import products
+from app.api import products, seeds
+from app.api import settings as settings_api
 from app.config import Settings, get_settings
+from app.connectors.registry import ConnectorFactory, build_connectors
 from app.db import make_engine, make_session_factory
 
 
 def create_app(
     settings: Settings | None = None,
     session_factory: sessionmaker[Session] | None = None,
+    connector_factory: ConnectorFactory = build_connectors,
 ) -> FastAPI:
     settings = settings or get_settings()
     if session_factory is None:
@@ -24,6 +27,7 @@ def create_app(
     app = FastAPI(title="POD Trend Radar", lifespan=lifespan)
     app.state.settings = settings
     app.state.session_factory = session_factory
+    app.state.connector_factory = connector_factory
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -35,5 +39,6 @@ def create_app(
     def ping() -> dict[str, bool]:
         return {"ok": True}
 
-    app.include_router(products.router)
+    for module in (products, seeds, settings_api):
+        app.include_router(module.router)
     return app

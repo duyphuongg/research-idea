@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProductOut(BaseModel):
@@ -26,3 +26,39 @@ class ProductOut(BaseModel):
 class ProductPage(BaseModel):
     total: int
     items: list[ProductOut]
+
+
+class SeedIn(BaseModel):
+    keyword: str = Field(max_length=200)
+
+    @field_validator("keyword")
+    @classmethod
+    def not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("keyword must not be blank")
+        return value
+
+
+class SeedOut(BaseModel):
+    id: int
+    keyword: str
+    active: bool
+    created_at: datetime
+    keyword_id: int
+
+
+class ConnectorStatusOut(BaseModel):
+    name: str
+    kind: str
+    configured: bool
+    enabled: bool
+
+
+class SettingsOut(BaseModel):
+    scan_hour_utc: int
+    connectors: list[ConnectorStatusOut]
+
+
+class SettingsIn(BaseModel):
+    scan_hour_utc: int | None = Field(None, ge=0, le=23)
+    connectors_enabled: dict[str, bool] | None = None
