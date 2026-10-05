@@ -3,6 +3,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import httpx
+import pytest
 import respx
 
 from app.connectors.base import RawBatch
@@ -27,33 +28,61 @@ def test_enabled_requires_api_key():
     assert EtsyConnector("").enabled() is False
 
 
-def test_normalize_maps_apparel_listings_and_drops_others():
-    raw = RawBatch(source="etsy", payloads=[load_payload()])
-    batch = EtsyConnector("k").normalize(raw, date(2026, 10, 5))
+TODAY = date(2026, 10, 5)
 
-    assert [p.external_id for p in batch.products] == ["1001", "1003"]
-    shirt, hoodie = batch.products
+
+def test_normalize_keeps_us_usd_apparel_only():
+    raw = RawBatch(source="etsy", payloads=[load_payload()])
+    batch = EtsyConnector("k").normalize(raw, TODAY)
+
+    # 1002 mug (not apparel), 1004 non-US shop, 1005 CAD price are dropped
+    assert [p.external_id for p in batch.products] == ["1001", "1003", "1006"]
+    shirt, hoodie, crew = batch.products
     assert shirt.title == "Funny Nurse Shirt & Gift"
     assert shirt.price == 24.99
     assert shirt.currency == "USD"
     assert shirt.favorites == 532
-    assert shirt.reviews is None
+    assert shirt.views == 1200
+    assert shirt.shop_sold_count == 15400
     assert shirt.image_url == "https://i.etsystatic.com/1001_570xN.jpg"
     assert shirt.shop_name == "NurseLifeCo"
     assert shirt.product_type == "tshirt"
     assert shirt.listed_at == datetime(2025, 8, 1)
-    assert shirt.keyword == "nurse"
-    assert shirt.rank == 1
-    assert hoodie.product_type == "hoodie"
-    assert hoodie.rank == 3
-    assert hoodie.image_url is None
-    assert hoodie.listed_at is not None
+    assert (shirt.keyword, shirt.rank) == ("nurse", 1)
+    assert (hoodie.product_type, hoodie.rank, hoodie.image_url) == ("hoodie", 3, None)
+    assert (crew.product_type, crew.rank) == ("sweatshirt", 6)
 
-    assert len(batch.signals) == 1
-    signal = batch.signals[0]
-    assert (signal.keyword, signal.source, signal.metric, signal.value, signal.date) == (
-        "nurse", "etsy", "listing_count_tshirt", 12345.0, date(2026, 10, 5)
+
+def test_normalize_emits_keyword_signals_and_tags():
+    raw = RawBatch(source="etsy", payloads=[load_payload()])
+    signals = EtsyConnector("k").normalize(raw, TODAY).signals
+    by_metric = {(s.source, s.metric, s.keyword): s for s in signals}
+
+    assert by_metric[("etsy", "listing_count_tshirt", "nurse")].value == 12345.0
+    assert by_metric[("etsy", "us_listing_count", "nurse")].value == 3.0
+    assert by_metric[("etsy", "new_listings_30d", "nurse")].value == 2.0
+    expected_rate = (1200 / 430 + 300 / 15 + 60 / 15) / 3
+    assert by_metric[("etsy", "views_per_day", "nurse")].value == pytest.approx(expected_rate)
+
+    tags = {s.keyword: s for s in signals if s.source == "etsy_tags"}
+    assert set(tags) == {"nurse gift", "rn shirt"}  # only tags on >= 3 kept US listings
+    gift = tags["nurse gift"]
+    assert (gift.metric, gift.value, gift.origin, gift.parent, gift.date) == (
+        "tag_count", 3.0, "discovered", "nurse", TODAY
     )
+    assert all(s.date == TODAY for s in signals)
+
+
+def test_keyword_signals_dedupe_listings_across_queries():
+    payload = load_payload()
+    second = {**payload, "query": "nurse hoodie", "product_type": "hoodie"}
+    raw = RawBatch(source="etsy", payloads=[payload, second])
+    signals = EtsyConnector("k").normalize(raw, TODAY).signals
+    us_count = [s for s in signals if s.metric == "us_listing_count"]
+    assert [s.value for s in us_count] == [3.0]
+    assert {s.metric for s in signals if s.metric.startswith("listing_count_")} == {
+        "listing_count_tshirt", "listing_count_hoodie"
+    }
 
 
 @respx.mock
@@ -76,7 +105,8 @@ async def test_fetch_runs_search_and_batch_per_product_type():
     first = search.calls[0].request
     assert first.headers["x-api-key"] == "k"
     assert first.url.params["keywords"] == "nurse shirt"
-    assert batch.calls[0].request.url.params["listing_ids"] == "1001,1002,1003"
+    assert batch.calls[0].request.url.params["listing_ids"] == "1001,1002,1003,1004,1005,1006"
+    assert first.url.params["limit"] == "100"
 
 
 @respx.mock
@@ -109,9 +139,12 @@ def test_normalize_skips_listings_without_id():
         "product_type": "tshirt",
         "search": {
             "count": 2,
-            "results": [{"title": "Broken Shirt"}, {"listing_id": 7, "title": "Nurse Shirt"}],
+            "results": [
+                {"title": "Broken Shirt"},
+                {"listing_id": 7, "title": "Nurse Shirt", "price": {"amount": 2000, "divisor": 100, "currency_code": "USD"}},
+            ],
         },
-        "details": {"results": [{"title": "Broken Detail Shirt"}]},
+        "details": {"results": [{"title": "Broken Detail Shirt"}, {"listing_id": 7, "shop": {"is_shop_us_based": True}}]},
     }
     batch = EtsyConnector("k").normalize(RawBatch(source="etsy", payloads=[payload]), date(2026, 10, 5))
 
