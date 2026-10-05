@@ -9,6 +9,7 @@ from app.analysis.scoring import (
     percentile_ranks,
     score_keywords,
     series_growth,
+    shrink,
 )
 
 TODAY = date(2026, 10, 5)
@@ -38,6 +39,13 @@ def test_latest_recent_and_growth():
     assert series_growth([(days_ago(1), 5.0), (days_ago(10), 0.0)], TODAY) is None
 
 
+def test_shrink():
+    assert shrink(1.0, 1) == pytest.approx(0.6)
+    assert shrink(1.0, 2) == pytest.approx(0.7)
+    assert shrink(0.0, 5) == 0.0
+    assert shrink(0.25, 10) == 0.25
+
+
 def test_score_keywords_end_to_end():
     signals = {
         # seed with rising Etsy demand and low competition
@@ -59,14 +67,18 @@ def test_score_keywords_end_to_end():
 
     assert set(results) == {1, 2, 3}
     k1, k2, k3 = results[1], results[2], results[3]
-    assert (k1.demand, k1.momentum, k1.competition) == (1.0, 1.0, 0.0)
+    assert k1.demand == pytest.approx(0.7)
+    assert k1.momentum == pytest.approx(0.6)
+    assert k1.competition == 0.0
     assert k1.growth == pytest.approx(1.0)
     assert (k1.sources, k1.sources_rising) == (("etsy",), 1)
-    assert k1.score == 100.0
-    assert (k2.demand, k2.momentum, k2.competition) == (0.0, 0.0, 1.0)
-    assert k2.score == 0.0
-    assert (k3.demand, k3.momentum, k3.competition, k3.growth) == (1.0, None, None, None)
-    assert k3.score == 100.0  # only demand available → weight renormalized
+    assert k1.score == 71.5
+    assert k2.demand == pytest.approx(0.3)
+    assert (k2.momentum, k2.competition) == (0.0, 1.0)
+    assert k2.score == 10.5
+    assert k3.demand == pytest.approx(0.6)
+    assert (k3.momentum, k3.competition, k3.growth) == (None, None, None)
+    assert k3.score == 53.5  # missing momentum/competition count as neutral 0.5
     assert [r.keyword_id for r in score_keywords(signals, TODAY)] == [1, 3, 2]
 
 
@@ -80,9 +92,16 @@ def test_convergence_bonus_and_multi_source_demand():
     }
     results = {r.keyword_id: r for r in score_keywords(signals, TODAY, Weights(1.0, 1.0, 1.0))}
     assert results[1].sources_rising == 2
-    assert results[1].momentum == 1.0  # 1.0 percentile + bonus, capped
+    assert results[1].momentum == pytest.approx(0.8)  # shrink(1.0, 2)=0.7 + bonus 0.1
     assert results[2].sources_rising == 1
-    assert results[2].momentum == pytest.approx(0.5)
-    assert results[3].momentum == 0.0
-    # etsy pct 1.0 (20 vs 10,10); suggest pct 0.75 (tied 20,20 vs 10) → mean 0.875
-    assert results[1].demand == pytest.approx(0.875)
+    assert results[2].momentum == pytest.approx(0.3)  # shrink(0.0, 2)
+    assert results[3].momentum == 0.0  # zero growth earns no momentum
+    # etsy: shrink(1.0,3)=0.8; suggest: shrink(0.75,3)=0.65 → mean 0.725
+    assert results[1].demand == pytest.approx(0.725)
+
+
+def test_declining_keyword_gets_zero_momentum():
+    signals = {1: {("etsy", "views_per_day"): [(days_ago(14), 10.0), (days_ago(1), 4.0)]}}
+    (result,) = score_keywords(signals, TODAY)
+    assert result.growth == pytest.approx(-0.6)
+    assert result.momentum == 0.0

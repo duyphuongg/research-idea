@@ -1,4 +1,15 @@
-"""Keyword opportunity score (spec §13). Pure functions over trend_signals series."""
+"""Keyword opportunity score (spec §13). Pure functions over trend_signals series.
+
+Rules:
+- Demand: per-source percentile among keywords active on that source, shrunk toward 0.5
+  when the pool is small (shrink), then averaged over the keyword's sources.
+- Momentum: only positive mean growth is rewarded (<= 0 → 0.0); percentile among
+  positive-growth keywords (shrunk) plus a convergence bonus per extra rising source.
+  No growth data → None.
+- Competition: min-max of log1p(listing count); None when unknown.
+- Missing momentum/competition count as NEUTRAL (0.5) in the score, but are still
+  reported as None so the UI shows "—".
+"""
 
 import math
 from bisect import bisect_left, bisect_right
@@ -20,6 +31,8 @@ ACTIVE_DAYS = 7
 HISTORY_DAYS = 30
 RISING_GROWTH = 0.2
 CONVERGENCE_BONUS = 0.1
+SMALL_POOL = 5
+NEUTRAL = 0.5
 
 Series = list[tuple[date, float]]
 
@@ -66,6 +79,11 @@ def percentile_ranks(values: dict[int, float]) -> dict[int, float]:
         equal = bisect_right(ordered, value) - less
         out[key] = (less + (equal - 1) / 2) / (n - 1)
     return out
+
+
+def shrink(p: float, n: int) -> float:
+    """Pull a percentile toward 0.5 when fewer than SMALL_POOL keywords back it."""
+    return 0.5 + (p - 0.5) * min(1.0, n / SMALL_POOL)
 
 
 def _window(series: Series, today: date, start: int, end: int) -> list[tuple[date, float]]:
@@ -124,25 +142,29 @@ def score_keywords(
 
     demand_pct = {source: percentile_ranks(values) for source, values in demand_raw.items()}
     mean_growth = {k: mean(g.values()) for k, g in growths.items() if g}
-    momentum_pct = percentile_ranks(mean_growth)
+    positive_growth = {k: g for k, g in mean_growth.items() if g > 0}
+    momentum_pct = percentile_ranks(positive_growth)
     competition_norm = _min_max(competition_raw)
 
     results = []
     for keyword_id, sources in active.items():
-        demand = mean(demand_pct[s][keyword_id] for s in sources)
+        demand = mean(shrink(demand_pct[s][keyword_id], len(demand_raw[s])) for s in sources)
         rising = sum(1 for g in growths.get(keyword_id, {}).values() if g > RISING_GROWTH)
         momentum = None
-        if keyword_id in momentum_pct:
-            momentum = min(1.0, momentum_pct[keyword_id] + CONVERGENCE_BONUS * max(0, rising - 1))
+        if keyword_id in mean_growth:
+            if keyword_id in momentum_pct:
+                base = shrink(momentum_pct[keyword_id], len(positive_growth))
+                momentum = min(1.0, base + CONVERGENCE_BONUS * max(0, rising - 1))
+            else:
+                momentum = 0.0
         competition = competition_norm.get(keyword_id)
         parts = [
             (weights.demand, demand),
-            (weights.momentum, momentum),
-            (weights.competition, None if competition is None else 1 - competition),
+            (weights.momentum, NEUTRAL if momentum is None else momentum),
+            (weights.competition, NEUTRAL if competition is None else 1 - competition),
         ]
-        available = [(w, v) for w, v in parts if v is not None]
-        total = sum(w for w, _ in available)
-        score = round(100 * sum(w * v for w, v in available) / total, 2) if total else 0.0
+        total = sum(w for w, _ in parts)
+        score = round(100 * sum(w * v for w, v in parts) / total, 2) if total else 0.0
         results.append(
             KeywordScoreResult(
                 keyword_id=keyword_id,
