@@ -62,3 +62,17 @@ def test_settings_update_reschedules_only_when_hour_given(client):
     client.put("/api/settings", json={"scan_hour_utc": 4})
     assert len(calls) == 1
     assert calls[0][0] == "daily_scan"
+
+
+def test_following_discovered_keyword_marks_it_relevant(client, session):
+    from app.keywords import get_or_create_keyword
+    from app.models import Keyword
+
+    kw = get_or_create_keyword(session, "braves dodgers game", origin="discovered")
+    session.commit()
+    assert kw.is_pod_relevant is False
+
+    resp = client.post("/api/seeds", json={"keyword": "braves dodgers game"})
+    assert resp.status_code == 201
+    session.expire_all()
+    assert session.get(Keyword, kw.id).is_pod_relevant is True

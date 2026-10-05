@@ -4,8 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.connectors.base import NormalizedBatch, NormalizedProduct, NormalizedSignal
-from app.keywords import get_or_create_keyword
-from app.models import Product, ProductKeyword, ProductSnapshot, TrendSignal
+from app.keywords import get_or_create_keyword, normalize_keyword
+from app.models import KeywordRelation, Product, ProductKeyword, ProductSnapshot, TrendSignal
 
 
 def persist_batch(session: Session, batch: NormalizedBatch, today: date) -> int:
@@ -19,7 +19,13 @@ def persist_batch(session: Session, batch: NormalizedBatch, today: date) -> int:
 
 
 def _upsert_signal(session: Session, signal: NormalizedSignal) -> None:
-    keyword = get_or_create_keyword(session, signal.keyword, signal.origin)
+    if not normalize_keyword(signal.keyword):
+        return
+    keyword = get_or_create_keyword(
+        session, signal.keyword, signal.origin, has_parent=signal.parent is not None
+    )
+    if signal.parent:
+        _upsert_relation(session, signal.parent, keyword.id, signal.source, signal.date)
     row = session.scalar(
         select(TrendSignal).where(
             TrendSignal.keyword_id == keyword.id,
@@ -43,6 +49,22 @@ def _upsert_signal(session: Session, signal: NormalizedSignal) -> None:
     session.flush()
 
 
+def _upsert_relation(
+    session: Session, parent_text: str, child_id: int, source: str, seen: date
+) -> None:
+    parent = get_or_create_keyword(session, parent_text)
+    if parent.id == child_id:
+        return
+    relation = session.get(KeywordRelation, (parent.id, child_id, source))
+    if relation is None:
+        session.add(
+            KeywordRelation(parent_id=parent.id, child_id=child_id, source=source, last_seen=seen)
+        )
+    else:
+        relation.last_seen = seen
+    session.flush()
+
+
 def _upsert_product(session: Session, item: NormalizedProduct, today: date) -> None:
     product = session.scalar(
         select(Product).where(Product.source == item.source, Product.external_id == item.external_id)
@@ -58,6 +80,7 @@ def _upsert_product(session: Session, item: NormalizedProduct, today: date) -> N
     product.currency = item.currency
     product.product_type = item.product_type
     product.listed_at = item.listed_at
+    product.shop_sold_count = item.shop_sold_count
     session.flush()
 
     keyword = get_or_create_keyword(session, item.keyword)
@@ -82,5 +105,6 @@ def _upsert_product(session: Session, item: NormalizedProduct, today: date) -> N
     snapshot.favorites = item.favorites
     snapshot.rating = item.rating
     snapshot.bsr = item.bsr
+    snapshot.views = item.views
     snapshot.price = item.price
     session.flush()

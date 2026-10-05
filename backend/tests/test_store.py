@@ -65,3 +65,46 @@ def test_signals_are_upserted_per_day(session):
     assert written == 1
     assert count(session, TrendSignal) == 1
     assert session.scalar(select(TrendSignal)).value == 2.0
+
+
+from app.models import KeywordRelation  # noqa: E402
+
+
+def test_discovered_signal_creates_child_keyword_and_relation(session):
+    sig = NormalizedSignal(
+        keyword="Funny Nurse Shirts", source="google_suggest", metric="suggest_score",
+        value=9.0, date=D1, origin="discovered", parent="nurse",
+    )
+    persist_batch(session, NormalizedBatch(signals=[sig]), D1)
+    session.commit()
+
+    child = session.scalar(select(Keyword).where(Keyword.text == "funny nurse shirts"))
+    parent = session.scalar(select(Keyword).where(Keyword.text == "nurse"))
+    assert (child.origin, child.is_pod_relevant) == ("discovered", True)
+    assert parent.origin == "seed"
+    rel = session.get(KeywordRelation, (parent.id, child.id, "google_suggest"))
+    assert rel.last_seen == D1
+
+
+def test_discovered_keywords_get_pod_relevance(session):
+    signals = [
+        NormalizedSignal(keyword="nurse shirts near me", source="google_suggest", metric="suggest_score", value=5.0, date=D1, origin="discovered", parent="nurse"),
+        NormalizedSignal(keyword="braves dodgers game", source="google_daily", metric="traffic", value=200.0, date=D1, origin="discovered"),
+        NormalizedSignal(keyword="halloween costume ideas", source="google_daily", metric="traffic", value=50000.0, date=D1, origin="discovered"),
+        NormalizedSignal(keyword="   ", source="google_daily", metric="traffic", value=1.0, date=D1, origin="discovered"),
+    ]
+    persist_batch(session, NormalizedBatch(signals=signals), D1)
+    session.commit()
+
+    relevance = {k.text: k.is_pod_relevant for k in session.scalars(select(Keyword))}
+    assert relevance["nurse shirts near me"] is False
+    assert relevance["braves dodgers game"] is False
+    assert relevance["halloween costume ideas"] is True
+    assert "" not in relevance
+
+
+def test_persists_views_and_shop_sold_count(session):
+    persist_batch(session, NormalizedBatch(products=[make_product(views=420, shop_sold_count=9000)]), D1)
+    session.commit()
+    assert session.scalar(select(Product)).shop_sold_count == 9000
+    assert session.scalar(select(ProductSnapshot)).views == 420

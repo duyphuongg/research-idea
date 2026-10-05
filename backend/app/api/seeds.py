@@ -38,6 +38,7 @@ def create_seed(body: SeedIn, session: Session = Depends(get_session)) -> SeedOu
     session.add(seed)
     session.flush()
     out = _to_out(session, seed)
+    get_or_create_keyword(session, seed.keyword).is_pod_relevant = True  # user chose to follow it
     session.commit()
     return out
 

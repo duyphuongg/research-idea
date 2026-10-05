@@ -32,6 +32,8 @@ class NormalizedProduct:
     favorites: int | None = None
     rating: float | None = None
     bsr: int | None = None
+    views: int | None = None
+    shop_sold_count: int | None = None
 
 
 @dataclass
@@ -42,6 +44,7 @@ class NormalizedSignal:
     value: float
     date: date
     origin: str = "seed"
+    parent: str | None = None  # seed keyword this niche was discovered from
 
 
 @dataclass
