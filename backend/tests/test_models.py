@@ -1,10 +1,11 @@
 from datetime import date
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.keywords import get_or_create_keyword, normalize_keyword
-from app.models import Product, ProductSnapshot
+from app.models import KeywordRelation, KeywordScore, Product, ProductSnapshot
 
 
 def test_normalize_keyword_lowercases_and_collapses_spaces():
@@ -37,5 +38,40 @@ def test_product_snapshots_ordered_by_date(session):
 def test_product_unique_per_source_external_id(session):
     session.add(Product(source="etsy", external_id="1", title="A", url="u", product_type="tshirt"))
     session.add(Product(source="etsy", external_id="1", title="B", url="u", product_type="tshirt"))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_snapshot_views_and_shop_sold_count(session):
+    p = Product(source="etsy", external_id="9", title="T", url="u", product_type="tshirt", shop_sold_count=1500)
+    session.add(p)
+    session.flush()
+    session.add(ProductSnapshot(product_id=p.id, date=date(2026, 10, 5), views=321))
+    session.commit()
+    session.refresh(p)
+    assert p.shop_sold_count == 1500
+    assert p.snapshots[0].views == 321
+
+
+def test_keyword_relation_and_score(session):
+    parent = get_or_create_keyword(session, "nurse")
+    child = get_or_create_keyword(session, "nurse gift", origin="discovered")
+    session.add(KeywordRelation(parent_id=parent.id, child_id=child.id, source="etsy_tags", last_seen=date(2026, 10, 5)))
+    session.add(
+        KeywordScore(
+            keyword_id=child.id, date=date(2026, 10, 5), score=71.5, demand=0.8, momentum=None,
+            competition=None, growth=None, sources_rising=0, sources=["etsy_tags"],
+        )
+    )
+    session.commit()
+    score = session.scalar(select(KeywordScore))
+    assert (score.score, score.sources, score.momentum) == (71.5, ["etsy_tags"], None)
+    assert session.get(KeywordRelation, (parent.id, child.id, "etsy_tags")) is not None
+
+
+def test_keyword_score_unique_per_day(session):
+    kw = get_or_create_keyword(session, "nurse")
+    for _ in range(2):
+        session.add(KeywordScore(keyword_id=kw.id, date=date(2026, 10, 5), score=1.0, sources_rising=0, sources=[]))
     with pytest.raises(IntegrityError):
         session.commit()

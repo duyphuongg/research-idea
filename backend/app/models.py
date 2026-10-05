@@ -64,6 +64,7 @@ class Product(Base):
     currency: Mapped[str | None] = mapped_column(String(3))
     product_type: Mapped[str] = mapped_column(String(20))  # tshirt | sweatshirt | hoodie
     listed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    shop_sold_count: Mapped[int | None] = mapped_column(Integer)
 
     snapshots: Mapped[list["ProductSnapshot"]] = relationship(
         order_by="ProductSnapshot.date", back_populates="product"
@@ -90,6 +91,7 @@ class ProductSnapshot(Base):
     favorites: Mapped[int | None] = mapped_column(Integer)
     rating: Mapped[float | None] = mapped_column(Float)
     bsr: Mapped[int | None] = mapped_column(Integer)
+    views: Mapped[int | None] = mapped_column(Integer)
     price: Mapped[float | None] = mapped_column(Float)
 
     product: Mapped[Product] = relationship(back_populates="snapshots")
@@ -122,3 +124,30 @@ class Setting(Base):
 
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     value: Mapped[Any] = mapped_column(JSON)
+
+
+class KeywordRelation(Base):
+    """parent (seed) → child (niche discovered from tags/suggestions)."""
+
+    __tablename__ = "keyword_relations"
+
+    parent_id: Mapped[int] = mapped_column(ForeignKey("keywords.id"), primary_key=True)
+    child_id: Mapped[int] = mapped_column(ForeignKey("keywords.id"), primary_key=True)
+    source: Mapped[str] = mapped_column(String(30), primary_key=True)
+    last_seen: Mapped[date] = mapped_column(Date)
+
+
+class KeywordScore(Base):
+    __tablename__ = "keyword_scores"
+    __table_args__ = (UniqueConstraint("keyword_id", "date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    keyword_id: Mapped[int] = mapped_column(ForeignKey("keywords.id"))
+    score: Mapped[float] = mapped_column(Float)
+    demand: Mapped[float | None] = mapped_column(Float)
+    momentum: Mapped[float | None] = mapped_column(Float)
+    competition: Mapped[float | None] = mapped_column(Float)
+    growth: Mapped[float | None] = mapped_column(Float)
+    sources_rising: Mapped[int] = mapped_column(Integer, default=0)
+    sources: Mapped[Any] = mapped_column(JSON, default=list)
+    date: Mapped[date] = mapped_column(Date)
