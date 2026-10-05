@@ -113,3 +113,19 @@ def test_ties_are_ordered_by_id(client, session):
     assert len(items2) == 2
     assert items1 + items2 == product_ids
     assert len(set(items1) & set(items2)) == 0  # No duplicates
+
+
+def test_views_shop_sales_and_metric_exposed(client, session):
+    p = Product(source="etsy", external_id="V", title="Views", url="u", product_type="tshirt",
+                shop_sold_count=777, listed_at=datetime(2026, 9, 1))
+    session.add(p)
+    session.flush()
+    session.add_all([
+        ProductSnapshot(product_id=p.id, date=date(2026, 9, 20), favorites=1, views=100),
+        ProductSnapshot(product_id=p.id, date=date(2026, 9, 27), favorites=2, views=300),
+    ])
+    session.commit()
+
+    [item] = client.get("/api/products").json()["items"]
+    assert (item["views"], item["shop_sold_count"], item["velocity_metric"]) == (300, 777, "views")
+    assert item["delta_7d"] == pytest.approx(200)

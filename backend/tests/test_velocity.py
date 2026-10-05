@@ -85,3 +85,21 @@ def test_falls_back_to_favorites_when_latest_has_no_reviews():
     ]
     delta, _ = compute_velocity(points, None)
     assert delta == pytest.approx(70)
+
+
+def test_views_preferred_over_favorites():
+    from app.analysis.velocity import velocity_metric
+
+    points = [
+        SnapshotPoint(date(2026, 9, 20), reviews=None, favorites=5, views=100),
+        SnapshotPoint(date(2026, 9, 27), reviews=None, favorites=6, views=240),
+    ]
+    assert velocity_metric(points) == "views"
+    delta, _ = compute_velocity(points, None)
+    assert delta == pytest.approx(140)
+
+
+def test_velocity_metric_none_without_data():
+    from app.analysis.velocity import velocity_metric
+
+    assert velocity_metric([SnapshotPoint(date(2026, 9, 27), None, None)]) is None

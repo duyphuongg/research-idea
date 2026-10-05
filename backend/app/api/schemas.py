@@ -17,6 +17,9 @@ class ProductOut(BaseModel):
     reviews: int | None
     favorites: int | None
     rating: float | None
+    views: int | None
+    shop_sold_count: int | None
+    velocity_metric: str | None
     delta_7d: float | None
     velocity: float | None
     hot: bool
