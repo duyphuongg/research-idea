@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -91,3 +92,56 @@ class SourceHealthOut(ConnectorStatusOut):
     last_status: str | None
     last_finished_at: datetime | None
     last_error: str | None
+
+
+class TrendOut(BaseModel):
+    keyword_id: int
+    keyword: str
+    origin: str
+    is_pod_relevant: bool
+    is_seed: bool
+    is_new: bool
+    score: float
+    demand: float | None
+    momentum: float | None
+    competition: float | None
+    growth: float | None
+    sources: list[str]
+    sources_rising: int
+    sparkline: list[float]
+
+
+class TrendPage(BaseModel):
+    date: date | None
+    items: list[TrendOut]
+
+
+class SignalPoint(BaseModel):
+    date: date
+    value: float
+
+
+class SignalSeries(BaseModel):
+    source: str
+    metric: str
+    points: list[SignalPoint]
+
+
+class RelatedKeywordOut(BaseModel):
+    keyword_id: int
+    keyword: str
+    relation: Literal["child", "parent"]
+    source: str
+    score: float | None
+    is_pod_relevant: bool
+
+
+class TrendDetail(BaseModel):
+    keyword_id: int
+    keyword: str
+    origin: str
+    is_pod_relevant: bool
+    is_seed: bool
+    trend: TrendOut | None
+    signals: list[SignalSeries]
+    related: list[RelatedKeywordOut]
