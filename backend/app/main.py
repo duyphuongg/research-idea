@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api import products
 from app.config import Settings, get_settings
 from app.db import make_engine, make_session_factory
 
@@ -34,4 +35,5 @@ def create_app(
     def ping() -> dict[str, bool]:
         return {"ok": True}
 
+    app.include_router(products.router)
     return app
