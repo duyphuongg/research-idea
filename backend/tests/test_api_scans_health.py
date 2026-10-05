@@ -69,7 +69,7 @@ def test_source_health_reports_last_finished_run(client, session):
     session.add(ScanRun(source="etsy", status="running"))
     session.commit()
 
-    [etsy] = client.get("/api/health/sources").json()
+    etsy = next(s for s in client.get("/api/health/sources").json() if s["name"] == "etsy")
     assert etsy["name"] == "etsy"
     assert etsy["configured"] is True
     assert etsy["last_status"] == "failed"

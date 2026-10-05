@@ -19,7 +19,11 @@ def test_settings_defaults(client):
     body = client.get("/api/settings").json()
     assert body == {
         "scan_hour_utc": 11,
-        "connectors": [{"name": "etsy", "kind": "product", "configured": True, "enabled": True}],
+        "connectors": [
+            {"name": "etsy", "kind": "product", "configured": True, "enabled": True},
+            {"name": "google_suggest", "kind": "trend", "configured": True, "enabled": True},
+            {"name": "google_daily", "kind": "trend", "configured": True, "enabled": True},
+        ],
     }
 
 

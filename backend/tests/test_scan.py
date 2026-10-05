@@ -80,13 +80,13 @@ def test_registry_filters_unconfigured_and_disabled():
     configured = Settings(etsy_api_key="k", _env_file=None)
     unconfigured = Settings(etsy_api_key=None, _env_file=None)
 
-    assert [c.name for c in build_connectors(configured, {})] == ["etsy"]
-    assert build_connectors(configured, {"etsy": False}) == []
+    assert [c.name for c in build_connectors(configured, {})] == ["etsy", "google_suggest", "google_daily"]
+    assert [c.name for c in build_connectors(configured, {"etsy": False})] == ["google_suggest", "google_daily"]
     assert build_connectors(configured, {}, only=["amazon"]) == []
-    assert build_connectors(unconfigured, {}) == []
-    assert connector_status(unconfigured, {"etsy": False}) == [
-        {"name": "etsy", "kind": "product", "configured": False, "enabled": False}
-    ]
+    assert [c.name for c in build_connectors(unconfigured, {})] == ["google_suggest", "google_daily"]
+    assert connector_status(unconfigured, {"etsy": False})[0] == {
+        "name": "etsy", "kind": "product", "configured": False, "enabled": False
+    }
 
 
 class NormalizeFails(FakeConnector):
