@@ -1,0 +1,67 @@
+from datetime import date
+
+from sqlalchemy import func, select
+
+from app.connectors.base import NormalizedBatch, NormalizedSignal
+from app.models import Keyword, Product, ProductKeyword, ProductSnapshot, TrendSignal
+from app.pipeline.store import persist_batch
+from tests.fakes import make_product
+
+D1 = date(2026, 9, 20)
+D2 = date(2026, 9, 27)
+
+
+def count(session, model) -> int:
+    return session.scalar(select(func.count()).select_from(model))
+
+
+def test_persists_new_product_with_keyword_and_snapshot(session):
+    written = persist_batch(session, NormalizedBatch(products=[make_product(rank=4)]), D1)
+    session.commit()
+
+    assert written == 1
+    product = session.scalar(select(Product))
+    assert (product.source, product.external_id, product.title) == ("fake", "1", "Nurse Shirt")
+    keyword = session.scalar(select(Keyword))
+    assert keyword.text == "nurse"
+    link = session.get(ProductKeyword, (product.id, keyword.id))
+    assert (link.rank, link.last_seen) == (4, D1)
+    snapshot = session.scalar(select(ProductSnapshot))
+    assert (snapshot.date, snapshot.favorites, snapshot.price) == (D1, 10, 19.99)
+
+
+def test_same_day_is_upserted_and_keeps_best_rank(session):
+    batch = NormalizedBatch(
+        products=[make_product(rank=5, favorites=10), make_product(rank=2, favorites=12)]
+    )
+    persist_batch(session, batch, D1)
+    session.commit()
+
+    assert count(session, Product) == 1
+    assert count(session, ProductSnapshot) == 1
+    assert session.scalar(select(ProductSnapshot)).favorites == 12
+    assert session.scalar(select(ProductKeyword)).rank == 2
+
+
+def test_next_day_adds_snapshot_and_updates_fields(session):
+    persist_batch(session, NormalizedBatch(products=[make_product(favorites=10)]), D1)
+    persist_batch(
+        session, NormalizedBatch(products=[make_product(favorites=30, title="New Title", rank=9)]), D2
+    )
+    session.commit()
+
+    assert count(session, ProductSnapshot) == 2
+    assert session.scalar(select(Product)).title == "New Title"
+    assert session.scalar(select(ProductKeyword)).rank == 9
+
+
+def test_signals_are_upserted_per_day(session):
+    sig = NormalizedSignal(keyword="Nurse", source="etsy", metric="listing_count_tshirt", value=1.0, date=D1)
+    persist_batch(session, NormalizedBatch(signals=[sig]), D1)
+    sig2 = NormalizedSignal(keyword="nurse", source="etsy", metric="listing_count_tshirt", value=2.0, date=D1)
+    written = persist_batch(session, NormalizedBatch(signals=[sig2]), D1)
+    session.commit()
+
+    assert written == 1
+    assert count(session, TrendSignal) == 1
+    assert session.scalar(select(TrendSignal)).value == 2.0
