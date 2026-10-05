@@ -1,0 +1,39 @@
+# Lọc keyword cho POD áo (t-shirt / sweatshirt / hoodie) — chỉnh tự do.
+# blocklist: cụm từ cho thấy không phải nhu cầu mua áo thiết kế (so khớp nguyên từ).
+blocklist:
+  - near me
+  - amazon
+  - walmart
+  - target
+  - shein
+  - temu
+  - svg
+  - png
+  - pdf
+  - free
+  - template
+  - clipart
+  - cricut
+  - mockup
+  - wholesale
+  - bulk
+  - cheap
+  - score
+  - stats
+  - lineup
+  - schedule
+  - tickets
+  - weather
+  - stock
+  - death
+  - died
+  - arrested
+  - lawsuit
+# allow: từ đơn cho thấy ngách POD (dùng cho keyword không có parent, vd Daily Trends).
+allow:
+  apparel: [shirt, tee, tshirt, hoodie, sweatshirt, crewneck, apparel, gift, merch]
+  family: [mom, mama, mommy, dad, daddy, papa, grandma, grandpa, nana, gigi, aunt, auntie, uncle, wife, husband, sister, brother, family, bride, groom]
+  jobs: [nurse, teacher, doctor, nurse, rn, cna, paramedic, firefighter, police, trucker, mechanic, engineer, lawyer, chef, barber, hairstylist, pharmacist, dentist, vet, coach]
+  pets: [dog, cat, puppy, kitten, horse, chicken, pet, corgi, dachshund, pitbull, golden]
+  hobbies: [fishing, hunting, camping, hiking, golf, pickleball, tennis, baseball, softball, football, basketball, soccer, hockey, volleyball, bowling, gaming, gamer, reading, book, coffee, beer, wine, garden, gardening, yoga, running, cycling, farm, farmer, cowboy, cowgirl]
+  occasions: [christmas, halloween, thanksgiving, valentine, easter, birthday, anniversary, wedding, graduation, retirement, mothers, fathers, patriotic, fourth, july, independence, veterans, memorial, st, patrick, patricks, oktoberfest, fall, autumn, spooky, summer, spring, winter]
