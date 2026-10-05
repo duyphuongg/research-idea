@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_session
 from app.api.schemas import ConnectorStatusOut, SettingsIn, SettingsOut
 from app.connectors.registry import connector_status
+from app.scheduler import reschedule
 from app.settings_store import get_setting, set_setting
 
 router = APIRouter(prefix="/api")
@@ -38,4 +39,6 @@ def update_settings(
     if body.scan_hour_utc is not None:
         set_setting(session, "scan_hour_utc", body.scan_hour_utc)
     session.commit()
+    if body.scan_hour_utc is not None:
+        reschedule(request.app, body.scan_hour_utc)
     return settings_out(request, session)

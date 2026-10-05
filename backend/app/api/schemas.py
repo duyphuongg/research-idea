@@ -62,3 +62,29 @@ class SettingsOut(BaseModel):
 class SettingsIn(BaseModel):
     scan_hour_utc: int | None = Field(None, ge=0, le=23)
     connectors_enabled: dict[str, bool] | None = None
+
+
+class ScanIn(BaseModel):
+    sources: list[str] | None = None
+
+
+class ScanStarted(BaseModel):
+    sources: list[str]
+
+
+class ScanRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    source: str
+    status: str
+    started_at: datetime
+    finished_at: datetime | None
+    records: int
+    error: str | None
+
+
+class SourceHealthOut(ConnectorStatusOut):
+    last_status: str | None
+    last_finished_at: datetime | None
+    last_error: str | None
