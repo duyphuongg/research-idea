@@ -1,0 +1,5 @@
+# Trọng số điểm cơ hội (0–100). Thành phần thiếu dữ liệu bị bỏ và chia lại trọng số.
+weights:
+  demand: 0.35
+  momentum: 0.45
+  competition: 0.20
