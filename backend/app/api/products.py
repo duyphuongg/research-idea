@@ -38,7 +38,7 @@ def list_products(
     offset: int = Query(0, ge=0),
     session: Session = Depends(get_session),
 ) -> ProductPage:
-    products = session.scalars(select(Product).options(selectinload(Product.snapshots))).all()
+    products = session.scalars(select(Product).order_by(Product.id).options(selectinload(Product.snapshots))).all()
 
     metrics = {
         p.id: compute_velocity(

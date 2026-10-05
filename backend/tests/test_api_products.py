@@ -82,3 +82,34 @@ def test_pagination(client, catalog):
 
 def test_invalid_sort_rejected(client):
     assert client.get("/api/products?sort=bogus").status_code == 422
+
+
+def test_ties_are_ordered_by_id(client, session):
+    """Test that products with same velocity (all None) are ordered by id"""
+    # Insert several products with no snapshots (velocity None for all)
+    products = []
+    for i in range(4):
+        p = add_product(
+            session, f"tie_{i}", "tshirt", datetime(2026, 9, 27),
+            [(date(2026, 9, 27), 1)],  # At least one snapshot, no keyword
+        )
+        products.append(p)
+    session.commit()
+
+    # All products have velocity=None (no change over time)
+    # They should be ordered by id
+    resp = client.get("/api/products?sort=velocity")
+    assert resp.status_code == 200
+    returned_ids = ids(resp)
+    product_ids = sorted([p.id for p in products])
+    assert returned_ids == product_ids
+
+    # Test pagination doesn't duplicate/skip items
+    resp1 = client.get("/api/products?sort=velocity&limit=2&offset=0")
+    resp2 = client.get("/api/products?sort=velocity&limit=2&offset=2")
+    items1 = ids(resp1)
+    items2 = ids(resp2)
+    assert len(items1) == 2
+    assert len(items2) == 2
+    assert items1 + items2 == product_ids
+    assert len(set(items1) & set(items2)) == 0  # No duplicates
