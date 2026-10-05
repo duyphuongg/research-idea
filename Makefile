@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -18,3 +18,6 @@ test:
 
 smoke:
 	cd backend && .venv/bin/python scripts/smoke.py
+
+rescore:
+	cd backend && .venv/bin/python scripts/rescore.py

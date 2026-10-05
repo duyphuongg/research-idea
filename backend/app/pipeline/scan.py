@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.connectors.base import Connector
 from app.db import utcnow
 from app.models import RawPayload, ScanRun, Seed
+from app.pipeline.rescore import rescore
 from app.pipeline.store import persist_batch
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,13 @@ async def run_scan(
         )
 
     run_ids = [await _run_one(session_factory, c, keywords, today) for c in connectors]
+
+    try:
+        with session_factory() as session:
+            rescore(session, today)
+            session.commit()
+    except Exception:  # scoring must never break a scan
+        logger.exception("Rescoring failed")
 
     with session_factory() as session:
         purge_raw_payloads(session, older_than=utcnow() - timedelta(days=retention_days))
