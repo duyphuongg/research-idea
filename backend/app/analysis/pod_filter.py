@@ -77,7 +77,7 @@ def is_pod_relevant(
             return False
     toks = tokens(normalized)
     for t in toks:
-        if re.search(r"\d{3,}", t) and not _YEAR.fullmatch(t):
+        if re.fullmatch(r"\d{3,}", t) and not _YEAR.fullmatch(t):
             return False
     singular = {singularize(t) for t in toks}
     if not singular or singular <= GENERIC_WORDS:

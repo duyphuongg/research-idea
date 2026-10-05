@@ -93,3 +93,9 @@ def test_singularize(token, expected):
 )
 def test_adds_only_product_words(text, parent, expected):
     assert adds_only_product_words(text, parent) is expected
+
+
+def test_digit_rule_only_blocks_all_digit_tokens():
+    rules = PodFilterRules(blocklist=(), allow=frozenset({"school"}))
+    assert is_pod_relevant("100th day of school shirt", origin="discovered", has_parent=False, rules=rules) is True
+    assert is_pod_relevant("school 727", origin="discovered", has_parent=False, rules=rules) is False
