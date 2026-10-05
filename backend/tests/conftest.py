@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 from app.config import Settings
 from app.db import Base, make_session_factory
 from app.main import create_app
+import app.models  # noqa: F401  (registers tables on Base.metadata)
 
 
 @pytest.fixture
