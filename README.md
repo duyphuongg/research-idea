@@ -2,6 +2,7 @@
 
 Ứng dụng nghiên cứu ngách & sản phẩm POD (t-shirt, sweatshirt, hoodie) bán chạy tại Mỹ.
 Phase 1: connector Etsy, theo dõi Best Sellers (snapshot hằng ngày, tăng trưởng 7 ngày, 🔥), trang Cài đặt.
+Phase 2: Trend Radar — gom tín hiệu từ Etsy + Google (thị trường Mỹ), chấm điểm cơ hội 0–100 cho từng keyword/ngách.
 
 ## Cài đặt
 
@@ -31,6 +32,24 @@ Vào **Cài đặt** → thêm keyword (vd `nurse`, `dog mom`) → **Quét ngay*
 Scheduler tự quét mỗi ngày theo giờ UTC đã chọn (backend phải đang chạy).
 
 Velocity/🔥 cần ít nhất 2 lần quét cách nhau ≥ 3 ngày.
+
+## Trend Radar (Phase 2)
+
+Nguồn dữ liệu (chỉ thị trường Mỹ):
+- **Etsy** — chỉ shop ở Mỹ, giá USD: lượt xem TB/ngày, số listing mới ≤ 30 ngày, tổng listing (cạnh tranh), tag phổ biến → ngách con.
+- **Google gợi ý (US)** — cụm từ người Mỹ gõ sau "<keyword> shirt/hoodie/sweatshirt" → ngách con.
+- **Google xu hướng ngày (US)** — sự kiện/tìm kiếm nóng trong ngày (đã lọc theo POD).
+
+Điểm 0–100 = nhu cầu 35% + đà tăng 45% + ít cạnh tranh 20% (chỉnh trong `backend/config/scoring.yaml`).
+- Nhu cầu: percentile theo từng nguồn, kéo về 0.5 khi nguồn có < 5 keyword.
+- Đà tăng: chỉ thưởng tăng trưởng dương (≤ 0 → 0 điểm).
+- Thiếu đà tăng/cạnh tranh được tính trung tính 0.5 (không bị loại), giao diện vẫn hiện "—".
+
+Bộ lọc POD chỉnh trong `backend/config/pod_filter.yaml`. Đà tăng cần ≥ 8 ngày dữ liệu (quét hằng ngày).
+Sau khi đổi cấu hình: `make rescore`.
+
+Bấm **+ Theo dõi** ở một ngách khám phá để Etsy quét sản phẩm cho ngách đó từ lần sau.
+TikTok Creative Center và Google Trends (biểu đồ quan tâm) chưa hỗ trợ: cả hai chặn truy cập tự động.
 
 ## Test
 

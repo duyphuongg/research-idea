@@ -226,10 +226,10 @@ Etsy `limit` tăng lên 100 / truy vấn. Snapshot sản phẩm lưu thêm `view
 
 **Chấm điểm** (thay mục 5.2, trọng số trong `backend/config/scoring.yaml`, mặc định 0.35/0.45/0.20):
 - Metric chính mỗi nguồn: etsy `views_per_day`, etsy_tags `tag_count`, google_suggest `suggest_score`, google_daily `traffic`. Nguồn "active" nếu có điểm dữ liệu trong 7 ngày gần nhất; keyword không có nguồn active → không chấm.
-- Demand = trung bình percentile (theo từng nguồn) của giá trị mới nhất.
-- Growth mỗi nguồn = mean(7 ngày gần nhất) / mean(ngày 8–30) − 1 (cần cả hai cửa sổ, mean cũ > 0); Momentum = percentile của growth trung bình + 0.1 × (số nguồn growth > 0.2 − 1), cắt ở 1.
+- Demand = trung bình percentile (theo từng nguồn) của giá trị mới nhất; percentile được kéo về 0.5 khi nguồn có < 5 keyword.
+- Growth mỗi nguồn = mean(7 ngày gần nhất) / mean(ngày 8–30) − 1 (cần cả hai cửa sổ, mean cũ > 0); Momentum chỉ thưởng tăng trưởng dương (growth ≤ 0 → 0); còn lại = percentile (đã kéo về 0.5 khi ít keyword) của growth trung bình + 0.1 × (số nguồn growth > 0.2 − 1), cắt ở 1.
 - Competition = min-max của log1p(`etsy/listing_count_tshirt`) mới nhất (chỉ seed có).
-- Score = 100 × tổng có trọng số các thành phần có mặt / tổng trọng số có mặt (Competition dùng 1 − c).
+- Score = 100 × tổng có trọng số các thành phần (Competition dùng 1 − c). Momentum/Competition thiếu dữ liệu được tính trung tính 0.5 thay vì bị loại, nhưng vẫn báo `null` để UI hiện "—".
 - Chấm lại sau mỗi lần quét (`keyword_scores`, 1 dòng / keyword / ngày) và qua `make rescore`.
 
 **API & UI Phase 2:** `GET /api/trends` (ngày chấm mới nhất; lọc source/origin/pod_only; sparkline điểm 30 ngày), `GET /api/trends/{id}` (tín hiệu theo nguồn 30 ngày, keyword liên quan, điểm). Trang `/` = Trend Radar; `/trends/[id]` = chi tiết keyword (biểu đồ Recharts, keyword liên quan, sản phẩm Etsy nếu là seed). Nút "+ Theo dõi" thêm keyword vào watchlist để Etsy quét từ lần sau.
