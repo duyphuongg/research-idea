@@ -195,3 +195,41 @@ Makefile, .env.example, README.md
 - Điều khoản sử dụng của các nền tảng: chỉ dùng cho nghiên cứu nội bộ, tần suất thấp (1 lần/ngày), tôn trọng rate limit.
 - Proxy doanh số (reviews/favorites) không phản ánh chính xác doanh thu → ghi chú rõ trên UI.
 - Chi phí Apify vượt free tier nếu quét nhiều keyword → giới hạn số keyword/sản phẩm cho Amazon trong settings.
+
+## 13. Cập nhật Phase 2 (2026-10-05, sau khi thử nghiệm nguồn thật)
+
+Thử nghiệm thực tế từ máy người dùng:
+- TikTok Creative Center: API cần chữ ký; qua Playwright khi chưa đăng nhập chỉ thấy top 3 hashtag chung → **bỏ khỏi Phase 2**.
+- Google Trends (interest over time / rising queries): 429 kể cả qua trình duyệt headless → **bỏ khỏi Phase 2**.
+- Pinterest Trends: 400 → bỏ.
+- Hoạt động ổn định: Etsy Open API (đã có key), Google Autocomplete (`suggestqueries.google.com`, `gl=us`), Google Daily Trends RSS (`trends.google.com/trending/rss?geo=US`).
+
+**Chỉ thị trường Mỹ:** Etsy chỉ giữ listing có `shop.is_shop_us_based == true` và giá `USD`; Google Autocomplete `gl=us&hl=en`; Daily Trends `geo=US`.
+
+**Nguồn & tín hiệu Phase 2** (lưu vào `trend_signals`):
+
+| source | keyword | metric | ý nghĩa |
+|---|---|---|---|
+| `etsy` | seed | `listing_count_<type>` | tổng listing toàn Etsy (cạnh tranh) — đã có |
+| `etsy` | seed | `us_listing_count` | số listing áo của shop US trong top 100 × 3 truy vấn (dedupe) |
+| `etsy` | seed | `views_per_day` | trung bình `views / tuổi listing (ngày)` của listing shop US (nhu cầu) |
+| `etsy` | seed | `new_listings_30d` | số listing shop US đăng ≤ 30 ngày (ngách đang nóng lên) |
+| `etsy_tags` | tag (discovered, parent = seed) | `tag_count` | số listing shop US dùng tag (≥ 3) |
+| `google_suggest` | gợi ý (discovered, parent = seed) | `suggest_score` | `11 − thứ hạng gợi ý` (10 = gợi ý đầu tiên) |
+| `google_daily` | xu hướng ngày (discovered, không parent) | `traffic` | lượt tìm kiếm ước tính ("50K+" → 50000) |
+
+Etsy `limit` tăng lên 100 / truy vấn. Snapshot sản phẩm lưu thêm `views`; sản phẩm lưu `shop_sold_count` (= `transaction_sold_count` của shop — số bán thật cấp shop). Velocity/🔥 ưu tiên metric `reviews` > `views` > `favorites` (chọn 1 metric cho cả chuỗi).
+
+**Quan hệ keyword:** bảng `keyword_relations(parent_id, child_id, source, last_seen)` — ngách con từ tag/gợi ý của seed.
+
+**Lọc POD** (`backend/config/pod_filter.yaml`): seed luôn relevant; chứa từ chặn (near me, amazon, svg, png, free…) → không; discovered có parent → relevant; không parent (Daily Trends) → relevant chỉ khi chứa từ cho phép (nghề, vai trò gia đình, thú cưng, sở thích, dịp lễ, từ chỉ áo/quà).
+
+**Chấm điểm** (thay mục 5.2, trọng số trong `backend/config/scoring.yaml`, mặc định 0.35/0.45/0.20):
+- Metric chính mỗi nguồn: etsy `views_per_day`, etsy_tags `tag_count`, google_suggest `suggest_score`, google_daily `traffic`. Nguồn "active" nếu có điểm dữ liệu trong 7 ngày gần nhất; keyword không có nguồn active → không chấm.
+- Demand = trung bình percentile (theo từng nguồn) của giá trị mới nhất.
+- Growth mỗi nguồn = mean(7 ngày gần nhất) / mean(ngày 8–30) − 1 (cần cả hai cửa sổ, mean cũ > 0); Momentum = percentile của growth trung bình + 0.1 × (số nguồn growth > 0.2 − 1), cắt ở 1.
+- Competition = min-max của log1p(`etsy/listing_count_tshirt`) mới nhất (chỉ seed có).
+- Score = 100 × tổng có trọng số các thành phần có mặt / tổng trọng số có mặt (Competition dùng 1 − c).
+- Chấm lại sau mỗi lần quét (`keyword_scores`, 1 dòng / keyword / ngày) và qua `make rescore`.
+
+**API & UI Phase 2:** `GET /api/trends` (ngày chấm mới nhất; lọc source/origin/pod_only; sparkline điểm 30 ngày), `GET /api/trends/{id}` (tín hiệu theo nguồn 30 ngày, keyword liên quan, điểm). Trang `/` = Trend Radar; `/trends/[id]` = chi tiết keyword (biểu đồ Recharts, keyword liên quan, sản phẩm Etsy nếu là seed). Nút "+ Theo dõi" thêm keyword vào watchlist để Etsy quét từ lần sau.
