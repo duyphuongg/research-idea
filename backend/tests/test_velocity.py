@@ -66,3 +66,22 @@ def test_hot_ids_top_ten_percent_per_group():
 
 def test_hot_ids_ignores_non_positive():
     assert hot_ids([(1, ("etsy", "tshirt"), 0.0), (2, ("etsy", "tshirt"), None)]) == set()
+
+
+def test_mixed_metrics_do_not_cross_compare():
+    """Metric must be chosen once per series; baseline and latest must use same metric."""
+    points = [
+        SnapshotPoint(date(2026, 9, 20), reviews=None, favorites=500),
+        SnapshotPoint(date(2026, 9, 27), reviews=3, favorites=510),
+    ]
+    assert compute_velocity(points, None) == (None, None)
+
+
+def test_falls_back_to_favorites_when_latest_has_no_reviews():
+    """When latest has no reviews, use favorites for the entire series."""
+    points = [
+        SnapshotPoint(date(2026, 9, 20), reviews=3, favorites=100),
+        SnapshotPoint(date(2026, 9, 27), reviews=None, favorites=170),
+    ]
+    delta, _ = compute_velocity(points, None)
+    assert delta == pytest.approx(70)

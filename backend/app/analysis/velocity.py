@@ -15,17 +15,40 @@ class SnapshotPoint:
     favorites: int | None
 
 
-def _metric(point: SnapshotPoint) -> int | None:
-    return point.reviews if point.reviews is not None else point.favorites
+def _chosen_metric_name(point: SnapshotPoint) -> str:
+    """Return 'reviews' if reviews is not None, else 'favorites'."""
+    return "reviews" if point.reviews is not None else "favorites"
 
 
 def compute_velocity(
     snapshots: list[SnapshotPoint], listed_on: date | None
 ) -> tuple[float | None, float | None]:
     """Return (delta over 7 days, delta per week of listing age)."""
-    points = sorted((p for p in snapshots if _metric(p) is not None), key=lambda p: p.date)
+    # Sort first to find the latest snapshot
+    sorted_snapshots = sorted(snapshots, key=lambda p: p.date)
+
+    # Find the latest snapshot that has any metric
+    latest_with_metric = None
+    for p in reversed(sorted_snapshots):
+        if p.reviews is not None or p.favorites is not None:
+            latest_with_metric = p
+            break
+
+    if latest_with_metric is None:
+        return None, None
+
+    # Choose metric type based on latest snapshot
+    metric_name = _chosen_metric_name(latest_with_metric)
+
+    # Filter to only points with the chosen metric and sort
+    points = sorted(
+        (p for p in snapshots if getattr(p, metric_name) is not None),
+        key=lambda p: p.date,
+    )
+
     if len(points) < 2:
         return None, None
+
     latest = points[-1]
     cutoff = latest.date - timedelta(days=WINDOW_DAYS)
     older = [p for p in points[:-1] if p.date <= cutoff]
@@ -33,7 +56,11 @@ def compute_velocity(
     span = (latest.date - base.date).days
     if span < MIN_SPAN_DAYS:
         return None, None
-    delta_7d = (_metric(latest) - _metric(base)) * WINDOW_DAYS / span
+    delta_7d = (
+        (getattr(latest, metric_name) - getattr(base, metric_name))
+        * WINDOW_DAYS
+        / span
+    )
     weeks = (latest.date - listed_on).days / 7 if listed_on else 1.0
     return delta_7d, delta_7d / max(1.0, weeks)
 
