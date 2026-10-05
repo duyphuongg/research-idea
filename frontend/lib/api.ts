@@ -115,6 +115,30 @@ export type TrendDetail = {
   related: RelatedKeyword[];
 };
 
+export type CalendarIdea = { keyword: string; keyword_id: number | null; score: number | null; is_seed: boolean };
+export type CalendarMatch = { keyword_id: number; keyword: string; score: number };
+export type CalendarPhase = "upcoming" | "design" | "launch" | "push" | "cutoff" | "peak" | "after";
+export type CalendarEvent = {
+  key: string;
+  name: string;
+  type: "holiday" | "occasion" | "awareness" | "sale";
+  start: string;
+  end: string;
+  days_until: number;
+  phase: CalendarPhase;
+  phase_label: string;
+  advice: string;
+  note: string;
+  design_start: string;
+  launch_by: string;
+  push_from: string;
+  ship_by: string | null;
+  theme_words: string[];
+  seed_ideas: CalendarIdea[];
+  radar_matches: CalendarMatch[];
+};
+export type CalendarPage = { today: string; fulfillment_days: number; events: CalendarEvent[] };
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -156,4 +180,5 @@ export const api = {
     request<{ sources: string[] }>("/api/scans", { method: "POST", body: JSON.stringify({ sources }) }),
   listScans: (limit = 20) => request<ScanRun[]>(`/api/scans${toQuery({ limit })}`),
   sourceHealth: () => request<SourceHealth[]>("/api/health/sources"),
+  getCalendar: (days = 120) => request<CalendarPage>(`/api/calendar${toQuery({ days })}`),
 };

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Sparkline from "@/components/Sparkline";
 import SourceHealthBanner from "@/components/SourceHealthBanner";
+import UpcomingEvents from "@/components/UpcomingEvents";
 import { ApiError, api, type TrendPage, type TrendQuery } from "@/lib/api";
 import { SOURCE_LABEL, formatGrowth } from "@/lib/format";
 
@@ -45,6 +46,7 @@ export default function TrendRadarPage() {
   return (
     <div>
       <SourceHealthBanner />
+      <UpcomingEvents />
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <h1 className="mr-auto text-xl font-semibold">Trend Radar</h1>
         <select

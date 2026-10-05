@@ -20,6 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/products" className="text-zinc-600 hover:text-zinc-900">
               Best Sellers
             </Link>
+            <Link href="/calendar" className="text-zinc-600 hover:text-zinc-900">
+              Lịch mùa vụ
+            </Link>
             <Link href="/settings" className="text-zinc-600 hover:text-zinc-900">
               Cài đặt
             </Link>
