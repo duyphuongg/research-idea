@@ -233,3 +233,10 @@ Etsy `limit` tăng lên 100 / truy vấn. Snapshot sản phẩm lưu thêm `view
 - Chấm lại sau mỗi lần quét (`keyword_scores`, 1 dòng / keyword / ngày) và qua `make rescore`.
 
 **API & UI Phase 2:** `GET /api/trends` (ngày chấm mới nhất; lọc source/origin/pod_only; sparkline điểm 30 ngày), `GET /api/trends/{id}` (tín hiệu theo nguồn 30 ngày, keyword liên quan, điểm). Trang `/` = Trend Radar; `/trends/[id]` = chi tiết keyword (biểu đồ Recharts, keyword liên quan, sản phẩm Etsy nếu là seed). Nút "+ Theo dõi" thêm keyword vào watchlist để Etsy quét từ lần sau.
+
+## 14. Lịch mùa vụ US (2026-10-05)
+
+- Sự kiện cấu hình trong `backend/config/us_calendar.yaml` (lễ lớn, dịp POD, tháng nhận thức, sale TikTok Shop: 11.11, 12.12, Black Friday, Cyber Monday). Ngày lễ di động tính tự động (thứ n trong tháng, thứ cuối tháng, Easter, lệch ngày so với sự kiện khác).
+- `fulfillment_days: 10` (in + giao POD). Mốc tính lùi từ ngày bắt đầu sự kiện S: thiết kế S−56, lên sản phẩm S−42, đẩy mạnh S−28, hạn chót giao S−10 (chỉ sự kiện cần giao trước ngày lễ; sale không có). Giai đoạn: upcoming → design → launch → push → cutoff → peak (trong sự kiện) → after (≤ 7 ngày sau).
+- Ghép ngách: `[từ chủ đề đầu tiên của sự kiện] + [seed]` (vd "halloween nurse"), kèm điểm Trend Radar nếu keyword đã có; và các keyword Trend Radar (POD) chứa từ chủ đề của sự kiện.
+- API `GET /api/calendar?days=120`; trang `/calendar`; dải "Sắp tới" trên Trend Radar. Không dùng nguồn ngoài.
