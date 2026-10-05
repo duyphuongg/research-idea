@@ -52,6 +52,14 @@ Sửa `pod_filter.yaml` / `scoring.yaml` rồi chạy `make rescore` để áp d
 Bấm **+ Theo dõi** ở một ngách khám phá để Etsy quét sản phẩm cho ngách đó từ lần sau.
 TikTok Creative Center và Google Trends (biểu đồ quan tâm) chưa hỗ trợ: cả hai chặn truy cập tự động.
 
+## Lịch mùa vụ (Mỹ)
+
+Trang **Lịch mùa vụ**: các dịp bán áo POD ở Mỹ (lễ lớn, Back to School, Nurses Week, tháng nhận thức, sale TikTok Shop 11.11 / 12.12 / Black Friday / Cyber Monday) với số ngày còn lại, giai đoạn hiện tại và việc nên làm.
+Ngoài ra còn có Women's History Month, Earth Day, Cinco de Mayo, Mardi Gras, Juneteenth, Grandparents Day, Hispanic Heritage Month và Día de los Muertos.
+Mốc tính lùi: thiết kế −8 tuần, lên sản phẩm −6 tuần, đẩy mạnh −4 tuần, hạn chót giao hàng −10 ngày (in + giao POD).
+Mỗi sự kiện gợi ý ghép với seed của bạn (vd "halloween nurse"); các sự kiện sale ghép dạng "<seed> gift" / "<seed> christmas gift". Đồng thời liệt kê keyword liên quan đang có trên Trend Radar.
+Chỉnh sự kiện / thời gian giao hàng trong `backend/config/us_calendar.yaml`.
+
 ## Test
 
 ```bash
