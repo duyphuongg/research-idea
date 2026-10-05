@@ -37,3 +37,20 @@ def test_settings_update_merges_and_validates(client):
 
 def test_settings_never_exposes_api_key(client):
     assert "test-key" not in client.get("/api/settings").text
+
+
+def test_settings_update_reschedules_only_when_hour_given(client):
+    calls = []
+
+    class FakeScheduler:
+        def reschedule_job(self, job_id, trigger=None):
+            calls.append((job_id, trigger))
+
+    client.app.state.scheduler = FakeScheduler()
+
+    client.put("/api/settings", json={"connectors_enabled": {"etsy": False}})
+    assert calls == []
+
+    client.put("/api/settings", json={"scan_hour_utc": 4})
+    assert len(calls) == 1
+    assert calls[0][0] == "daily_scan"

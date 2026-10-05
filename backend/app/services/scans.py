@@ -28,9 +28,17 @@ def resolve_connectors(app: Any, session: Session, only: list[str] | None = None
     return app.state.connector_factory(app.state.settings, overrides, only)
 
 
+def try_begin_scan(app: Any) -> bool:
+    return app.state.scan_lock.acquire(blocking=False)
+
+
 async def execute_scan(app: Any, connectors: list[Connector]) -> list[int]:
-    return await run_scan(
-        app.state.session_factory,
-        connectors,
-        retention_days=app.state.settings.raw_retention_days,
-    )
+    """Run a scan; the caller must already hold the lock from try_begin_scan."""
+    try:
+        return await run_scan(
+            app.state.session_factory,
+            connectors,
+            retention_days=app.state.settings.raw_retention_days,
+        )
+    finally:
+        app.state.scan_lock.release()

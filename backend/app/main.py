@@ -1,3 +1,4 @@
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -24,14 +25,17 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         scheduler = start_scheduler(app) if settings.scheduler_enabled else None
-        yield
-        if scheduler is not None:
-            scheduler.shutdown(wait=False)
+        try:
+            yield
+        finally:
+            if scheduler is not None:
+                scheduler.shutdown(wait=False)
 
     app = FastAPI(title="POD Trend Radar", lifespan=lifespan)
     app.state.settings = settings
     app.state.session_factory = session_factory
     app.state.connector_factory = connector_factory
+    app.state.scan_lock = threading.Lock()
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

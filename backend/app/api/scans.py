@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_session
 from app.api.schemas import ScanIn, ScanRunOut, ScanStarted
 from app.models import ScanRun
-from app.services.scans import execute_scan, resolve_connectors, scan_in_progress
+from app.services.scans import execute_scan, resolve_connectors, scan_in_progress, try_begin_scan
 
 router = APIRouter(prefix="/api")
 
@@ -22,6 +22,8 @@ def start_scan(
     connectors = resolve_connectors(request.app, session, body.sources if body else None)
     if not connectors:
         raise HTTPException(status_code=400, detail="No enabled and configured connectors")
+    if not try_begin_scan(request.app):
+        raise HTTPException(status_code=409, detail="A scan is already running")
     background.add_task(execute_scan, request.app, connectors)
     return ScanStarted(sources=[c.name for c in connectors])
 

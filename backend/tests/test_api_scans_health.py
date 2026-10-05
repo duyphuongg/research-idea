@@ -37,6 +37,25 @@ def test_start_scan_conflicts_when_running(make_client, session):
     assert client.post("/api/scans", json={}).status_code == 409
 
 
+def test_start_scan_conflicts_while_lock_held(make_client):
+    client = make_client(connector_factory=lambda s, o, only: [FakeConnector()])
+    lock = client.app.state.scan_lock
+    assert lock.acquire(blocking=False)
+    try:
+        assert client.post("/api/scans", json={}).status_code == 409
+    finally:
+        lock.release()
+    assert client.post("/api/scans", json={}).status_code == 202
+
+
+def test_scan_lock_released_after_background_scan(make_client):
+    client = make_client(connector_factory=lambda s, o, only: [FakeConnector()])
+    assert client.post("/api/scans", json={}).status_code == 202
+    lock = client.app.state.scan_lock
+    assert lock.acquire(blocking=False)
+    lock.release()
+
+
 def test_start_scan_requires_enabled_connector(make_client):
     client = make_client(connector_factory=lambda s, o, only: [])
     assert client.post("/api/scans", json={}).status_code == 400

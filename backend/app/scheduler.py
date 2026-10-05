@@ -4,7 +4,7 @@ from typing import Any
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from app.services.scans import execute_scan, resolve_connectors, scan_in_progress
+from app.services.scans import execute_scan, resolve_connectors, scan_in_progress, try_begin_scan
 from app.settings_store import get_setting
 
 logger = logging.getLogger(__name__)
@@ -16,13 +16,21 @@ def _trigger(hour: int) -> CronTrigger:
 
 
 async def scheduled_scan(app: Any) -> None:
-    with app.state.session_factory() as session:
-        if scan_in_progress(session):
-            logger.info("Skipping scheduled scan: another scan is running")
+    try:
+        with app.state.session_factory() as session:
+            if scan_in_progress(session):
+                logger.info("Skipping scheduled scan: another scan is running")
+                return
+            connectors = resolve_connectors(app, session)
+        if not connectors:
+            logger.info("Skipping scheduled scan: no enabled connectors")
             return
-        connectors = resolve_connectors(app, session)
-    if connectors:
+        if not try_begin_scan(app):
+            logger.info("Skipping scheduled scan: another scan is starting")
+            return
         await execute_scan(app, connectors)
+    except Exception:
+        logger.exception("Scheduled scan failed")
 
 
 def start_scheduler(app: Any) -> AsyncIOScheduler:
