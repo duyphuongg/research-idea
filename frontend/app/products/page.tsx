@@ -10,7 +10,7 @@ const PAGE_SIZE = 60;
 
 const SORTS: { value: ProductSort; label: string }[] = [
   { value: "velocity", label: "Tăng trưởng 7 ngày" },
-  { value: "reviews", label: "Tổng reviews/favorites" },
+  { value: "reviews", label: "Phổ biến (reviews/lượt xem)" },
   { value: "newest", label: "Mới đăng" },
   { value: "price", label: "Giá thấp → cao" },
 ];
@@ -93,8 +93,8 @@ export default function ProductsPage() {
         </select>
       </div>
       <p className="mb-4 text-xs text-zinc-500">
-        Reviews/favorites và mức tăng 7 ngày là chỉ số ước tính (proxy), không phải doanh số thật. 🔥 = top 10% tăng
-        trưởng trong cùng nguồn và loại áo.
+        Lượt xem / favorites / reviews và mức tăng 7 ngày là chỉ số ước tính (proxy), không phải doanh số thật. Chỉ
+        hiển thị shop ở Mỹ. 🔥 = top 10% tăng trưởng trong cùng nguồn và loại áo.
       </p>
 
       {result?.error && !loading && <p className="text-sm text-red-600">Không tải được dữ liệu: {result.error}</p>}

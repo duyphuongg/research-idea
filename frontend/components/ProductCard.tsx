@@ -1,10 +1,12 @@
 import type { Product } from "@/lib/api";
-import { PRODUCT_TYPE_LABEL, formatPrice, timeAgo } from "@/lib/format";
+import { PRODUCT_TYPE_LABEL, formatNumber, formatPrice, timeAgo } from "@/lib/format";
+
+const METRIC_UNIT = { reviews: "reviews", views: "lượt xem", favorites: "favorites" } as const;
 
 export default function ProductCard({ product }: { product: Product }) {
-  const isReviews = product.reviews !== null;
-  const count = isReviews ? product.reviews : product.favorites;
-  const label = isReviews ? "reviews" : "favorites";
+  const metric =
+    product.velocity_metric ?? (product.reviews !== null ? "reviews" : product.views !== null ? "views" : "favorites");
+  const count = product[metric];
   const delta = product.delta_7d;
 
   return (
@@ -37,16 +39,21 @@ export default function ProductCard({ product }: { product: Product }) {
           <span className="text-xs text-zinc-500">{PRODUCT_TYPE_LABEL[product.product_type]}</span>
         </div>
         <p className="text-xs text-zinc-600">
-          {count ?? "—"} {label}
+          {formatNumber(count)} {METRIC_UNIT[metric]}
           {delta !== null && (
             <span className={delta > 0 ? "ml-1 text-green-600" : "ml-1 text-zinc-400"}>
               ({delta > 0 ? "+" : ""}
               {Math.round(delta)} / 7 ngày)
             </span>
           )}
+          {metric !== "favorites" && product.favorites !== null && (
+            <span className="ml-1 text-zinc-400">· {formatNumber(product.favorites)} favorites</span>
+          )}
         </p>
         <p className="text-xs text-zinc-500">
-          {product.shop_name ?? "—"} · đăng {timeAgo(product.listed_at)}
+          {product.shop_name ?? "—"}
+          {product.shop_sold_count !== null && <> · shop đã bán {formatNumber(product.shop_sold_count)}</>} · đăng{" "}
+          {timeAgo(product.listed_at)}
         </p>
         {product.keywords.length > 0 && (
           <div className="mt-auto flex flex-wrap gap-1 pt-1">

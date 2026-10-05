@@ -23,6 +23,9 @@ export type Product = {
   reviews: number | null;
   favorites: number | null;
   rating: number | null;
+  views: number | null;
+  shop_sold_count: number | null;
+  velocity_metric: "reviews" | "views" | "favorites" | null;
   delta_7d: number | null;
   velocity: number | null;
   hot: boolean;
@@ -64,6 +67,54 @@ export type SourceHealth = ConnectorStatus & {
   last_error: string | null;
 };
 
+export type TrendItem = {
+  keyword_id: number;
+  keyword: string;
+  origin: "seed" | "discovered";
+  is_pod_relevant: boolean;
+  is_seed: boolean;
+  is_new: boolean;
+  score: number;
+  demand: number | null;
+  momentum: number | null;
+  competition: number | null;
+  growth: number | null;
+  sources: string[];
+  sources_rising: number;
+  sparkline: number[];
+};
+
+export type TrendPage = { date: string | null; items: TrendItem[] };
+
+export type TrendQuery = {
+  source?: string;
+  origin?: "seed" | "discovered";
+  pod_only?: boolean;
+  limit?: number;
+};
+
+export type SignalSeries = { source: string; metric: string; points: { date: string; value: number }[] };
+
+export type RelatedKeyword = {
+  keyword_id: number;
+  keyword: string;
+  relation: "child" | "parent";
+  source: string;
+  score: number | null;
+  is_pod_relevant: boolean;
+};
+
+export type TrendDetail = {
+  keyword_id: number;
+  keyword: string;
+  origin: "seed" | "discovered";
+  is_pod_relevant: boolean;
+  is_seed: boolean;
+  trend: TrendItem | null;
+  signals: SignalSeries[];
+  related: RelatedKeyword[];
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -89,6 +140,11 @@ function toQuery(params: Record<string, string | number | undefined>): string {
 
 export const api = {
   listProducts: (q: ProductQuery = {}) => request<ProductPage>(`/api/products${toQuery(q)}`),
+  listTrends: (q: TrendQuery = {}) =>
+    request<TrendPage>(
+      `/api/trends${toQuery({ ...q, pod_only: q.pod_only === undefined ? undefined : String(q.pod_only) })}`,
+    ),
+  getTrend: (id: number) => request<TrendDetail>(`/api/trends/${id}`),
   listSeeds: () => request<Seed[]>("/api/seeds"),
   addSeed: (keyword: string) =>
     request<Seed>("/api/seeds", { method: "POST", body: JSON.stringify({ keyword }) }),
