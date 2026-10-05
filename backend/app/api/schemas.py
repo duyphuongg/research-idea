@@ -145,3 +145,42 @@ class TrendDetail(BaseModel):
     trend: TrendOut | None
     signals: list[SignalSeries]
     related: list[RelatedKeywordOut]
+
+
+class CalendarIdea(BaseModel):
+    keyword: str
+    keyword_id: int | None
+    score: float | None
+    is_seed: bool
+
+
+class CalendarMatch(BaseModel):
+    keyword_id: int
+    keyword: str
+    score: float
+
+
+class CalendarEventOut(BaseModel):
+    key: str
+    name: str
+    type: str
+    start: date
+    end: date
+    days_until: int
+    phase: str
+    phase_label: str
+    advice: str
+    note: str
+    design_start: date
+    launch_by: date
+    push_from: date
+    ship_by: date | None
+    theme_words: list[str]
+    seed_ideas: list[CalendarIdea]
+    radar_matches: list[CalendarMatch]
+
+
+class CalendarPage(BaseModel):
+    today: date
+    fulfillment_days: int
+    events: list[CalendarEventOut]
