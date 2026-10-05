@@ -1,0 +1,31 @@
+# Lịch mùa vụ thị trường Mỹ cho POD áo. Chỉnh tự do; ngày được tính lại mỗi năm.
+# type: holiday | occasion | awareness | sale.  ship_by: cần giao trước ngày lễ?
+# theme_words: từ đầu tiên dùng để ghép ngách với seed (vd "halloween nurse").
+fulfillment_days: 10
+events:
+  - {key: new_year, name: "New Year", type: holiday, rule: {kind: fixed, month: 1, day: 1}, theme_words: [new year, "2027", cheers]}
+  - {key: black_history_month, name: "Black History Month", type: awareness, rule: {kind: month, month: 2}, theme_words: [black history, melanin, juneteenth]}
+  - {key: super_bowl, name: "Super Bowl", type: occasion, rule: {kind: nth_weekday, month: 2, weekday: sun, n: 2}, theme_words: [game day, football, super bowl]}
+  - {key: valentines, name: "Valentine's Day", type: holiday, rule: {kind: fixed, month: 2, day: 14}, theme_words: [valentine, love, heart, galentine]}
+  - {key: st_patricks, name: "St. Patrick's Day", type: holiday, rule: {kind: fixed, month: 3, day: 17}, theme_words: [st patrick, lucky, shamrock, irish]}
+  - {key: autism_awareness_month, name: "Autism Awareness Month", type: awareness, rule: {kind: month, month: 4}, theme_words: [autism, puzzle, neurodiverse]}
+  - {key: easter, name: "Easter", type: holiday, rule: {kind: easter}, theme_words: [easter, bunny, he is risen]}
+  - {key: teacher_appreciation_week, name: "Teacher Appreciation Week", type: occasion, rule: {kind: nth_weekday, month: 5, weekday: mon, n: 1}, duration_days: 5, theme_words: [teacher appreciation, teacher, school]}
+  - {key: nurses_week, name: "Nurses Week", type: occasion, rule: {kind: fixed, month: 5, day: 6}, duration_days: 7, theme_words: [nurse week, nurse appreciation, nurse]}
+  - {key: mothers_day, name: "Mother's Day", type: holiday, rule: {kind: nth_weekday, month: 5, weekday: sun, n: 2}, theme_words: [mothers day, mom, mama]}
+  - {key: graduation, name: "Graduation season", type: occasion, rule: {kind: fixed, month: 5, day: 15}, duration_days: 31, theme_words: [graduation, senior, class of]}
+  - {key: memorial_day, name: "Memorial Day", type: holiday, rule: {kind: last_weekday, month: 5, weekday: mon}, theme_words: [memorial day, patriotic, usa]}
+  - {key: pride_month, name: "Pride Month", type: awareness, rule: {kind: month, month: 6}, theme_words: [pride, rainbow, lgbtq]}
+  - {key: fathers_day, name: "Father's Day", type: holiday, rule: {kind: nth_weekday, month: 6, weekday: sun, n: 3}, theme_words: [fathers day, dad, papa]}
+  - {key: independence_day, name: "4th of July", type: holiday, rule: {kind: fixed, month: 7, day: 4}, theme_words: [4th of july, patriotic, america, usa]}
+  - {key: back_to_school, name: "Back to School", type: occasion, rule: {kind: fixed, month: 8, day: 1}, duration_days: 31, theme_words: [back to school, first day, teacher]}
+  - {key: labor_day, name: "Labor Day", type: holiday, rule: {kind: nth_weekday, month: 9, weekday: mon, n: 1}, theme_words: [labor day, usa]}
+  - {key: breast_cancer_awareness, name: "Breast Cancer Awareness Month", type: awareness, rule: {kind: month, month: 10}, theme_words: [pink, breast cancer, awareness, in october we wear pink]}
+  - {key: halloween, name: "Halloween", type: holiday, rule: {kind: fixed, month: 10, day: 31}, theme_words: [halloween, spooky, ghost, pumpkin, skeleton, witch, boo]}
+  - {key: veterans_day, name: "Veterans Day", type: holiday, rule: {kind: fixed, month: 11, day: 11}, theme_words: [veteran, veterans day, patriotic]}
+  - {key: sale_11_11, name: "TikTok Shop 11.11 Sale", type: sale, ship_by: false, rule: {kind: fixed, month: 11, day: 11}, theme_words: [gift, christmas gift]}
+  - {key: thanksgiving, name: "Thanksgiving", type: holiday, rule: {kind: nth_weekday, month: 11, weekday: thu, n: 4}, theme_words: [thanksgiving, thankful, turkey, fall]}
+  - {key: black_friday, name: "Black Friday", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: 1}, theme_words: [christmas gift, gift]}
+  - {key: cyber_monday, name: "Cyber Monday", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: 4}, theme_words: [christmas gift, gift]}
+  - {key: sale_12_12, name: "TikTok Shop 12.12 Sale", type: sale, ship_by: false, rule: {kind: fixed, month: 12, day: 12}, theme_words: [christmas gift, christmas]}
+  - {key: christmas, name: "Christmas", type: holiday, rule: {kind: fixed, month: 12, day: 25}, theme_words: [christmas, xmas, santa, ugly sweater, family christmas]}
