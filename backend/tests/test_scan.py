@@ -7,6 +7,7 @@ from app.connectors.registry import build_connectors, connector_status
 from app.db import utcnow
 from app.models import Product, ProductSnapshot, RawPayload, ScanRun, Seed
 from app.pipeline.scan import run_scan
+from app.services.scans import mark_interrupted_scans
 from tests.fakes import FakeConnector
 
 TODAY = date(2026, 10, 5)
@@ -86,3 +87,35 @@ def test_registry_filters_unconfigured_and_disabled():
     assert connector_status(unconfigured, {"etsy": False}) == [
         {"name": "etsy", "kind": "product", "configured": False, "enabled": False}
     ]
+
+
+class NormalizeFails(FakeConnector):
+    def normalize(self, raw, today):
+        raise ValueError("bad payload")
+
+
+async def test_raw_payloads_kept_when_normalize_raises(session_factory):
+    add_seeds(session_factory, "nurse")
+
+    [run_id] = await run_scan(session_factory, [NormalizeFails()], today=TODAY)
+
+    with session_factory() as s:
+        run = s.get(ScanRun, run_id)
+        assert run.status == "failed"
+        assert "ValueError" in run.error
+        assert s.scalar(
+            select(func.count()).select_from(RawPayload).where(RawPayload.scan_run_id == run_id)
+        ) == 1
+
+
+def test_mark_interrupted_scans(session):
+    session.add_all([ScanRun(source="a", status="running"), ScanRun(source="b", status="ok")])
+    session.commit()
+
+    assert mark_interrupted_scans(session) == 1
+    session.commit()
+
+    a, b = session.scalars(select(ScanRun).order_by(ScanRun.id))
+    assert (a.status, a.error) == ("failed", "interrupted (process restart)")
+    assert a.finished_at is not None
+    assert b.status == "ok"

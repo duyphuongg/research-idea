@@ -88,3 +88,31 @@ async def test_fetch_collects_errors_per_query():
     assert raw.payloads == []
     assert len(raw.errors) == 3
     assert all("HTTP 404" in e for e in raw.errors)
+
+
+@respx.mock
+async def test_fetch_treats_unparseable_body_as_query_error():
+    respx.get(url__startswith=SEARCH_URL).mock(
+        return_value=httpx.Response(200, text="<html>maintenance</html>")
+    )
+
+    raw = await EtsyConnector("k", min_interval=0, sleep=no_sleep).fetch(["nurse"])
+
+    assert raw.payloads == []
+    assert len(raw.errors) == 3
+
+
+def test_normalize_skips_listings_without_id():
+    payload = {
+        "keyword": "nurse",
+        "query": "nurse shirt",
+        "product_type": "tshirt",
+        "search": {
+            "count": 2,
+            "results": [{"title": "Broken Shirt"}, {"listing_id": 7, "title": "Nurse Shirt"}],
+        },
+        "details": {"results": [{"title": "Broken Detail Shirt"}]},
+    }
+    batch = EtsyConnector("k").normalize(RawBatch(source="etsy", payloads=[payload]), date(2026, 10, 5))
+
+    assert [p.external_id for p in batch.products] == ["7"]

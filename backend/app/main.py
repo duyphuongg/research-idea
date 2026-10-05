@@ -11,6 +11,7 @@ from app.config import Settings, get_settings
 from app.connectors.registry import ConnectorFactory, build_connectors
 from app.db import make_engine, make_session_factory
 from app.scheduler import start_scheduler
+from app.services.scans import mark_interrupted_scans
 
 
 def create_app(
@@ -24,6 +25,9 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        with session_factory() as session:
+            mark_interrupted_scans(session)
+            session.commit()
         scheduler = start_scheduler(app) if settings.scheduler_enabled else None
         try:
             yield

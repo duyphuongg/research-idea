@@ -46,10 +46,12 @@ async def _run_one(
     status, records, error = "ok", 0, None
     try:
         raw = await connector.fetch(keywords)
-        normalized = connector.normalize(raw, today)
-        with session_factory() as session:
+        with session_factory() as session:  # keep raw payloads even if later steps fail
             for payload in raw.payloads:
                 session.add(RawPayload(scan_run_id=run_id, source=connector.name, payload=payload))
+            session.commit()
+        normalized = connector.normalize(raw, today)
+        with session_factory() as session:
             records = persist_batch(session, normalized, today)
             session.commit()
         if raw.errors:
@@ -59,13 +61,16 @@ async def _run_one(
         logger.exception("Connector %s failed", connector.name)
         status, error = "failed", f"{type(exc).__name__}: {exc}"[:MAX_ERROR_LEN]
 
-    with session_factory() as session:
-        run = session.get(ScanRun, run_id)
-        run.status = status
-        run.records = records
-        run.error = error
-        run.finished_at = utcnow()
-        session.commit()
+    try:
+        with session_factory() as session:
+            run = session.get(ScanRun, run_id)
+            run.status = status
+            run.records = records
+            run.error = error
+            run.finished_at = utcnow()
+            session.commit()
+    except Exception:
+        logger.exception("Could not finalize scan run %s for %s", run_id, connector.name)
     return run_id
 
 

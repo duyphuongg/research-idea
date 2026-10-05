@@ -57,23 +57,19 @@ class EtsyConnector:
     async def _fetch_query(
         self, client: httpx.AsyncClient, keyword: str, query: str, product_type: str
     ) -> dict[str, Any]:
-        search = (
-            await self._get(
-                client,
-                "/listings/active",
-                {"keywords": query, "limit": SEARCH_LIMIT, "sort_on": "score"},
-            )
-        ).json()
-        ids = [str(item["listing_id"]) for item in search.get("results", [])]
+        search = await self._get_json(
+            client,
+            "/listings/active",
+            {"keywords": query, "limit": SEARCH_LIMIT, "sort_on": "score"},
+        )
+        ids = [str(i["listing_id"]) for i in search.get("results", []) if "listing_id" in i]
         details: dict[str, Any] = {"results": []}
         if ids:
-            details = (
-                await self._get(
-                    client,
-                    "/listings/batch",
-                    {"listing_ids": ",".join(ids), "includes": "Images,Shop"},
-                )
-            ).json()
+            details = await self._get_json(
+                client,
+                "/listings/batch",
+                {"listing_ids": ",".join(ids), "includes": "Images,Shop"},
+            )
         return {
             "keyword": keyword,
             "query": query,
@@ -81,6 +77,15 @@ class EtsyConnector:
             "search": search,
             "details": details,
         }
+
+    async def _get_json(
+        self, client: httpx.AsyncClient, path: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        response = await self._get(client, path, params)
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise ConnectorError(f"invalid JSON from {path}") from exc
 
     async def _get(
         self, client: httpx.AsyncClient, path: str, params: dict[str, Any]
@@ -105,9 +110,13 @@ class EtsyConnector:
                     )
                 )
             details = {
-                str(d["listing_id"]): d for d in payload.get("details", {}).get("results", [])
+                str(d["listing_id"]): d
+                for d in payload.get("details", {}).get("results", [])
+                if "listing_id" in d
             }
             for rank, item in enumerate(search.get("results", []), start=1):
+                if "listing_id" not in item:
+                    continue
                 listing = {**item, **details.get(str(item["listing_id"]), {})}
                 product = _to_product(listing, keyword, rank)
                 if product is not None:

@@ -42,3 +42,13 @@ async def execute_scan(app: Any, connectors: list[Connector]) -> list[int]:
         )
     finally:
         app.state.scan_lock.release()
+
+
+def mark_interrupted_scans(session: Session) -> int:
+    """Fail scans left 'running' by a stopped process; the caller commits."""
+    runs = list(session.scalars(select(ScanRun).where(ScanRun.status == "running")))
+    for run in runs:
+        run.status = "failed"
+        run.error = "interrupted (process restart)"
+        run.finished_at = utcnow()
+    return len(runs)

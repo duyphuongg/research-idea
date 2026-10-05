@@ -36,7 +36,15 @@ def test_settings_update_merges_and_validates(client):
 
 
 def test_settings_never_exposes_api_key(client):
-    assert "test-key" not in client.get("/api/settings").text
+    resp = client.get("/api/settings")
+    assert resp.status_code == 200
+    assert resp.json()["connectors"][0]["configured"] is True
+    assert "test-key" not in resp.text
+
+    resp = client.get("/api/health/sources")
+    assert resp.status_code == 200
+    assert resp.json()[0]["configured"] is True
+    assert "test-key" not in resp.text
 
 
 def test_settings_update_reschedules_only_when_hour_given(client):

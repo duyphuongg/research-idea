@@ -39,6 +39,11 @@ make test           # backend unit/API tests, không gọi mạng
 make smoke          # gọi thật các nguồn đã cấu hình
 ```
 
+## Lưu ý vận hành
+- Luôn chạy backend bằng `make dev-backend` (file `.env` và đường dẫn SQLite được tính tương đối theo thư mục `backend/`).
+- Mở dashboard tại http://localhost:3000 (CORS mặc định chỉ cho phép origin này; nếu khác thì đổi `CORS_ORIGINS`).
+- API không có xác thực, vì vậy không chạy với `--host 0.0.0.0` trên mạng dùng chung.
+
 ## Lưu ý
 - Reviews/favorites là chỉ số proxy, không phải doanh số thật.
 - Chỉ dùng cho nghiên cứu nội bộ, tần suất thấp, tuân thủ điều khoản API của từng nền tảng.

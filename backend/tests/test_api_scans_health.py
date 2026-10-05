@@ -1,3 +1,5 @@
+from sqlalchemy import select
+
 from app.db import utcnow
 from app.models import ScanRun
 from tests.fakes import FakeConnector
@@ -31,9 +33,9 @@ def test_start_scan_passes_requested_sources(make_client):
 
 
 def test_start_scan_conflicts_when_running(make_client, session):
+    client = make_client(connector_factory=lambda s, o, only: [FakeConnector()])
     session.add(ScanRun(source="fake", status="running", started_at=utcnow()))
     session.commit()
-    client = make_client(connector_factory=lambda s, o, only: [FakeConnector()])
     assert client.post("/api/scans", json={}).status_code == 409
 
 
@@ -73,3 +75,17 @@ def test_source_health_reports_last_finished_run(client, session):
     assert etsy["last_status"] == "failed"
     assert etsy["last_error"] == "HTTP 403"
     assert etsy["last_finished_at"] is not None
+
+
+def test_startup_marks_running_scans_failed(session_factory, make_client):
+    with session_factory() as s:
+        s.add(ScanRun(source="etsy", status="running"))
+        s.commit()
+
+    make_client()
+
+    with session_factory() as s:
+        run = s.scalar(select(ScanRun))
+        assert run.status == "failed"
+        assert run.error == "interrupted (process restart)"
+        assert run.finished_at is not None
