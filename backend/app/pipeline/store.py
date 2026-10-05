@@ -3,6 +3,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.analysis.pod_filter import adds_only_product_words
 from app.connectors.base import NormalizedBatch, NormalizedProduct, NormalizedSignal
 from app.keywords import get_or_create_keyword, normalize_keyword
 from app.models import KeywordRelation, Product, ProductKeyword, ProductSnapshot, TrendSignal
@@ -20,6 +21,8 @@ def persist_batch(session: Session, batch: NormalizedBatch, today: date) -> int:
 
 def _upsert_signal(session: Session, signal: NormalizedSignal) -> None:
     if not normalize_keyword(signal.keyword):
+        return
+    if signal.parent and adds_only_product_words(signal.keyword, signal.parent):
         return
     keyword = get_or_create_keyword(
         session, signal.keyword, signal.origin, has_parent=signal.parent is not None

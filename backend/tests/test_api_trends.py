@@ -74,7 +74,7 @@ def test_lists_latest_scores_pod_only_by_default(client, data):
 
 def test_filters(client, data):
     all_items = client.get("/api/trends?pod_only=false").json()["items"]
-    assert [i["keyword"] for i in all_items] == ["braves dodgers game", "nurse", "nurse gift"]
+    assert [i["keyword"] for i in all_items] == ["brave dodger game", "nurse", "nurse gift"]
     by_source = client.get("/api/trends?source=etsy_tags").json()["items"]
     assert [i["keyword"] for i in by_source] == ["nurse gift"]
     by_origin = client.get("/api/trends?origin=seed").json()["items"]

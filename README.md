@@ -46,7 +46,7 @@ Nguồn dữ liệu (chỉ thị trường Mỹ):
 - Thiếu đà tăng/cạnh tranh được tính trung tính 0.5 (không bị loại), giao diện vẫn hiện "—".
 
 Bộ lọc POD chỉnh trong `backend/config/pod_filter.yaml`. Đà tăng cần ≥ 8 ngày dữ liệu (quét hằng ngày).
-Sau khi đổi cấu hình: `make rescore`.
+Sửa `pod_filter.yaml` / `scoring.yaml` rồi chạy `make rescore` để áp dụng lại bộ lọc và điểm cho dữ liệu hiện có; backend đang chạy tự đọc cấu hình mới ở lần quét tới.
 
 Bấm **+ Theo dõi** ở một ngách khám phá để Etsy quét sản phẩm cho ngách đó từ lần sau.
 TikTok Creative Center và Google Trends (biểu đồ quan tâm) chưa hỗ trợ: cả hai chặn truy cập tự động.

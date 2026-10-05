@@ -78,7 +78,7 @@ def test_discovered_signal_creates_child_keyword_and_relation(session):
     persist_batch(session, NormalizedBatch(signals=[sig]), D1)
     session.commit()
 
-    child = session.scalar(select(Keyword).where(Keyword.text == "funny nurse shirts"))
+    child = session.scalar(select(Keyword).where(Keyword.text == "funny nurse shirt"))
     parent = session.scalar(select(Keyword).where(Keyword.text == "nurse"))
     assert (child.origin, child.is_pod_relevant) == ("discovered", True)
     assert parent.origin == "seed"
@@ -97,9 +97,9 @@ def test_discovered_keywords_get_pod_relevance(session):
     session.commit()
 
     relevance = {k.text: k.is_pod_relevant for k in session.scalars(select(Keyword))}
-    assert relevance["nurse shirts near me"] is False
-    assert relevance["braves dodgers game"] is False
-    assert relevance["halloween costume ideas"] is True
+    assert relevance["nurse shirt near me"] is False
+    assert relevance["brave dodger game"] is False
+    assert relevance["halloween costume ideas"] is False
     assert "" not in relevance
 
 
@@ -108,3 +108,17 @@ def test_persists_views_and_shop_sold_count(session):
     session.commit()
     assert session.scalar(select(Product)).shop_sold_count == 9000
     assert session.scalar(select(ProductSnapshot)).views == 420
+
+
+def test_seed_plus_product_word_signal_is_dropped(session):
+    sigs = [
+        NormalizedSignal(keyword="nurse shirts", source="google_suggest", metric="suggest_score", value=5.0, date=D1, origin="discovered", parent="nurse"),
+        NormalizedSignal(keyword="nurse gift", source="google_suggest", metric="suggest_score", value=5.0, date=D1, origin="discovered", parent="nurse"),
+    ]
+    persist_batch(session, NormalizedBatch(signals=sigs), D1)
+    session.commit()
+    texts = {k.text for k in session.scalars(select(Keyword))}
+    assert "nurse shirt" not in texts and "nurse shirts" not in texts
+    assert "nurse gift" in texts
+    assert count(session, KeywordRelation) == 1
+    assert count(session, TrendSignal) == 1

@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
 from app.api.schemas import SeedIn, SeedOut
-from app.keywords import get_or_create_keyword, normalize_keyword
-from app.models import Seed
+from app.keywords import canonical_keyword, get_or_create_keyword, normalize_keyword
+from app.models import Keyword, Seed
 
 router = APIRouter(prefix="/api")
 
@@ -39,6 +39,10 @@ def create_seed(body: SeedIn, session: Session = Depends(get_session)) -> SeedOu
     session.flush()
     out = _to_out(session, seed)
     get_or_create_keyword(session, seed.keyword).is_pod_relevant = True  # user chose to follow it
+    # discovered keywords are stored in canonical (singular) form; follow that one too
+    discovered = session.scalar(select(Keyword).where(Keyword.text == canonical_keyword(text)))
+    if discovered is not None:
+        discovered.is_pod_relevant = True
     session.commit()
     return out
 
