@@ -3,10 +3,12 @@
 Rules:
 - Demand: per-source percentile among keywords active on that source, shrunk toward 0.5
   when the pool is small (shrink), then averaged over the keyword's sources.
-- Momentum: only positive mean growth is rewarded (<= 0 → 0.0); percentile among
-  positive-growth keywords (shrunk) plus a convergence bonus per extra rising source.
+- Momentum from mean growth g: g > FLAT_GROWTH → 0.5 + 0.5 * percentile among such
+  keywords (shrunk) plus a convergence bonus per extra rising source (cap 1.0);
+  |g| <= FLAT_GROWTH → 0.25 (flat); g < -FLAT_GROWTH → 0.0 (declining).
   No growth data → None.
-- Competition: min-max of log1p(listing count); None when unknown.
+- Competition: min-max of log1p(listing count) across keywords that have it, shrunk
+  toward 0.5 when fewer than SMALL_POOL have it; None when unknown.
 - Missing momentum/competition count as NEUTRAL (0.5) in the score, but are still
   reported as None so the UI shows "—".
 """
@@ -31,6 +33,7 @@ ACTIVE_DAYS = 7
 HISTORY_DAYS = 30
 RISING_GROWTH = 0.2
 CONVERGENCE_BONUS = 0.1
+FLAT_GROWTH = 0.05
 SMALL_POOL = 5
 NEUTRAL = 0.5
 
@@ -142,7 +145,7 @@ def score_keywords(
 
     demand_pct = {source: percentile_ranks(values) for source, values in demand_raw.items()}
     mean_growth = {k: mean(g.values()) for k, g in growths.items() if g}
-    positive_growth = {k: g for k, g in mean_growth.items() if g > 0}
+    positive_growth = {k: g for k, g in mean_growth.items() if g > FLAT_GROWTH}
     momentum_pct = percentile_ranks(positive_growth)
     competition_norm = _min_max(competition_raw)
 
@@ -154,10 +157,16 @@ def score_keywords(
         if keyword_id in mean_growth:
             if keyword_id in momentum_pct:
                 base = shrink(momentum_pct[keyword_id], len(positive_growth))
-                momentum = min(1.0, base + CONVERGENCE_BONUS * max(0, rising - 1))
-            else:
+                momentum = min(
+                    1.0, 0.5 + 0.5 * base + CONVERGENCE_BONUS * max(0, rising - 1)
+                )
+            elif mean_growth[keyword_id] < -FLAT_GROWTH:
                 momentum = 0.0
+            else:
+                momentum = 0.25
         competition = competition_norm.get(keyword_id)
+        if competition is not None:
+            competition = shrink(competition, len(competition_norm))
         parts = [
             (weights.demand, demand),
             (weights.momentum, NEUTRAL if momentum is None else momentum),

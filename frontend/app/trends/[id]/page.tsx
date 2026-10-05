@@ -82,7 +82,7 @@ export default function TrendDetailPage() {
           ["Điểm", trend ? String(Math.round(trend.score)) : "—"],
           ["Nhu cầu", pct(trend?.demand ?? null)],
           ["Đà tăng", pct(trend?.momentum ?? null)],
-          ["Cạnh tranh", pct(trend?.competition ?? null)],
+          ["Cạnh tranh (tương đối)", pct(trend?.competition ?? null)],
           ["Tăng trưởng", formatGrowth(trend?.growth ?? null)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-md border border-zinc-200 bg-white p-3">

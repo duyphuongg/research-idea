@@ -42,7 +42,8 @@ Nguồn dữ liệu (chỉ thị trường Mỹ):
 
 Điểm 0–100 = nhu cầu 35% + đà tăng 45% + ít cạnh tranh 20% (chỉnh trong `backend/config/scoring.yaml`).
 - Nhu cầu: percentile theo từng nguồn, kéo về 0.5 khi nguồn có < 5 keyword.
-- Đà tăng: chỉ thưởng tăng trưởng dương (≤ 0 → 0 điểm).
+- Đà tăng: tăng > 5% → 0.5–1 theo thứ hạng; đi ngang (±5%) → 0.25; giảm → 0; chưa đủ lịch sử → 0.5.
+- Cạnh tranh: tương đối giữa các seed, kéo về 0.5 khi < 5 seed.
 - Thiếu đà tăng/cạnh tranh được tính trung tính 0.5 (không bị loại), giao diện vẫn hiện "—".
 
 Bộ lọc POD chỉnh trong `backend/config/pod_filter.yaml`. Đà tăng cần ≥ 8 ngày dữ liệu (quét hằng ngày).
