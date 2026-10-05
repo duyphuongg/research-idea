@@ -1,0 +1,53 @@
+{
+  "keyword": "nurse",
+  "query": "nurse shirt",
+  "product_type": "tshirt",
+  "search": {
+    "count": 12345,
+    "results": [
+      {
+        "listing_id": 1001,
+        "title": "Funny Nurse Shirt &amp; Gift",
+        "price": {"amount": 2499, "divisor": 100, "currency_code": "USD"},
+        "num_favorers": 532,
+        "url": "https://www.etsy.com/listing/1001/funny-nurse-shirt",
+        "creation_timestamp": 1756684800,
+        "original_creation_timestamp": 1754006400,
+        "shop_id": 11
+      },
+      {
+        "listing_id": 1002,
+        "title": "Nurse Coffee Mug",
+        "price": {"amount": 1599, "divisor": 100, "currency_code": "USD"},
+        "num_favorers": 40,
+        "url": "https://www.etsy.com/listing/1002/nurse-mug",
+        "creation_timestamp": 1756684800,
+        "shop_id": 11
+      },
+      {
+        "listing_id": 1003,
+        "title": "Retro Nurse Hoodie, Nurse Life Sweatshirt",
+        "price": {"amount": 3999, "divisor": 100, "currency_code": "USD"},
+        "num_favorers": 87,
+        "url": "https://www.etsy.com/listing/1003/retro-nurse-hoodie",
+        "creation_timestamp": 1758000000,
+        "shop_id": 12
+      }
+    ]
+  },
+  "details": {
+    "count": 2,
+    "results": [
+      {
+        "listing_id": 1001,
+        "images": [{"url_570xN": "https://i.etsystatic.com/1001_570xN.jpg"}],
+        "shop": {"shop_id": 11, "shop_name": "NurseLifeCo"}
+      },
+      {
+        "listing_id": 1003,
+        "images": [],
+        "shop": {"shop_id": 12, "shop_name": "RetroScrubs"}
+      }
+    ]
+  }
+}
