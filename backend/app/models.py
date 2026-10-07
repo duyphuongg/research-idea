@@ -65,6 +65,7 @@ class Product(Base):
     product_type: Mapped[str] = mapped_column(String(20))  # tshirt | sweatshirt | hoodie
     listed_at: Mapped[datetime | None] = mapped_column(DateTime)
     shop_sold_count: Mapped[int | None] = mapped_column(Integer)
+    tags: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     snapshots: Mapped[list["ProductSnapshot"]] = relationship(
         order_by="ProductSnapshot.date", back_populates="product"
@@ -151,3 +152,21 @@ class KeywordScore(Base):
     sources_rising: Mapped[int] = mapped_column(Integer, default=0)
     sources: Mapped[Any] = mapped_column(JSON, default=list)
     date: Mapped[date] = mapped_column(Date)
+
+
+class ListingSignal(Base):
+    """Daily-tracked newly created Etsy listing (Listing Signals)."""
+
+    __tablename__ = "listing_signals"
+
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), primary_key=True)
+    discovered_on: Mapped[date] = mapped_column(Date)
+    discovery_query: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20), default="calibrating")
+    age_days: Mapped[int | None] = mapped_column(Integer)
+    views: Mapped[int | None] = mapped_column(Integer)
+    saves: Mapped[int | None] = mapped_column(Integer)
+    delta_views: Mapped[float | None] = mapped_column(Float)
+    delta_saves: Mapped[float | None] = mapped_column(Float)
+    dsr: Mapped[float | None] = mapped_column(Float)
+    updated_on: Mapped[date | None] = mapped_column(Date)

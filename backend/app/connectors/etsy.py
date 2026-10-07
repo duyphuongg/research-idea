@@ -144,7 +144,7 @@ def _is_us_usd(listing: dict[str, Any]) -> bool:
     return shop.get("is_shop_us_based") is True and price.get("currency_code") == "USD"
 
 
-def _to_product(listing: dict[str, Any], keyword: str, rank: int) -> NormalizedProduct | None:
+def _to_product(listing: dict[str, Any], keyword: str | None, rank: int) -> NormalizedProduct | None:
     title = html.unescape(listing.get("title") or "").strip()
     product_type = classify_product_type(title)
     if product_type == "other" or not _is_us_usd(listing):
@@ -171,7 +171,17 @@ def _to_product(listing: dict[str, Any], keyword: str, rank: int) -> NormalizedP
         favorites=listing.get("num_favorers"),
         views=listing.get("views"),
         shop_sold_count=shop.get("transaction_sold_count"),
+        tags=_tags(listing),
     )
+
+
+def _tags(listing: dict[str, Any]) -> list[str]:
+    seen: list[str] = []
+    for raw_tag in listing.get("tags") or []:
+        tag = normalize_keyword(html.unescape(str(raw_tag)))
+        if tag and tag not in seen:
+            seen.append(tag)
+    return seen
 
 
 def _keyword_signals(

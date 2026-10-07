@@ -14,7 +14,7 @@ def persist_batch(session: Session, batch: NormalizedBatch, today: date) -> int:
     for signal in batch.signals:
         _upsert_signal(session, signal)
     for item in batch.products:
-        _upsert_product(session, item, today)
+        upsert_product(session, item, today)
     session.flush()
     return len(batch.signals) + len(batch.products)
 
@@ -68,7 +68,7 @@ def _upsert_relation(
     session.flush()
 
 
-def _upsert_product(session: Session, item: NormalizedProduct, today: date) -> None:
+def upsert_product(session: Session, item: NormalizedProduct, today: date) -> Product:
     product = session.scalar(
         select(Product).where(Product.source == item.source, Product.external_id == item.external_id)
     )
@@ -84,17 +84,20 @@ def _upsert_product(session: Session, item: NormalizedProduct, today: date) -> N
     product.product_type = item.product_type
     product.listed_at = item.listed_at
     product.shop_sold_count = item.shop_sold_count
+    if item.tags is not None:
+        product.tags = item.tags
     session.flush()
 
-    keyword = get_or_create_keyword(session, item.keyword)
-    link = session.get(ProductKeyword, (product.id, keyword.id))
-    if link is None:
-        session.add(
-            ProductKeyword(product_id=product.id, keyword_id=keyword.id, rank=item.rank, last_seen=today)
-        )
-    else:
-        link.rank = min(link.rank, item.rank) if link.last_seen == today else item.rank
-        link.last_seen = today
+    if item.keyword is not None:
+        keyword = get_or_create_keyword(session, item.keyword)
+        link = session.get(ProductKeyword, (product.id, keyword.id))
+        if link is None:
+            session.add(
+                ProductKeyword(product_id=product.id, keyword_id=keyword.id, rank=item.rank, last_seen=today)
+            )
+        else:
+            link.rank = min(link.rank, item.rank) if link.last_seen == today else item.rank
+            link.last_seen = today
 
     snapshot = session.scalar(
         select(ProductSnapshot).where(
@@ -111,3 +114,4 @@ def _upsert_product(session: Session, item: NormalizedProduct, today: date) -> N
     snapshot.views = item.views
     snapshot.price = item.price
     session.flush()
+    return product

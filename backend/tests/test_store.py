@@ -122,3 +122,17 @@ def test_seed_plus_product_word_signal_is_dropped(session):
     assert "nurse gift" in texts
     assert count(session, KeywordRelation) == 1
     assert count(session, TrendSignal) == 1
+
+
+from app.pipeline.store import upsert_product  # noqa: E402
+
+
+def test_upsert_product_without_keyword_and_with_tags(session):
+    product = upsert_product(session, make_product(keyword=None, tags=["vintage sasquatch"], views=10), D1)
+    session.commit()
+    assert product.tags == ["vintage sasquatch"]
+    assert session.scalar(select(func.count()).select_from(ProductKeyword)) == 0
+    assert session.scalar(select(ProductSnapshot)).views == 10
+    upsert_product(session, make_product(keyword=None, tags=None), D2)
+    session.commit()
+    assert session.get(Product, product.id).tags == ["vintage sasquatch"]  # None keeps old tags

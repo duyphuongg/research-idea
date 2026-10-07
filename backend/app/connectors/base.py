@@ -26,7 +26,7 @@ class NormalizedProduct:
     currency: str | None
     product_type: str
     listed_at: datetime | None  # naive UTC
-    keyword: str
+    keyword: str | None
     rank: int
     reviews: int | None = None
     favorites: int | None = None
@@ -34,6 +34,7 @@ class NormalizedProduct:
     bsr: int | None = None
     views: int | None = None
     shop_sold_count: int | None = None
+    tags: list[str] | None = None
 
 
 @dataclass

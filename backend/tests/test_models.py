@@ -75,3 +75,17 @@ def test_keyword_score_unique_per_day(session):
         session.add(KeywordScore(keyword_id=kw.id, date=date(2026, 10, 5), score=1.0, sources_rising=0, sources=[]))
     with pytest.raises(IntegrityError):
         session.commit()
+
+
+from app.models import ListingSignal  # noqa: E402
+
+
+def test_listing_signal_row_and_product_tags(session):
+    p = Product(source="etsy", external_id="77", title="T", url="u", product_type="tshirt", tags=["a", "b"])
+    session.add(p)
+    session.flush()
+    session.add(ListingSignal(product_id=p.id, discovered_on=date(2026, 10, 6), discovery_query="shirt"))
+    session.commit()
+    row = session.get(ListingSignal, p.id)
+    assert (row.status, row.discovery_query, row.dsr) == ("calibrating", "shirt", None)
+    assert session.get(Product, p.id).tags == ["a", "b"]

@@ -149,3 +149,9 @@ def test_normalize_skips_listings_without_id():
     batch = EtsyConnector("k").normalize(RawBatch(source="etsy", payloads=[payload]), date(2026, 10, 5))
 
     assert [p.external_id for p in batch.products] == ["7"]
+
+
+def test_normalize_fills_normalized_tags():
+    raw = RawBatch(source="etsy", payloads=[load_payload()])
+    shirt = EtsyConnector("k").normalize(raw, TODAY).products[0]
+    assert shirt.tags == ["nurse shirt", "nurse gift", "funny nurse", "rn shirt"]
