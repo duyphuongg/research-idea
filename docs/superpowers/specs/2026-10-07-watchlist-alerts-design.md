@@ -36,7 +36,7 @@ When the watchlist is empty, only the scope-independent rules run (super breakou
 
 ## 2. Keyword ↔ listing matching
 
-A listing belongs to watchlist keyword `k` if `ListingSignal.discovery_query == f"{k} {seed_query_suffix}"` or the listing title contains `k` (case-insensitive, whole-phrase via the same normalisation as `app.keywords.normalize_keyword`). Implemented once in `app/services/watchlist.py::listing_matches(keyword, discovery_query, title)` and reused by the Signals filter, the Watchlist page and alert scope.
+A listing belongs to watchlist keyword `k` if `ListingSignal.discovery_query == f"{k} {seed_query_suffix}"` or the listing title contains `k` (case-insensitive substring of `normalize_keyword(k)`). Implemented once in `app/services/watchlist.py::listing_matches(keyword, discovery_query, title)` and reused by the Signals filter, the Watchlist page and alert scope.
 
 ## 3. Data model (Alembic migration `alerts`)
 
@@ -48,6 +48,7 @@ A listing belongs to watchlist keyword `k` if `ListingSignal.discovery_query == 
 | kind | str(20) | niche / listing / hot_product / amazon |
 | subject_id | int | keyword id (niche) or product id |
 | level | int | 1 or 2 |
+| priority | float | ordering within a kind (score, Δsaves, velocity, −rank) |
 | title | str(300) | e.g. "football mom game day" / listing title |
 | reason | str(300) | Vietnamese, e.g. "Điểm 64 · tăng 35%", "+12 lượt lưu/ngày · DSR 18%", "Hạng 7 · Áo thun nữ" |
 | image_url | str null | product image (null for niche) |
