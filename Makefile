@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status up down telegram-setup
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -20,7 +20,7 @@ up:
 	  echo "Đang build giao diện (chỉ khi code thay đổi)…"; npm run build > ../backend/data/logs/frontend-build.log 2>&1 || { echo "Build lỗi — xem backend/data/logs/frontend-build.log"; exit 1; }; fi; \
 	  (nohup npm run start -- -p $(UI_PORT) -H 0.0.0.0 > ../backend/data/logs/frontend.log 2>&1 < /dev/null &) ; echo "Đang bật giao diện…"; fi
 	@for i in $$(seq 1 90); do curl -s -m 3 -o /dev/null localhost:$(UI_PORT) && curl -s -m 3 -o /dev/null localhost:8000/api/ping && break; sleep 1; done
-	@open http://localhost:$(UI_PORT)
+	@[ -n "$(NO_OPEN)" ] || open http://localhost:$(UI_PORT)
 	@echo "Giao diện: http://localhost:$(UI_PORT) — tắt bằng: make down (log: backend/data/logs/)"
 	@TS=$$(command -v tailscale || echo /Applications/Tailscale.app/Contents/MacOS/Tailscale); \
 	NAME=$$($$TS status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null); \
@@ -79,3 +79,23 @@ daily-status:
 
 telegram-setup:
 	cd backend && .venv/bin/python scripts/telegram_setup.py
+
+# --- Tự bật giao diện khi đăng nhập máy ---
+APP_LABEL := io.podtrendradar.app
+APP_PLIST := $(HOME)/Library/LaunchAgents/$(APP_LABEL).plist
+NODE_BIN := $(patsubst %/,%,$(dir $(shell command -v node)))
+
+install-autostart:
+	@[ -n "$(NODE_BIN)" ] || { echo "Không tìm thấy node trong PATH"; exit 1; }
+	mkdir -p backend/data/logs $(HOME)/Library/LaunchAgents
+	sed -e "s#__ROOT__#$(CURDIR)#g" -e "s#__LABEL__#$(APP_LABEL)#g" -e "s#__NODE_BIN__#$(NODE_BIN)#g" \
+		deploy/launchd/app.plist.template > $(APP_PLIST)
+	plutil -lint $(APP_PLIST) >/dev/null
+	-launchctl bootout gui/$$(id -u) $(APP_PLIST) 2>/dev/null
+	launchctl bootstrap gui/$$(id -u) $(APP_PLIST)
+	@echo "Đã cài: tự bật giao diện mỗi khi đăng nhập máy. Log: backend/data/logs/autostart.log"
+
+uninstall-autostart:
+	-launchctl bootout gui/$$(id -u) $(APP_PLIST)
+	rm -f $(APP_PLIST)
+	@echo "Đã gỡ tự bật giao diện."

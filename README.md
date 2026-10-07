@@ -32,6 +32,15 @@ make down   # tắt
 
 (Chạy riêng từng phần khi phát triển: `make dev-backend` — API ở http://localhost:8000, tài liệu API ở /docs; `make dev-frontend`.)
 
+Tự bật giao diện mỗi khi đăng nhập máy (sau khi Mac khởi động lại):
+
+```bash
+make install-autostart     # cài (chạy make up lúc đăng nhập, không mở trình duyệt)
+make uninstall-autostart   # gỡ
+```
+
+Log: `backend/data/logs/autostart.log`. `make up` / `make down` vẫn dùng bình thường.
+
 ### Xem từ điện thoại / máy khác (Tailscale)
 
 1. Cài Tailscale trên Mac (`brew install --cask tailscale-app` hoặc từ tailscale.com) và trên điện thoại; đăng nhập **cùng một tài khoản** ở cả hai.
@@ -52,6 +61,8 @@ make daily-status               # trạng thái + log gần nhất
 make scan-now                   # quét ngay trong terminal
 make uninstall-daily            # gỡ
 ```
+
+Sau mỗi lần quét, database được sao lưu vào `backend/data/backups/` (1 bản/ngày, giữ 14 bản; ~30MB/bản). Muốn có bản ngoài máy: đặt `BACKUP_DIR` trong `backend/.env` là một thư mục iCloud Drive. Sao lưu ngay: `make backup`. Khôi phục: tắt app (`make down`), chép bản sao lưu đè lên `backend/data/radar.db`, rồi `make up`.
 
 Dùng launchd: không cần mở backend; nếu máy đang ngủ đúng giờ, macOS chạy bù khi máy thức. Một lần quét ~8–10 phút. Số liệu lưu theo ngày (UTC): lần quét tối cập nhật lại số của ngày đó cho mới hơn, nên mức tăng/ngày vẫn so giữa các ngày. Log: `backend/data/logs/daily-scan.log`.
 Khi dùng cách này, đặt `SCHEDULER_ENABLED=false` trong `backend/.env` để backend không quét thêm lần nữa (giờ quét trong trang Cài đặt khi đó không còn tác dụng). Nếu muốn dùng scheduler của backend thay vì launchd: `make uninstall-daily` và đặt `SCHEDULER_ENABLED=true` (backend phải luôn chạy).
@@ -86,6 +97,8 @@ Tốn khoảng vài trăm request Etsy mỗi ngày, trên quota 5.000/ngày.
 Tag của các listing bứt phá được đưa vào Trend Radar với nguồn "Etsy bứt phá".
 Chạy riêng: `POST /api/scans` với `{"sources": ["etsy_signals"]}`.
 
+
+Listing bán **file thiết kế** (PNG/SVG, mockup, digital download, sublimation design, DTF/iron-on transfer — hoặc Etsy ghi `listing_type: download`) bị bỏ qua, không tính là áo; listing đã theo dõi mà là file số sẽ chuyển sang "Đã gỡ" ở lần quét kế tiếp.
 ## Amazon (bản gọn)
 
 Nguồn **Amazon** (amazon.com, thị trường Mỹ) lấy Best Sellers và New Releases của 8 danh mục áo/hoodie, mỗi danh sách top 100, bằng trình duyệt Chromium tự động (`make install` đã cài Chromium qua Playwright).

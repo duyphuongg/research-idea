@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- POD Trend Radar: bật backend + giao diện khi đăng nhập máy (make up). Cài bằng `make install-autostart`. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>__LABEL__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/make</string>
+    <string>-C</string>
+    <string>__ROOT__</string>
+    <string>up</string>
+    <string>NO_OPEN=1</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <!-- make up exits after starting the servers in the background; keep them running -->
+  <key>AbandonProcessGroup</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>__ROOT__/backend/data/logs/autostart.log</string>
+  <key>StandardErrorPath</key>
+  <string>__ROOT__/backend/data/logs/autostart.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>__NODE_BIN__:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+  </dict>
+  <key>ProcessType</key>
+  <string>Interactive</string>
+</dict>
+</plist>
