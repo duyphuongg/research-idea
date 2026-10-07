@@ -116,9 +116,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       aria-hidden="true"
                       className={`absolute inset-y-1.5 left-0 w-[3px] ${active ? "bg-cyan" : "bg-transparent"}`}
                     />
-                    <span aria-hidden="true" className="w-4 font-mono text-[11px] text-white/40">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
                     {item.label}
                   </Link>
                 </li>

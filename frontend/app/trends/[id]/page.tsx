@@ -2,16 +2,34 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import ProductCard from "@/components/ProductCard";
+import { Button, Card, Delta, EmptyState, HalftoneMeter, InkDot, Notice, PageHeader, Section } from "@/components/ui";
 import { ApiError, api, type ProductPage, type TrendDetail } from "@/lib/api";
-import { METRIC_LABEL, SOURCE_LABEL, formatGrowth, formatNumber } from "@/lib/format";
+import { METRIC_LABEL, formatNumber } from "@/lib/format";
+import { type Ink, sourceInk, sourceLabel } from "@/lib/sources";
 
 type Loaded = { key: string; detail?: TrendDetail; products?: ProductPage; error?: string };
 
 function pct(value: number | null): string {
   return value === null ? "—" : `${Math.round(value * 100)}%`;
+}
+
+/** Hex values of the process inks (app/globals.css @theme) — Recharts needs raw colours. */
+const INK_HEX: Record<Ink, string> = { cyan: "#0096B7", magenta: "#C8246E", yellow: "#E3A600", ink: "#15171E" };
+const RULE_HEX = "#D5DAE1";
+const INK2_HEX = "#5B6170";
+const AXIS_TICK = { fontSize: 10, fill: INK2_HEX, fontFamily: "var(--font-plex-mono), ui-monospace, monospace" };
+
+function StatBlock({ label, value, meter }: { label: string; value: ReactNode; meter?: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2 bg-sheet p-4">
+      <p className="eyebrow text-ink-2">{label}</p>
+      <p className="font-mono text-[32px] font-medium leading-none text-ink">{value}</p>
+      {meter && <div className="mt-auto">{meter}</div>}
+    </div>
+  );
 }
 
 export default function TrendDetailPage() {
@@ -46,113 +64,162 @@ export default function TrendDetailPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-zinc-500">Đang tải…</p>;
-  if (loaded?.error || !loaded?.detail) return <p className="text-sm text-red-600">{loaded?.error}</p>;
+  if (loading)
+    return (
+      <Card className="text-sm text-ink-2" role="status">
+        Đang tải…
+      </Card>
+    );
+  if (loaded?.error || !loaded?.detail)
+    return (
+      <div className="space-y-4">
+        <Link href="/" className="text-sm text-ink-2 hover:text-ink hover:underline">
+          ← Trend Radar
+        </Link>
+        <Notice tone="error" title="Không tải được keyword">
+          {loaded?.error}
+        </Notice>
+      </div>
+    );
   const { detail, products } = loaded;
   const trend = detail.trend;
 
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/" className="text-sm text-zinc-500 hover:underline">
+        <Link href="/" className="mb-3 inline-block text-sm text-ink-2 hover:text-ink hover:underline">
           ← Trend Radar
         </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold">{detail.keyword}</h1>
-          <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
-            {detail.is_seed ? "seed" : "ngách khám phá"}
-          </span>
-          {!detail.is_pod_relevant && (
-            <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">có thể không phải POD</span>
-          )}
-          {!detail.is_seed && (
-            <button
-              onClick={() => follow(detail.keyword)}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
-            >
-              + Theo dõi
-            </button>
-          )}
-        </div>
-        {message && <p className="mt-3 rounded-md bg-zinc-100 p-3 text-sm">{message}</p>}
+        <PageHeader
+          eyebrow={<>Trend Radar · Chi tiết keyword</>}
+          title={detail.keyword}
+          description={
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>{detail.is_seed ? "seed" : "ngách khám phá"}</span>
+              {!detail.is_pod_relevant && (
+                <span className="inline-flex items-center gap-1.5 text-ink">
+                  <InkDot ink="yellow" size={7} />
+                  có thể không phải POD
+                </span>
+              )}
+            </span>
+          }
+          actions={
+            !detail.is_seed && (
+              <Button size="sm" variant="secondary" onClick={() => follow(detail.keyword)}>
+                + Theo dõi
+              </Button>
+            )
+          }
+        />
+        {message && <Notice tone="info">{message}</Notice>}
       </div>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {[
-          ["Điểm", trend ? String(Math.round(trend.score)) : "—"],
-          ["Nhu cầu", pct(trend?.demand ?? null)],
-          ["Đà tăng", pct(trend?.momentum ?? null)],
-          ["Cạnh tranh (tương đối)", pct(trend?.competition ?? null)],
-          ["Tăng trưởng", formatGrowth(trend?.growth ?? null)],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-md border border-zinc-200 bg-white p-3">
-            <p className="text-xs text-zinc-500">{label}</p>
-            <p className="text-lg font-semibold">{value}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="font-semibold">Tín hiệu 30 ngày (thị trường Mỹ)</h2>
-        {detail.signals.length === 0 && <p className="text-sm text-zinc-500">Chưa có tín hiệu.</p>}
-        <div className="grid gap-4 md:grid-cols-2">
-          {detail.signals.map((series) => (
-            <div key={`${series.source}/${series.metric}`} className="rounded-md border border-zinc-200 bg-white p-3">
-              <p className="mb-2 text-sm font-medium">
-                {SOURCE_LABEL[series.source] ?? series.source} · {METRIC_LABEL[series.metric] ?? series.metric}
-              </p>
-              {series.points.length < 2 ? (
-                <p className="text-sm text-zinc-600">
-                  {formatNumber(series.points[0]?.value ?? null)}{" "}
-                  <span className="text-xs text-zinc-400">(cần ≥ 2 ngày để vẽ biểu đồ)</span>
-                </p>
-              ) : (
-                <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={series.points}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                      <YAxis tick={{ fontSize: 10 }} width={48} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="value" stroke="#ea580c" dot={false} strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
-          ))}
+      <section aria-label="Thông số" className="overflow-hidden rounded-md border border-rule shadow-card">
+        <div className="grid grid-cols-2 gap-px bg-rule sm:grid-cols-3 lg:grid-cols-5">
+          <StatBlock
+            label="Điểm"
+            value={trend ? Math.round(trend.score) : "—"}
+            meter={trend && <HalftoneMeter value={trend.score / 100} size="sm" />}
+          />
+          <StatBlock
+            label="Nhu cầu"
+            value={pct(trend?.demand ?? null)}
+            meter={trend?.demand != null && <HalftoneMeter value={trend.demand} size="sm" />}
+          />
+          <StatBlock
+            label="Đà tăng"
+            value={pct(trend?.momentum ?? null)}
+            meter={trend?.momentum != null && <HalftoneMeter value={trend.momentum} size="sm" />}
+          />
+          <StatBlock
+            label="Cạnh tranh (tương đối)"
+            value={pct(trend?.competition ?? null)}
+            meter={trend?.competition != null && <HalftoneMeter value={trend.competition} size="sm" />}
+          />
+          <StatBlock
+            label="Tăng trưởng"
+            value={<Delta value={trend?.growth ?? null} />}
+          />
+          <div className="bg-sheet lg:hidden" aria-hidden="true" />
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Keyword liên quan</h2>
-        {detail.related.length === 0 && <p className="text-sm text-zinc-500">Chưa có.</p>}
+      <Section title="Tín hiệu 30 ngày (thị trường Mỹ)">
+        {detail.signals.length === 0 && <EmptyState title="Chưa có tín hiệu" body="Tín hiệu sẽ xuất hiện sau lần quét tới." />}
+        <div className="grid gap-4 md:grid-cols-2">
+          {detail.signals.map((series) => {
+            const ink = sourceInk(series.source);
+            return (
+              <Card key={`${series.source}/${series.metric}`}>
+                <p className="mb-3 flex items-center gap-2 text-sm">
+                  <InkDot ink={ink} size={8} />
+                  <span className="font-semibold text-ink">{sourceLabel(series.source)}</span>
+                  <span className="text-ink-2">· {METRIC_LABEL[series.metric] ?? series.metric}</span>
+                </p>
+                {series.points.length < 2 ? (
+                  <p className="flex items-baseline gap-2">
+                    <span className="font-mono text-2xl text-ink">{formatNumber(series.points[0]?.value ?? null)}</span>
+                    <span className="text-xs text-ink-2">(cần ≥ 2 ngày để vẽ biểu đồ)</span>
+                  </p>
+                ) : (
+                  <div className="h-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={series.points} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                        <CartesianGrid stroke={RULE_HEX} strokeDasharray="2 4" vertical={false} />
+                        <XAxis dataKey="date" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: RULE_HEX }} />
+                        <YAxis tick={AXIS_TICK} width={48} tickLine={false} axisLine={false} />
+                        <Tooltip
+                          contentStyle={{ border: `1px solid ${RULE_HEX}`, borderRadius: 6, fontSize: 12 }}
+                          labelStyle={{ color: INK2_HEX }}
+                          formatter={(v) => [formatNumber(Number(v)), METRIC_LABEL[series.metric] ?? series.metric]}
+                        />
+                        <Line type="monotone" dataKey="value" stroke={INK_HEX[ink]} dot={false} strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      </Section>
+
+      <Section title="Keyword liên quan">
+        {detail.related.length === 0 && <p className="text-sm text-ink-2">Chưa có.</p>}
         <div className="flex flex-wrap gap-2">
           {detail.related.map((r) => (
             <Link
               key={`${r.relation}-${r.keyword_id}-${r.source}`}
               href={`/trends/${r.keyword_id}`}
-              className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm hover:bg-zinc-50"
+              title={sourceLabel(r.source)}
+              className="inline-flex items-center gap-2 rounded-full border border-rule bg-sheet px-3 py-1 text-sm text-ink transition-colors hover:border-ink-2"
             >
+              <InkDot ink={sourceInk(r.source)} size={7} />
               {r.relation === "parent" ? "↑ " : ""}
               {r.keyword}
-              <span className="ml-1 text-xs text-zinc-400">
-                {r.score !== null ? Math.round(r.score) : "—"} · {SOURCE_LABEL[r.source] ?? r.source}
-              </span>
+              <span className="font-mono text-xs text-ink-2">{r.score !== null ? Math.round(r.score) : "—"}</span>
             </Link>
           ))}
         </div>
-      </section>
+      </Section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Sản phẩm Etsy (shop US)</h2>
+      <Section title="Sản phẩm Etsy (shop US)">
         {!detail.is_seed && (products?.items.length ?? 0) === 0 && (
-          <p className="text-sm text-zinc-500">Theo dõi keyword này để lấy sản phẩm Etsy từ lần quét tới.</p>
+          <EmptyState
+            title="Chưa có sản phẩm"
+            body="Theo dõi keyword này để lấy sản phẩm Etsy từ lần quét tới."
+            action={
+              <Button variant="primary" onClick={() => follow(detail.keyword)}>
+                + Theo dõi
+              </Button>
+            }
+          />
         )}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {products?.items.map((p) => <ProductCard key={p.id} product={p} />)}
         </div>
-      </section>
+      </Section>
     </div>
   );
 }
