@@ -4,7 +4,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 
-from app.analysis.pod_filter import APPAREL_WORDS, GENERIC_WORDS
+from app.analysis.pod_filter import APPAREL_WORDS, GENERIC_WORDS, singularize
 from app.config_files import load_yaml
 
 STOPWORDS = frozenset({
@@ -12,7 +12,11 @@ STOPWORDS = frozenset({
     "this", "that", "i", "you", "me", "men", "mens", "women", "womens", "kids", "boys", "girls",
     "youth", "adult", "unisex",
 })
-_IGNORED = STOPWORDS | APPAREL_WORDS | GENERIC_WORDS
+# Descriptor adjectives stay usable at a phrase edge ("funny pickleball").
+_DESCRIPTORS = frozenset({"best", "cute", "funny", "custom", "personalized"})
+_IGNORED = STOPWORDS | APPAREL_WORDS | (GENERIC_WORDS - _DESCRIPTORS) | frozenset(
+    {"top", "tee", "shirt", "tshirt", "t", "sweatshirt", "hoodie", "gift"}
+)
 
 _URLS = {
     "bestsellers": "https://www.amazon.com/gp/bestsellers/fashion/{node}?pg={page}",
@@ -59,11 +63,15 @@ def list_url(list_name: str, node: str, page: int) -> str:
     return _URLS[list_name].format(node=node, page=page)
 
 
+def _norm_license(text: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[-/.'\u2019]", " ", text.lower())).strip()
+
+
 def is_licensed(title: str, terms: tuple[str, ...] | list[str]) -> bool:
     """Whole-word / whole-phrase, case-insensitive match of any term in the title."""
-    low = title.lower()
+    low = _norm_license(title)
     for term in terms:
-        t = term.lower().strip()
+        t = _norm_license(term)
         if t and re.search(rf"(?<![a-z0-9]){re.escape(t)}(?![a-z0-9])", low):
             return True
     return False
@@ -72,26 +80,36 @@ def is_licensed(title: str, terms: tuple[str, ...] | list[str]) -> bool:
 def parse_reviews(text: str | None) -> int | None:
     if not text:
         return None
-    m = re.search(r"(\d[\d,]*(?:\.\d+)?)\s*([kKmM])?", text)
+    m = re.match(r"^\(?\s*([\d,]+(?:\.\d+)?)\s*([kKmM])?\s*\)?$", text.strip())
     if not m:
+        return None
+    suffix = (m.group(2) or "").lower()
+    if "." in m.group(1) and not suffix:
         return None
     try:
         num = float(m.group(1).replace(",", ""))
     except ValueError:
         return None
-    mult = {"k": 1_000, "m": 1_000_000}.get((m.group(2) or "").lower(), 1)
-    return round(num * mult)
+    return round(num * {"k": 1_000, "m": 1_000_000}.get(suffix, 1))
 
 
 def parse_rating(text: str | None) -> float | None:
     if not text:
         return None
-    m = re.search(r"(\d(?:\.\d)?)\s*out of\s*5", text)
+    m = re.search(r"(?<![\d.])(\d(?:\.\d)?)\s*out of\s*5", text)
     return float(m.group(1)) if m else None
 
 
-def _tokens(title: str) -> list[str]:
-    return re.findall(r"[a-z0-9]+", title.lower().replace("'", ""))
+_SEGMENT_SPLIT = re.compile(r"[|,()/:;]| - ")
+
+
+def _segments(title: str) -> list[list[str]]:
+    out = []
+    for seg in _SEGMENT_SPLIT.split(title.lower().replace("\u2019", "'")):
+        toks = re.findall(r"[a-z0-9]+", seg.replace("'", ""))
+        if toks:
+            out.append(toks)
+    return out
 
 
 def title_phrases(
@@ -99,18 +117,21 @@ def title_phrases(
 ) -> list[tuple[str, int]]:
     """2-3 word phrases counted once per title; see plan Global Constraints."""
     counts: Counter[tuple[str, ...]] = Counter()
+    occurrences: Counter[tuple[str, ...]] = Counter()
     for title in titles:
-        toks = _tokens(title)
         seen: set[tuple[str, ...]] = set()
-        for n in (2, 3):
-            for i in range(len(toks) - n + 1):
-                gram = tuple(toks[i : i + n])
-                if all(w in _IGNORED for w in gram):
-                    continue
-                if gram[0] in STOPWORDS or gram[-1] in STOPWORDS:
-                    continue
-                seen.add(gram)
+        occ: Counter[tuple[str, ...]] = Counter()
+        for toks in _segments(title):
+            for n in (2, 3):
+                for i in range(len(toks) - n + 1):
+                    gram = tuple(toks[i : i + n])
+                    ign = [singularize(w) in _IGNORED or w in _IGNORED for w in gram]
+                    if ign[0] or ign[-1] or sum(ign) * 2 >= len(gram):
+                        continue
+                    seen.add(gram)
+                    occ[gram] += 1
         counts.update(seen)
+        occurrences.update(occ)
 
     ranked = sorted(
         ((g, c) for g, c in counts.items() if c >= min_products),
@@ -119,7 +140,11 @@ def title_phrases(
     kept: list[tuple[tuple[str, ...], int]] = []
     for gram, c in ranked:
         if len(gram) == 2 and any(
-            len(k) == 3 and kc == c and (k[:2] == gram or k[1:] == gram) for k, kc in kept
+            len(k) == 3
+            and kc == c
+            and occurrences[k] >= occurrences[gram]
+            and (k[:2] == gram or k[1:] == gram)
+            for k, kc in kept
         ):
             continue
         kept.append((gram, c))

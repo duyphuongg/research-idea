@@ -91,3 +91,40 @@ def test_title_phrases_counts_once_per_product_and_caps():
     out = title_phrases(["Cat Cat Cat Dad Cat Dad"] * 3, 3, 1)
     assert len(out) == 1
     assert out[0][1] == 3
+
+
+def test_title_phrases_real_titles():
+    titles = [
+        "Halloween Shirts Women Ghost Shirt Spooky Season Tee Fall Tops | "
+        "I Found This Humerus Ghost Shirt Nurse Spooky Season Tees",
+        "in October We Wear Pink Black Women Breast Cancer Awareness T-Shirt",
+    ] * 3
+    phrases = [p for p, _ in title_phrases(titles, 3, 40)]
+    assert "spooky season" in phrases
+    assert "breast cancer awareness" in phrases
+    bad = {"top", "tee", "shirt", "tshirt", "t", "sweatshirt", "hoodie", "gift", "women", "in", "i", "this"}
+    for p in phrases:
+        w = p.split()
+        assert w[0] not in bad and w[-1] not in bad
+    assert "tops i found" not in phrases
+    assert not any("tops i" in p or "tees" in p.split() for p in phrases)
+
+
+def test_title_phrases_apostrophes():
+    out = dict(title_phrases(["Best Mom's Club"] * 3, 3, 40))
+    assert "best moms club" in out
+
+
+def test_is_licensed_normalised():
+    assert is_licensed("Spider Man Dad Shirt", ("spider-man",))
+    assert is_licensed("Spider-Man Shirt", ("spider man",))
+    assert is_licensed("AC DC Shirt", ("ac/dc",))
+    assert is_licensed("AC/DC Shirt", ("ac dc",))
+    assert not is_licensed("Ford Truck Dad", ("legend of zelda",))
+
+
+def test_parse_edge_cases():
+    assert parse_reviews("4.6") is None
+    assert parse_reviews("-5") is None
+    assert parse_reviews("1,234 ratings") is None
+    assert parse_rating("10 out of 5") is None
