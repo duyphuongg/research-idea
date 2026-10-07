@@ -128,6 +128,19 @@ async def test_listing_turning_non_us_becomes_gone(session_factory):
         assert rows["502"].status == "gone"
 
 
+async def test_tracked_digital_download_becomes_gone(session_factory):
+    await run_day(session_factory, DAY1, day(100, 10, 50, 2))
+    search, batch = day(160, 22, 80, 4)
+    for d in batch["results"]:
+        if d["listing_id"] == 502:
+            d["listing_type"] = "download"
+    await run_day(session_factory, DAY2, (search, batch))
+    with session_factory() as s:
+        rows = {s.get(Product, r.product_id).external_id: r for r in s.scalars(select(ListingSignal))}
+        assert rows["502"].status == "gone"
+        assert rows["501"].status != "gone"
+
+
 async def test_failing_chunk_is_bisected_and_run_partial(session_factory):
     details = [listing(i, f"Shirt {i}", 10, 1, ["t"]) for i in (601, 666, 602, 603)]
 

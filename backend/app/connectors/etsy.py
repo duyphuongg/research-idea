@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from app.analysis.product_type import classify_product_type
+from app.analysis.product_type import classify_product_type, is_digital_listing
 from app.connectors.base import (
     ConnectorError,
     NormalizedBatch,
@@ -148,6 +148,8 @@ def _to_product(listing: dict[str, Any], keyword: str | None, rank: int) -> Norm
     title = html.unescape(listing.get("title") or "").strip()
     product_type = classify_product_type(title)
     if product_type == "other" or not _is_us_usd(listing):
+        return None
+    if is_digital_listing(title, listing.get("listing_type")):
         return None
     price = listing.get("price") or {}
     amount = price.get("amount")

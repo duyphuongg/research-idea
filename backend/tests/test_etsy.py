@@ -132,6 +132,15 @@ async def test_fetch_treats_unparseable_body_as_query_error():
     assert len(raw.errors) == 3
 
 
+def test_normalize_drops_digital_downloads():
+    payload = load_payload()
+    listings = {str(d["listing_id"]): d for d in payload["search"]["results"]}
+    listings["1003"]["title"] += " PNG, Sublimation Design"
+    listings["1006"]["listing_type"] = "download"
+    batch = EtsyConnector("k").normalize(RawBatch(source="etsy", payloads=[payload]), TODAY)
+    assert [p.external_id for p in batch.products] == ["1001"]
+
+
 def test_normalize_skips_listings_without_id():
     payload = {
         "keyword": "nurse",

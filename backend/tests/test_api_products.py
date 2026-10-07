@@ -156,3 +156,11 @@ def test_licensed_flag_not_hot_and_hide_param(client, session, catalog):
     assert catalog["A"] not in ids(resp)
     assert resp.json()["total"] == 2
     assert catalog["A"] in ids(client.get("/api/products?hide_licensed=false"))
+
+
+def test_digital_etsy_listings_are_hidden(client, session, catalog):
+    d = add_product(session, "D", "tshirt", datetime(2026, 9, 20), [(date(2026, 9, 27), 900)], keyword="nurse")
+    d.title = "Nurse Shirt PNG, Sublimation Design"
+    session.commit()
+    assert catalog["A"] in ids(client.get("/api/products"))
+    assert d.id not in ids(client.get("/api/products"))

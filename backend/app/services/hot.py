@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.analysis.product_type import is_digital_listing
 from app.analysis.velocity import SnapshotPoint, compute_velocity, hot_ids, velocity_metric
 from app.models import ListingSignal, Product, ProductKeyword
 
@@ -18,8 +19,11 @@ class ProductMetrics:
 
 
 def compute_product_metrics(session: Session) -> tuple[list[Product], dict[int, ProductMetrics]]:
-    """Best Sellers population: products not only tracked by Listing Signals, or linked to a keyword."""
-    products = list(session.scalars(
+    """Best Sellers population: products not only tracked by Listing Signals, or linked to a keyword.
+
+    Etsy design files/transfers stored before the digital filter existed are left out.
+    """
+    products = [p for p in session.scalars(
         select(Product)
         .where(
             ~exists().where(ListingSignal.product_id == Product.id)
@@ -27,7 +31,7 @@ def compute_product_metrics(session: Session) -> tuple[list[Product], dict[int, 
         )
         .order_by(Product.id)
         .options(selectinload(Product.snapshots))
-    ))
+    ) if not (p.source == "etsy" and is_digital_listing(p.title))]
     points = {
         p.id: [SnapshotPoint(s.date, s.reviews, s.favorites, s.views) for s in p.snapshots] for p in products
     }
