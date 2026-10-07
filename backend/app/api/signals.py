@@ -4,11 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.analysis.listing_signals import SIGNAL_STATUSES
+from app.analysis.listing_signals import SIGNAL_STATUSES, load_signals_config
 from app.api.deps import get_session
 from app.api.schemas import SignalItem, SignalPage, SignalTag
 from app.keywords import canonical_keyword
 from app.models import Keyword, ListingSignal, Product
+from app.services.watchlist import listing_keyword_filter
 
 router = APIRouter(prefix="/api")
 
@@ -20,6 +21,7 @@ VISIBLE = tuple(s for s in SIGNAL_STATUSES if s != "gone")
 def list_signals(
     status: str = "signals",
     max_age: int | None = Query(None, ge=1),
+    keyword: str | None = None,
     sort: Literal["delta_saves", "dsr", "delta_views", "newest"] = "delta_saves",
     limit: int = Query(60, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -39,8 +41,12 @@ def list_signals(
         return SignalPage(updated_on=None, counts={}, total=0, items=[])
 
     base = [ListingSignal.updated_on == latest]
+    if keyword:
+        base.append(listing_keyword_filter(keyword, load_signals_config().seed_query_suffix))
     count_rows = session.execute(
         select(ListingSignal.status, func.count())
+        .select_from(ListingSignal)
+        .join(Product, Product.id == ListingSignal.product_id)
         .where(*base, ListingSignal.status != "gone")
         .group_by(ListingSignal.status)
     ).all()
@@ -50,7 +56,8 @@ def list_signals(
     if max_age is not None:
         filters.append(ListingSignal.age_days <= max_age)
     total = session.scalar(
-        select(func.count()).select_from(ListingSignal).where(*filters)
+        select(func.count()).select_from(ListingSignal)
+        .join(Product, Product.id == ListingSignal.product_id).where(*filters)
     ) or 0
 
     if sort == "newest":

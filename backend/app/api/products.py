@@ -3,13 +3,13 @@ from collections.abc import Callable
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import exists, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.analysis.velocity import SnapshotPoint, compute_velocity, hot_ids, velocity_metric
 from app.api.deps import get_session
 from app.api.schemas import ProductOut, ProductPage
-from app.models import Keyword, ListingSignal, Product, ProductKeyword
+from app.models import Keyword, Product, ProductKeyword
+from app.services.hot import ProductMetrics, compute_product_metrics
 
 router = APIRouter(prefix="/api")
 
@@ -41,27 +41,7 @@ def list_products(
     hide_licensed: bool = False,
     session: Session = Depends(get_session),
 ) -> ProductPage:
-    products = session.scalars(
-        select(Product)
-        .where(
-            ~exists().where(ListingSignal.product_id == Product.id)
-            | exists().where(ProductKeyword.product_id == Product.id)
-        )
-        .order_by(Product.id)
-        .options(selectinload(Product.snapshots))
-    ).all()
-
-    points = {
-        p.id: [SnapshotPoint(s.date, s.reviews, s.favorites, s.views) for s in p.snapshots]
-        for p in products
-    }
-    metrics = {
-        p.id: compute_velocity(points[p.id], p.listed_at.date() if p.listed_at else None)
-        for p in products
-    }
-    hot = hot_ids(
-        (p.id, (p.source, p.product_type), metrics[p.id][1]) for p in products if not p.licensed
-    )
+    products, metrics = compute_product_metrics(session)
 
     keyword_texts: dict[int, list[str]] = defaultdict(list)
     keyword_ids: dict[int, set[int]] = defaultdict(set)
@@ -75,7 +55,7 @@ def list_products(
         keyword_ids[product_id].add(kid)
 
     items = [
-        _to_out(p, metrics[p.id], velocity_metric(points[p.id]), p.id in hot, sorted(keyword_texts[p.id]))
+        _to_out(p, metrics[p.id], sorted(keyword_texts[p.id]))
         for p in products
         if (source is None or p.source == source)
         and (product_type is None or p.product_type == product_type)
@@ -87,7 +67,7 @@ def list_products(
 
 
 def _to_out(
-    p: Product, metric: tuple[float | None, float | None], metric_name: str | None, hot: bool, keywords: list[str]
+    p: Product, m: ProductMetrics, keywords: list[str]
 ) -> ProductOut:
     latest = p.snapshots[-1] if p.snapshots else None
     return ProductOut(
@@ -106,10 +86,10 @@ def _to_out(
         rating=latest.rating if latest else None,
         views=latest.views if latest else None,
         shop_sold_count=p.shop_sold_count,
-        velocity_metric=metric_name,
-        delta_7d=metric[0],
-        velocity=metric[1],
-        hot=hot,
+        velocity_metric=m.metric,
+        delta_7d=m.delta_7d,
+        velocity=m.velocity,
+        hot=m.hot,
         keywords=keywords,
         licensed=p.licensed,
     )

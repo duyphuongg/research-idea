@@ -95,3 +95,21 @@ def test_bad_params(client, data):
     assert client.get("/api/signals?status=bogus").status_code == 422
     assert client.get("/api/signals?sort=bogus").status_code == 422
     assert client.get("/api/signals?max_age=0").status_code == 422
+
+
+def test_signals_keyword_filter(client, session):
+    a = _product(session, 11)
+    b = _product(session, 12)
+    a.title = "Pickleball Queen Tee"
+    b.title = "Dog Tee"
+    _signal(session, a, "steady_grower")
+    _signal(session, b, "steady_grower")
+    _signal(session, _product(session, 13), "normal")  # title t13: excluded from counts by keyword
+    session.commit()
+    r = client.get("/api/signals", params={"keyword": "Pickleball", "status": "all"})
+    body = r.json()
+    assert [i["title"] for i in body["items"]] == ["Pickleball Queen Tee"]
+    assert body["total"] == 1
+    assert body["counts"] == {"steady_grower": 1}
+    unfiltered = client.get("/api/signals", params={"status": "all"}).json()
+    assert unfiltered["total"] == 3
