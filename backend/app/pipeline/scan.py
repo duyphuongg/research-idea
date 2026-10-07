@@ -11,6 +11,7 @@ from app.db import utcnow
 from app.models import RawPayload, ScanRun, Seed, TrendSignal
 from app.pipeline.rescore import rescore
 from app.pipeline.store import persist_batch
+from app.services.alerts import detect_alerts
 
 if TYPE_CHECKING:  # jobs imports listing_signals, which imports this module
     from app.pipeline.jobs import ScanJob
@@ -46,6 +47,13 @@ async def run_scan(
             session.commit()
     except Exception:  # scoring must never break a scan
         logger.exception("Rescoring failed")
+
+    try:
+        with session_factory() as session:
+            detect_alerts(session, today)
+            session.commit()
+    except Exception:  # alerts must never break a scan
+        logger.exception("Alert detection failed")
 
     with session_factory() as session:
         purge_raw_payloads(session, older_than=utcnow() - timedelta(days=retention_days))
