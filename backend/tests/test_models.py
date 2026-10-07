@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.keywords import get_or_create_keyword, normalize_keyword
-from app.models import KeywordRelation, KeywordScore, Product, ProductSnapshot
+from app.models import AmazonRank, KeywordRelation, KeywordScore, Product, ProductSnapshot
 
 
 def test_normalize_keyword_lowercases_and_collapses_spaces():
@@ -89,3 +89,16 @@ def test_listing_signal_row_and_product_tags(session):
     row = session.get(ListingSignal, p.id)
     assert (row.status, row.discovery_query, row.dsr) == ("calibrating", "shirt", None)
     assert session.get(Product, p.id).tags == ["a", "b"]
+
+
+def test_amazon_rank_unique_per_product_date_category_list(session):
+    p = Product(source="amazon", external_id="B001", title="T", url="u", product_type="tshirt")
+    session.add(p)
+    session.flush()
+    session.add(AmazonRank(product_id=p.id, date=date(2026, 10, 7), category_key="tshirt", list_name="movers", rank=3))
+    session.commit()
+    session.add(AmazonRank(product_id=p.id, date=date(2026, 10, 7), category_key="tshirt", list_name="movers", rank=4))
+    with pytest.raises(IntegrityError):
+        session.commit()
+    session.rollback()
+    assert p.licensed is None

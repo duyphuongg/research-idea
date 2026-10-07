@@ -39,6 +39,7 @@ class NormalizedProduct:
     views: int | None = None
     shop_sold_count: int | None = None
     tags: list[str] | None = None
+    licensed: bool | None = None
 
 
 @dataclass
@@ -53,9 +54,19 @@ class NormalizedSignal:
 
 
 @dataclass
+class NormalizedRank:
+    external_id: str
+    category_key: str
+    list_name: str
+    rank: int
+    date: date
+
+
+@dataclass
 class NormalizedBatch:
     products: list[NormalizedProduct] = field(default_factory=list)
     signals: list[NormalizedSignal] = field(default_factory=list)
+    ranks: list[NormalizedRank] = field(default_factory=list)
 
 
 class Connector(Protocol):

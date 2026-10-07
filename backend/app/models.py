@@ -66,6 +66,7 @@ class Product(Base):
     listed_at: Mapped[datetime | None] = mapped_column(DateTime)
     shop_sold_count: Mapped[int | None] = mapped_column(Integer)
     tags: Mapped[Any] = mapped_column(JSON, nullable=True)
+    licensed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     snapshots: Mapped[list["ProductSnapshot"]] = relationship(
         order_by="ProductSnapshot.date", back_populates="product"
@@ -170,3 +171,17 @@ class ListingSignal(Base):
     delta_saves: Mapped[float | None] = mapped_column(Float)
     dsr: Mapped[float | None] = mapped_column(Float)
     updated_on: Mapped[date | None] = mapped_column(Date)
+
+
+class AmazonRank(Base):
+    """Daily Amazon list rank (e.g. movers & shakers) of a product within a category."""
+
+    __tablename__ = "amazon_ranks"
+    __table_args__ = (UniqueConstraint("product_id", "date", "category_key", "list_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    date: Mapped[date] = mapped_column(Date)
+    category_key: Mapped[str] = mapped_column(String(40))
+    list_name: Mapped[str] = mapped_column(String(20))
+    rank: Mapped[int] = mapped_column(Integer)
