@@ -9,29 +9,31 @@ migrate:
 	cd backend && .venv/bin/alembic upgrade head
 
 # --- Mở / tắt giao diện bằng 1 lệnh ---
+# cổng giao diện (3000 hay trùng app khác)
+UI_PORT ?= 3737
 up:
 	@mkdir -p backend/data/logs
 	@if lsof -ti tcp:8000 >/dev/null 2>&1; then echo "Backend đã chạy sẵn (cổng 8000)"; \
 	else (cd backend && nohup .venv/bin/uvicorn --factory app.main:create_app --port 8000 > data/logs/backend.log 2>&1 < /dev/null &) ; echo "Đang bật backend…"; fi
-	@if lsof -ti tcp:3000 >/dev/null 2>&1; then echo "Giao diện đã chạy sẵn (cổng 3000)"; \
+	@if lsof -ti tcp:$(UI_PORT) >/dev/null 2>&1; then echo "Giao diện đã chạy sẵn (cổng $(UI_PORT))"; \
 	else cd frontend && if [ ! -f .next/BUILD_ID ] || [ -n "$$(find app components lib public next.config.ts package.json -newer .next/BUILD_ID 2>/dev/null | head -1)" ]; then \
 	  echo "Đang build giao diện (chỉ khi code thay đổi)…"; npm run build > ../backend/data/logs/frontend-build.log 2>&1 || { echo "Build lỗi — xem backend/data/logs/frontend-build.log"; exit 1; }; fi; \
-	  (nohup npm run start -- -p 3000 -H 0.0.0.0 > ../backend/data/logs/frontend.log 2>&1 < /dev/null &) ; echo "Đang bật giao diện…"; fi
-	@for i in $$(seq 1 90); do curl -s -m 3 -o /dev/null localhost:3000 && curl -s -m 3 -o /dev/null localhost:8000/api/ping && break; sleep 1; done
-	@open http://localhost:3000
-	@echo "Giao diện: http://localhost:3000 — tắt bằng: make down (log: backend/data/logs/)"
+	  (nohup npm run start -- -p $(UI_PORT) -H 0.0.0.0 > ../backend/data/logs/frontend.log 2>&1 < /dev/null &) ; echo "Đang bật giao diện…"; fi
+	@for i in $$(seq 1 90); do curl -s -m 3 -o /dev/null localhost:$(UI_PORT) && curl -s -m 3 -o /dev/null localhost:8000/api/ping && break; sleep 1; done
+	@open http://localhost:$(UI_PORT)
+	@echo "Giao diện: http://localhost:$(UI_PORT) — tắt bằng: make down (log: backend/data/logs/)"
 	@TS=$$(command -v tailscale || echo /Applications/Tailscale.app/Contents/MacOS/Tailscale); \
 	NAME=$$($$TS status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null); \
-	if [ -n "$$NAME" ]; then echo "Từ điện thoại/máy khác (Tailscale): http://$$NAME:3000"; fi
+	if [ -n "$$NAME" ]; then echo "Từ điện thoại/máy khác (Tailscale): http://$$NAME:$(UI_PORT)"; fi
 
 down:
-	-@lsof -ti tcp:8000 | xargs kill 2>/dev/null; lsof -ti tcp:3000 | xargs kill 2>/dev/null; echo "Đã tắt backend và giao diện."
+	-@lsof -ti tcp:8000 | xargs kill 2>/dev/null; lsof -ti tcp:$(UI_PORT) | xargs kill 2>/dev/null; echo "Đã tắt backend và giao diện."
 
 dev-backend:
 	cd backend && .venv/bin/uvicorn --factory app.main:create_app --reload --port 8000
 
 dev-frontend:
-	cd frontend && npm run dev
+	cd frontend && npm run dev -- -p $(UI_PORT)
 
 test:
 	cd backend && .venv/bin/pytest -q

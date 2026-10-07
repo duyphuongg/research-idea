@@ -24,18 +24,18 @@ make migrate
 ## Chạy
 
 ```bash
-make up     # bật backend + giao diện và mở http://localhost:3000
+make up     # bật backend + giao diện và mở http://localhost:3737
 make down   # tắt
 ```
 
-`make up` chạy bản build của giao diện (tự build lại khi code thay đổi). Giao diện tự chuyển `/api/*` sang backend, nên chỉ cần mở cổng 3000; backend chỉ nghe trong máy (127.0.0.1:8000).
+`make up` chạy bản build của giao diện (tự build lại khi code thay đổi). Giao diện tự chuyển `/api/*` sang backend, nên chỉ cần mở cổng 3737; backend chỉ nghe trong máy (127.0.0.1:8000).
 
 (Chạy riêng từng phần khi phát triển: `make dev-backend` — API ở http://localhost:8000, tài liệu API ở /docs; `make dev-frontend`.)
 
 ### Xem từ điện thoại / máy khác (Tailscale)
 
 1. Cài Tailscale trên Mac (`brew install --cask tailscale-app` hoặc từ tailscale.com) và trên điện thoại; đăng nhập **cùng một tài khoản** ở cả hai.
-2. Chạy `make up` trên Mac — lệnh in ra địa chỉ dạng `http://<tên-máy>.<tailnet>.ts.net:3000`.
+2. Chạy `make up` trên Mac — lệnh in ra địa chỉ dạng `http://<tên-máy>.<tailnet>.ts.net:3737`.
 3. Mở địa chỉ đó trên điện thoại (bật Tailscale). Chỉ thiết bị trong tài khoản Tailscale của bạn vào được; app không mở ra internet công khai.
 
 Mac phải đang bật và không ngủ (System Settings → Displays/Battery → bật "Prevent automatic sleeping when the display is off" khi cắm sạc). Lần đầu macOS có thể hỏi cho phép `node` nhận kết nối — chọn Allow.
@@ -113,7 +113,7 @@ make smoke          # gọi thật các nguồn đã cấu hình
 
 ## Lưu ý vận hành
 - Luôn chạy backend bằng `make dev-backend` (file `.env` và đường dẫn SQLite được tính tương đối theo thư mục `backend/`).
-- Mở dashboard tại http://localhost:3000 (CORS mặc định chỉ cho phép origin này; nếu khác thì đổi `CORS_ORIGINS`).
+- Mở dashboard tại http://localhost:3737 (CORS mặc định chỉ cho phép origin này; nếu khác thì đổi `CORS_ORIGINS`).
 - API không có xác thực, vì vậy không chạy với `--host 0.0.0.0` trên mạng dùng chung.
 
 ## Lưu ý

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     etsy_api_key: str | None = None
     scheduler_enabled: bool = True
     raw_retention_days: int = 30
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3737"]
 
 
 @lru_cache
