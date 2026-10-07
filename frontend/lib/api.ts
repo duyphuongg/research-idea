@@ -43,6 +43,39 @@ export type ProductQuery = {
   offset?: number;
 };
 
+export type SignalStatus = "super_breakout" | "steady_grower" | "graduated" | "calibrating" | "normal" | "gone";
+export type SignalSort = "delta_saves" | "dsr" | "delta_views" | "newest";
+export type SignalTag = { tag: string; keyword_id: number | null };
+export type SignalItem = {
+  product_id: number;
+  title: string;
+  url: string;
+  image_url: string | null;
+  shop_name: string | null;
+  shop_sold_count: number | null;
+  price: number | null;
+  currency: string | null;
+  product_type: string;
+  listed_at: string | null;
+  age_days: number | null;
+  views: number | null;
+  saves: number | null;
+  delta_views: number | null;
+  delta_saves: number | null;
+  dsr: number | null;
+  status: SignalStatus;
+  discovery_query: string;
+  tags: SignalTag[];
+};
+export type SignalPage = { updated_on: string | null; counts: Record<string, number>; total: number; items: SignalItem[] };
+export type SignalQuery = {
+  status?: "signals" | "all" | SignalStatus;
+  max_age?: number;
+  sort?: SignalSort;
+  limit?: number;
+  offset?: number;
+};
+
 export type Seed = { id: number; keyword: string; active: boolean; created_at: string; keyword_id: number };
 
 export type ConnectorStatus = { name: string; kind: string; configured: boolean; enabled: boolean };
@@ -165,6 +198,7 @@ function toQuery(params: Record<string, string | number | undefined>): string {
 
 export const api = {
   listProducts: (q: ProductQuery = {}) => request<ProductPage>(`/api/products${toQuery(q)}`),
+  listSignals: (q: SignalQuery = {}) => request<SignalPage>(`/api/signals${toQuery(q)}`),
   listTrends: (q: TrendQuery = {}) =>
     request<TrendPage>(
       `/api/trends${toQuery({ ...q, pod_only: q.pod_only === undefined ? undefined : String(q.pod_only) })}`,

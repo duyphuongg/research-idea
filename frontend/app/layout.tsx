@@ -17,6 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="text-zinc-600 hover:text-zinc-900">
               Trend Radar
             </Link>
+            <Link href="/signals" className="text-zinc-600 hover:text-zinc-900">
+              Listing Signals
+            </Link>
             <Link href="/products" className="text-zinc-600 hover:text-zinc-900">
               Best Sellers
             </Link>
