@@ -84,3 +84,18 @@ async def test_run_scan_survives_alert_failure(session_factory, monkeypatch):
     monkeypatch.setattr(scan_mod, "detect_alerts", boom)
     run_ids = await scan_mod.run_scan(session_factory, [FakeConnector()])
     assert len(run_ids) == 1
+
+
+def test_amazon_previous_date_is_per_category(session):
+    a_new = _product(session, "pa1", "New A", source="amazon")
+    b_any = _product(session, "pb1", "New B", source="amazon")
+    prev = date(2026, 10, 7)
+    session.add_all([
+        AmazonRank(product_id=a_new.id, date=prev, category_key="cat_a", list_name="bestsellers", rank=50),
+        AmazonRank(product_id=a_new.id, date=TODAY, category_key="cat_a", list_name="bestsellers", rank=3),
+        # cat_b is new today: no previous date, so nothing in it can be "new in top 20"
+        AmazonRank(product_id=b_any.id, date=TODAY, category_key="cat_b", list_name="bestsellers", rank=1),
+    ])
+    session.flush()
+    alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
+    assert [(a.kind, a.subject_id) for a in alerts] == [("amazon", a_new.id)]
