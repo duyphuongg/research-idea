@@ -11,7 +11,11 @@ STOPWORDS = frozenset({
     "a", "an", "and", "for", "of", "the", "to", "with", "in", "on", "my", "your", "is", "it",
     "this", "that", "i", "you", "me", "men", "mens", "women", "womens", "kids", "boys", "girls",
     "youth", "adult", "unisex",
+    "we", "our", "us", "be", "are", "so", "just", "all", "who", "what",
 })
+_APPAREL_IGNORED = APPAREL_WORDS | frozenset(
+    {"top", "tee", "shirt", "tshirt", "t", "sweatshirt", "hoodie"}
+)
 # Descriptor adjectives stay usable at a phrase edge ("funny pickleball").
 _DESCRIPTORS = frozenset({"best", "cute", "funny", "custom", "personalized"})
 _IGNORED = STOPWORDS | APPAREL_WORDS | (GENERIC_WORDS - _DESCRIPTORS) | frozenset(
@@ -125,6 +129,17 @@ def title_phrases(
             for n in (2, 3):
                 for i in range(len(toks) - n + 1):
                     gram = tuple(toks[i : i + n])
+                    if any(
+                        singularize(w) in _APPAREL_IGNORED or w in _APPAREL_IGNORED
+                        for w in gram
+                    ):
+                        continue
+                    if any(
+                        (w in STOPWORDS or singularize(w) in STOPWORDS)
+                        and not (n == 3 and j == 1 and w in ("of", "and"))
+                        for j, w in enumerate(gram)
+                    ):
+                        continue
                     ign = [singularize(w) in _IGNORED or w in _IGNORED for w in gram]
                     if ign[0] or ign[-1] or sum(ign) * 2 >= len(gram):
                         continue

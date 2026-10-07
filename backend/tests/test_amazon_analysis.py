@@ -110,6 +110,23 @@ def test_title_phrases_real_titles():
     assert not any("tops i" in p or "tees" in p.split() for p in phrases)
 
 
+def test_title_phrases_rejects_apparel_and_filler_anywhere():
+    t1 = (
+        "Halloween Shirts Women Ghost Shirt Spooky Season Tee Fall Tops | "
+        "I Found This Humerus Ghost Shirt Nurse Spooky Season Tees"
+    )
+    t2 = "in October We Wear Pink Black Women Breast Cancer Awareness T-Shirt"
+    assert dict(title_phrases([t1] * 3, 3, 40)) == {
+        "spooky season": 3, "nurse spooky season": 3, "humerus ghost": 3,
+    }
+    # "wear pink black" is filler-free, so it is kept (absorbs "wear pink").
+    assert dict(title_phrases([t2] * 3, 3, 40)) == {
+        "breast cancer awareness": 3, "wear pink black": 3,
+    }
+    assert "salt of the earth" not in dict(title_phrases(["Salt of the Earth Club"] * 3, 3, 40))
+    assert dict(title_phrases(["Salt and Pepper Club"] * 3, 3, 40))["salt and pepper"] == 3
+
+
 def test_title_phrases_apostrophes():
     out = dict(title_phrases(["Best Mom's Club"] * 3, 3, 40))
     assert "best moms club" in out
