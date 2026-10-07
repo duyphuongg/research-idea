@@ -240,3 +240,12 @@ Etsy `limit` tăng lên 100 / truy vấn. Snapshot sản phẩm lưu thêm `view
 - `fulfillment_days: 10` (in + giao POD). Mốc tính lùi từ ngày bắt đầu sự kiện S: thiết kế S−56, lên sản phẩm S−42, đẩy mạnh S−28, hạn chót giao S−10 (chỉ sự kiện cần giao trước ngày lễ; sale không có). Giai đoạn: upcoming → design → launch → push → cutoff → peak (trong sự kiện) → after (≤ 7 ngày sau).
 - Ghép ngách: `[từ chủ đề đầu tiên của sự kiện] + [seed]` (vd "halloween nurse"), kèm điểm Trend Radar nếu keyword đã có; và các keyword Trend Radar (POD) chứa từ chủ đề của sự kiện.
 - API `GET /api/calendar?days=120`; trang `/calendar`; dải "Sắp tới" trên Trend Radar. Không dùng nguồn ngoài.
+
+## 15. Etsy Listing Signals (2026-10-07)
+
+Theo mô hình merchtrends.io/etsy/signals, chỉ shop US + USD.
+- Hằng ngày (job `etsy_signals` chạy sau các connector trong lần quét): tìm listing mới (`sort_on=created`, ≤ 30 ngày theo `original_creation_timestamp`) cho các truy vấn trong `backend/config/listing_signals.yaml` + "[seed] shirt"; cập nhật views/favorites/tag mọi listing đang theo dõi (≤ 45 ngày tuổi, tối đa 20.000) qua `/listings/batch`.
+- Chỉ số: tuổi, Δviews/ngày, Δsaves/ngày (so với snapshot ≥ 1 ngày trước), DSR = Δsaves/Δviews (khi Δviews ≥ 10).
+- Nhóm: super_breakout (≤ 14 ngày, ≥ 5 lưu/ngày, DSR ≥ 15%), graduated (> 30 ngày, ≥ 30 lưu, ≥ 1 lưu/ngày), steady_grower (≥ 2 lưu/ngày, DSR ≥ 5%), calibrating (chưa đủ dữ liệu), normal. Ngưỡng trong yaml.
+- Tag của listing super_breakout/steady_grower (cập nhật hôm nay, xuất hiện ở ≥ 2 listing) → tín hiệu `etsy_signals/breakout_tag_count` cho Trend Radar (nguồn tin cậy: coi như có parent khi lọc POD).
+- API `GET /api/signals`; trang `/signals` dạng thẻ.
