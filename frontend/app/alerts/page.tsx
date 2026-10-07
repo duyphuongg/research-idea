@@ -21,15 +21,12 @@ function errorText(err: unknown): string {
   return err instanceof ApiError || err instanceof Error ? err.message : String(err);
 }
 
-function externalLabel(url: string): string {
-  return url.includes("amazon") ? "Amazon ↗" : "Etsy ↗";
-}
-
 export default function AlertsPage() {
   const [items, setItems] = useState<AlertItem[] | null>(null);
   const [unreadIds, setUnreadIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
+  const [telegramError, setTelegramError] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -37,20 +34,23 @@ export default function AlertsPage() {
     let cancelled = false;
     api
       .listAlerts()
-      .then(async (page) => {
+      .then((page) => {
         if (cancelled) return;
         setUnreadIds(new Set(page.items.filter((a) => !a.read).map((a) => a.id)));
         setItems(page.items);
         if (page.unread > 0 || page.items.some((a) => !a.read)) {
-          await api.markAlertsRead();
-          window.dispatchEvent(new Event("alerts:read"));
+          // Own handling: a mark-read failure must not surface as a load error (retries next visit).
+          api
+            .markAlertsRead()
+            .then(() => window.dispatchEvent(new Event("alerts:read")))
+            .catch(() => {});
         }
       })
       .catch((err) => !cancelled && setError(errorText(err)));
     api
       .telegramStatus()
       .then((t) => !cancelled && setTelegram(t))
-      .catch(() => !cancelled && setTelegram(null));
+      .catch(() => !cancelled && setTelegramError(true));
     return () => {
       cancelled = true;
     };
@@ -102,6 +102,10 @@ export default function AlertsPage() {
               Chưa kết nối Telegram. Trên máy Mac, chạy <code className="font-mono text-xs">make telegram-setup</code> rồi làm
               theo hướng dẫn.
             </Notice>
+          ) : telegramError ? (
+            <Notice tone="error" className="min-w-0 flex-1 basis-72">
+              Không kiểm tra được Telegram — thử tải lại trang.
+            </Notice>
           ) : (
             <span className="text-sm text-ink-2">Đang kiểm tra…</span>
           )}
@@ -144,11 +148,12 @@ export default function AlertsPage() {
 function AlertRow({ alert: a, unread }: { alert: AlertItem; unread: boolean }) {
   const kind = KIND[a.kind];
   return (
-    <div className={`flex items-start gap-3 p-3 ${unread ? "border-l-[3px] border-cyan" : ""}`}>
+    <div
+      className={`relative flex items-start gap-3 p-3 ${unread ? "before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-cyan" : ""}`}
+    >
       <span aria-hidden="true" className="w-6 shrink-0 pt-0.5 text-center text-lg leading-none">
         {kind.icon}
       </span>
-      <span className="sr-only">{kind.label}</span>
       {a.image_url ? (
         <ImageZoom src={a.image_url} alt={a.title} href={a.external_url ?? undefined} className="size-14 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -181,7 +186,7 @@ function AlertRow({ alert: a, unread }: { alert: AlertItem; unread: boolean }) {
           rel="noopener noreferrer"
           className="shrink-0 text-xs font-medium text-ink underline underline-offset-2"
         >
-          {externalLabel(a.external_url)}
+          {a.kind === "amazon" ? "Amazon ↗" : "Etsy ↗"}
         </a>
       )}
     </div>
