@@ -1,0 +1,29 @@
+# Etsy Listing Signals — listing áo mới của shop US. Chỉnh tự do.
+queries:
+  - shirt
+  - t-shirt
+  - graphic tee
+  - funny shirt
+  - sweatshirt
+  - hoodie
+  - crewneck sweatshirt
+  - comfort colors shirt
+  - halloween shirt
+  - christmas shirt
+seed_query_suffix: shirt        # thêm "<seed> shirt" cho mỗi seed đang theo dõi
+pages_per_query: 3              # 100 listing / trang, sắp theo ngày tạo
+max_age_days: 30                # chỉ nhận listing đăng trong 30 ngày
+track_days: 45                  # ngừng cập nhật sau 45 ngày tuổi
+max_tracked: 20000
+min_tag_listings: 2             # tag phải có ở >= 2 listing bứt phá
+max_tags: 50
+thresholds:
+  breakout_max_age: 14
+  breakout_min_saves_per_day: 5
+  breakout_min_dsr: 0.15
+  graduated_min_age: 30
+  graduated_min_saves: 30
+  graduated_min_saves_per_day: 1
+  steady_min_saves_per_day: 2
+  steady_min_dsr: 0.05
+  dsr_min_delta_views: 10
