@@ -6,6 +6,7 @@ from app.models import KeywordScore, Seed
 from app.services.calendar_ideas import seed_ideas
 
 TODAY = "2026-10-05"
+T7 = "2026-10-07"
 
 
 def score(session, kw, value, day=date(2026, 10, 5)):
@@ -28,12 +29,13 @@ def test_calendar_lists_upcoming_events_with_phases(client):
     assert (halloween["days_until"], halloween["phase"], halloween["ship_by"]) == (
         26,
         "push",
-        "2026-10-21",
+        "2026-10-18",
     )
     assert halloween["phase_label"] == "📈 Đẩy mạnh"
     assert halloween["advice"]
     bf = next(e for e in body["events"] if e["key"] == "black_friday")
-    assert (bf["type"], bf["ship_by"], bf["phase"]) == ("sale", None, "design")
+    assert (bf["type"], bf["ship_by"], bf["order_by"], bf["phase"]) == ("sale", None, None, "launch")
+    assert halloween["order_by"] == "2026-10-18"
 
 
 def test_days_param_limits_horizon(client):
@@ -81,7 +83,7 @@ def test_seed_idea_templates_and_cross_seeds(client, session):
     )
     session.commit()
     events = {e["key"]: e for e in client.get(f"/api/calendar?today={TODAY}").json()["events"]}
-    defs, _ = load_calendar()
+    defs = load_calendar().events
     for key in ("nurses_week", "teacher_appreciation_week"):
         defn = next(d for d in defs if d.key == key)
         occ = Occurrence(event=defn, start=date(2026, 5, 4), end=date(2026, 5, 8))
@@ -121,3 +123,32 @@ def test_seed_whose_tokens_are_within_lead_is_skipped(client, session):
     session.commit()
     events = {e["key"]: e for e in client.get(f"/api/calendar?today={TODAY}").json()["events"]}
     assert [i["keyword"] for i in events["halloween"]["seed_ideas"]] == ["halloween witch"]
+
+
+def test_seed_pollution_and_duplicates(client, session):
+    session.add_all(
+        [Seed(keyword="halloween nurse"), Seed(keyword="nurse"), Seed(keyword="dog mom"),
+         Seed(keyword="nurse gift")]
+    )
+    session.commit()
+    events = {e["key"]: e for e in client.get(f"/api/calendar?today={T7}").json()["events"]}
+    ideas = events["halloween"]["seed_ideas"]
+    assert [i["keyword"] for i in ideas] == ["halloween nurse", "halloween dog mom"]
+    assert ideas[0]["is_seed"] is True
+    for e in events.values():
+        for i in e["seed_ideas"]:
+            assert "halloween halloween" not in i["keyword"]
+            assert "thanksgiving halloween" not in i["keyword"]
+            assert "gift gift" not in i["keyword"]
+    assert [i["keyword"] for i in events["sale_11_11"]["seed_ideas"]] == [
+        "nurse gift", "dog mom gift"
+    ]
+
+
+def test_peak_order_by_advice_via_api(client):
+    events = {e["key"]: e for e in client.get(f"/api/calendar?today={T7}").json()["events"]}
+    bca = events["breast_cancer_awareness"]
+    assert bca["phase"] == "peak" and bca["order_by"] == "2026-10-18"
+    assert bca["advice"].startswith("Vẫn kịp")
+    hh = events["hispanic_heritage_month"]
+    assert hh["order_by"] == "2026-10-02" and not hh["advice"].startswith("Vẫn kịp")

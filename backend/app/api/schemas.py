@@ -175,6 +175,7 @@ class CalendarEventOut(BaseModel):
     launch_by: date
     push_from: date
     ship_by: date | None
+    order_by: date | None
     theme_words: list[str]
     seed_ideas: list[CalendarIdea]
     radar_matches: list[CalendarMatch]

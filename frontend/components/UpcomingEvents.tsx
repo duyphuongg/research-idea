@@ -4,13 +4,30 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, type CalendarEvent } from "@/lib/api";
 
+const PHASE_RANK: Record<CalendarEvent["phase"], number> = {
+  push: 0,
+  launch: 1,
+  design: 2,
+  peak: 3,
+  cutoff: 4,
+  upcoming: 5,
+  after: 6,
+};
+
+function pickUpcoming(events: CalendarEvent[], today: string): CalendarEvent[] {
+  return events
+    .filter((e) => e.phase !== "after" && !(e.phase === "peak" && (e.order_by === null || e.order_by < today)))
+    .sort((a, b) => PHASE_RANK[a.phase] - PHASE_RANK[b.phase] || a.start.localeCompare(b.start))
+    .slice(0, 3);
+}
+
 export default function UpcomingEvents() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     api
       .getCalendar(120)
-      .then((page) => setEvents(page.events.filter((e) => e.phase !== "after").slice(0, 3)))
+      .then((page) => setEvents(pickUpcoming(page.events, page.today)))
       .catch(() => setEvents([]));
   }, []);
 

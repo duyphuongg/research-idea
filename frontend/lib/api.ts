@@ -133,6 +133,7 @@ export type CalendarEvent = {
   launch_by: string;
   push_from: string;
   ship_by: string | null;
+  order_by: string | null;
   theme_words: string[];
   seed_ideas: CalendarIdea[];
   radar_matches: CalendarMatch[];

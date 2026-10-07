@@ -23,6 +23,11 @@ const TYPE_LABEL: Record<CalendarEvent["type"], string> = {
   sale: "Sale TikTok Shop",
 };
 
+function shortDm(iso: string): string {
+  const [, m, d] = iso.split("-");
+  return `${d}/${m}`;
+}
+
 function shortDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
@@ -75,15 +80,18 @@ export default function CalendarPageView() {
         </select>
       </div>
       <p className="mb-4 text-xs text-zinc-500">
-        Mốc tính lùi từ ngày sự kiện: thiết kế −8 tuần, lên sản phẩm −6 tuần, đẩy mạnh −4 tuần, hạn chót giao hàng −
-        {page?.fulfillment_days ?? 10} ngày (thời gian in + giao POD, chỉnh trong backend/config/us_calendar.yaml).
+        Mốc tính lùi từ ngày sự kiện: thiết kế −8 tuần, lên sản phẩm −6 tuần, đẩy mạnh −4 tuần, hạn chót đặt hàng −
+        {(page?.fulfillment_days ?? 10) + 3} ngày (thời gian in + giao POD + đệm 3 ngày, chỉnh trong backend/config/us_calendar.yaml).
       </p>
       {message && <p className="mb-3 rounded-md bg-zinc-100 p-3 text-sm">{message}</p>}
       {loading && <p className="text-sm text-zinc-500">Đang tải…</p>}
       {result?.error && !loading && <p className="text-sm text-red-600">Không tải được lịch: {result.error}</p>}
 
       <div className="space-y-4">
-        {page?.events.map((event) => (
+        {page?.events.map((event) => {
+          const today = page.today;
+          const deadline = event.phase === "peak" ? event.order_by : event.ship_by;
+          return (
           <section key={`${event.key}-${event.start}`} className="rounded-lg border border-zinc-200 bg-white p-4">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold">{event.name}</h2>
@@ -100,9 +108,15 @@ export default function CalendarPageView() {
             <p className="mt-2 text-sm">{event.advice}</p>
             {event.note && <p className="mt-1 text-xs text-zinc-500">{event.note}</p>}
             <p className="mt-2 text-xs text-zinc-500">
-              Thiết kế từ {shortDate(event.design_start)} · lên sản phẩm trước {shortDate(event.launch_by)} · đẩy mạnh từ{" "}
-              {shortDate(event.push_from)}
-              {event.ship_by && <> · hạn chót giao hàng {shortDate(event.ship_by)}</>}
+              {[
+                event.design_start >= today && `Thiết kế từ ${shortDate(event.design_start)}`,
+                event.launch_by >= today && `lên sản phẩm trước ${shortDate(event.launch_by)}`,
+                event.push_from >= today && `đẩy mạnh từ ${shortDate(event.push_from)}`,
+                deadline && deadline >= today && `Hạn chót đặt hàng ${shortDate(deadline)}`,
+                event.end !== event.start && event.start <= today && today <= event.end && `đang diễn ra · kết thúc ${shortDm(event.end)}`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
 
             {event.seed_ideas.length > 0 && (
@@ -150,7 +164,8 @@ export default function CalendarPageView() {
               </div>
             )}
           </section>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -13,13 +13,15 @@ LAUNCH_DAYS = 42
 PUSH_DAYS = 28
 AFTER_DAYS = 7
 DEFAULT_FULFILLMENT_DAYS = 10
+DEFAULT_SHIP_BUFFER_DAYS = 3
+EVENT_TYPES = {"holiday", "occasion", "awareness", "sale"}
 
 PHASE_LABEL = {
     "upcoming": "Sắp tới",
     "design": "🎨 Thiết kế",
     "launch": "🚀 Lên sản phẩm",
     "push": "📈 Đẩy mạnh",
-    "cutoff": "⏰ Quá hạn giao hàng",
+    "cutoff": "⏰ Quá hạn đặt hàng",
     "peak": "🔥 Cao điểm",
     "after": "Hết mùa",
 }
@@ -42,18 +44,21 @@ PHASE_ADVICE = {
         "mẫu nào bán tốt để nhân bản."
     ),
     "cutoff": (
-        "Đơn mới có thể không kịp giao trước ngày lễ — ghi rõ thời gian "
-        "giao, chuyển sang sự kiện kế tiếp."
+        "Đã quá hạn chót đặt hàng — đơn mới có thể không kịp giao trước "
+        "sự kiện; ghi rõ thời gian giao, chuyển sang sự kiện kế tiếp."
     ),
     "peak": (
         "Cao điểm: không sửa listing đang chạy, giữ ngân sách quảng cáo, "
         "trả lời khách nhanh."
     ),
     "after": (
-        "Hết mùa: dừng quảng cáo theo mùa, xả hàng, ghi lại mẫu thắng "
-        "cho năm sau."
+        "Hết mùa: dừng quảng cáo theo mùa, ghi lại mẫu thắng cho năm sau, "
+        "chuyển sang sự kiện kế tiếp."
     ),
 }
+SALE_AFTER_ADVICE = (
+    "Sale đã qua — chuyển ngân sách sang sự kiện kế tiếp, giữ lại mẫu bán tốt."
+)
 
 
 @dataclass(frozen=True)
@@ -68,6 +73,14 @@ class EventDef:
     note: str = ""
     idea_template: str = "{lead} {seed}"
     cross_seeds: bool = True
+    lead_days: tuple[int, int, int] = (DESIGN_DAYS, LAUNCH_DAYS, PUSH_DAYS)
+
+
+@dataclass(frozen=True)
+class CalendarConfig:
+    events: list[EventDef]
+    fulfillment_days: int
+    ship_buffer_days: int
 
 
 @dataclass(frozen=True)
@@ -83,6 +96,7 @@ class Milestones:
     launch_by: date
     push_from: date
     ship_by: date | None
+    order_by: date | None
 
 
 def nth_weekday(
@@ -165,10 +179,21 @@ def _parse_event(e: Any) -> EventDef:
     for field in ("key", "name", "rule"):
         if not e.get(field):
             raise ValueError(f"Calendar event {label!r} is missing {field!r}")
+    etype = str(e.get("type", "holiday"))
+    if etype not in EVENT_TYPES:
+        raise ValueError(
+            f"Calendar event {label!r}: type must be one of {sorted(EVENT_TYPES)}, got {etype!r}"
+        )
+    lead = e.get("lead_days") or {}
+    lead_days = (
+        int(lead.get("design", DESIGN_DAYS)),
+        int(lead.get("launch", LAUNCH_DAYS)),
+        int(lead.get("push", PUSH_DAYS)),
+    )
     return EventDef(
         key=str(e["key"]),
         name=str(e["name"]),
-        type=str(e.get("type", "holiday")),
+        type=etype,
         rule=dict(e["rule"]),
         duration_days=int(e.get("duration_days", 1)),
         ship_by=bool(e.get("ship_by", True)),
@@ -176,10 +201,11 @@ def _parse_event(e: Any) -> EventDef:
         note=str(e.get("note", "")),
         idea_template=str(e.get("idea_template", "{lead} {seed}")),
         cross_seeds=bool(e.get("cross_seeds", True)),
+        lead_days=lead_days,
     )
 
 
-def load_calendar() -> tuple[list[EventDef], int]:
+def load_calendar() -> CalendarConfig:
     data = load_yaml("us_calendar.yaml")
     events = [_parse_event(e) for e in data.get("events") or []]
     seen: set[str] = set()
@@ -187,7 +213,24 @@ def load_calendar() -> tuple[list[EventDef], int]:
         if e.key in seen:
             raise ValueError(f"Duplicate calendar event key {e.key!r}")
         seen.add(e.key)
-    return events, int(data.get("fulfillment_days", DEFAULT_FULFILLMENT_DAYS))
+    by_key = {e.key: e for e in events}
+    year = date.today().year
+    for e in events:
+        try:
+            event_start(e, year, by_key)
+        except RecursionError as exc:
+            raise ValueError(
+                f"Calendar event {e.key!r}: offset rule forms a cycle"
+            ) from exc
+        except ValueError as exc:
+            if repr(e.key) in str(exc):
+                raise
+            raise ValueError(f"Calendar event {e.key!r}: invalid rule ({exc})") from exc
+    return CalendarConfig(
+        events=events,
+        fulfillment_days=int(data.get("fulfillment_days", DEFAULT_FULFILLMENT_DAYS)),
+        ship_buffer_days=int(data.get("ship_buffer_days", DEFAULT_SHIP_BUFFER_DAYS)),
+    )
 
 
 def occurrences(
@@ -208,20 +251,34 @@ def occurrences(
     return sorted(out, key=lambda o: (o.start, o.event.key))
 
 
-def milestones(occ: Occurrence, fulfillment_days: int) -> Milestones:
+def milestones(
+    occ: Occurrence,
+    fulfillment_days: int,
+    ship_buffer_days: int = DEFAULT_SHIP_BUFFER_DAYS,
+) -> Milestones:
     start = occ.start
+    design, launch, push = occ.event.lead_days
+    lead = fulfillment_days + ship_buffer_days
+    ship_by = order_by = None
+    if occ.event.ship_by:
+        ship_by = start - timedelta(days=lead)
+        order_by = max(ship_by, occ.end - timedelta(days=lead))
     return Milestones(
-        design_start=start - timedelta(days=DESIGN_DAYS),
-        launch_by=start - timedelta(days=LAUNCH_DAYS),
-        push_from=start - timedelta(days=PUSH_DAYS),
-        ship_by=(
-            start - timedelta(days=fulfillment_days) if occ.event.ship_by else None
-        ),
+        design_start=start - timedelta(days=design),
+        launch_by=start - timedelta(days=launch),
+        push_from=start - timedelta(days=push),
+        ship_by=ship_by,
+        order_by=order_by,
     )
 
 
-def phase(occ: Occurrence, today: date, fulfillment_days: int) -> str:
-    m = milestones(occ, fulfillment_days)
+def phase(
+    occ: Occurrence,
+    today: date,
+    fulfillment_days: int,
+    ship_buffer_days: int = DEFAULT_SHIP_BUFFER_DAYS,
+) -> str:
+    m = milestones(occ, fulfillment_days, ship_buffer_days)
     if today > occ.end:
         return "after"
     if occ.start <= today <= occ.end:
@@ -235,3 +292,14 @@ def phase(occ: Occurrence, today: date, fulfillment_days: int) -> str:
     if today >= m.design_start:
         return "design"
     return "upcoming"
+
+
+def advice_for(occ: Occurrence, current: str, today: date, m: Milestones) -> str:
+    if current == "peak" and m.order_by is not None and today <= m.order_by:
+        return (
+            "Vẫn kịp: lên mẫu mới và đẩy quảng cáo — đặt trước "
+            f"{m.order_by:%d/%m} vẫn giao kịp trong sự kiện."
+        )
+    if current == "after" and occ.event.type == "sale":
+        return SALE_AFTER_ADVICE
+    return PHASE_ADVICE[current]

@@ -2,6 +2,7 @@
 # type: holiday | occasion | awareness | sale.  ship_by: cần giao trước ngày lễ?
 # theme_words: từ đầu tiên dùng để ghép ngách với seed (vd "halloween nurse").
 fulfillment_days: 10
+ship_buffer_days: 3
 events:
   - {key: new_year, name: "New Year", type: holiday, rule: {kind: fixed, month: 1, day: 1}, theme_words: [new year, cheers]}
   - {key: black_history_month, name: "Black History Month", type: awareness, rule: {kind: month, month: 2}, theme_words: [black history, melanin]}
@@ -20,15 +21,14 @@ events:
   - {key: independence_day, name: "4th of July", type: holiday, rule: {kind: fixed, month: 7, day: 4}, theme_words: [4th of july, patriotic, america, usa]}
   - {key: back_to_school, name: "Back to School", type: occasion, rule: {kind: fixed, month: 8, day: 1}, duration_days: 31, theme_words: [back to school, first day, teacher]}
   - {key: labor_day, name: "Labor Day", type: holiday, rule: {kind: nth_weekday, month: 9, weekday: mon, n: 1}, theme_words: [labor day, usa]}
-  - {key: breast_cancer_awareness, name: "Breast Cancer Awareness Month", type: awareness, rule: {kind: month, month: 10}, theme_words: [pink, breast cancer, awareness, in october we wear pink]}
-  - {key: halloween, name: "Halloween", type: holiday, rule: {kind: fixed, month: 10, day: 31}, theme_words: [halloween, spooky, ghost, pumpkin, skeleton, witch, boo]}
+  - {key: breast_cancer_awareness, name: "Breast Cancer Awareness Month", type: awareness, rule: {kind: month, month: 10}, theme_words: [pink, breast cancer, in october we wear pink]}
+  - {key: halloween, name: "Halloween", type: holiday, lead_days: {design: 70, launch: 50, push: 30}, rule: {kind: fixed, month: 10, day: 31}, theme_words: [halloween, spooky, ghost, pumpkin, skeleton, witch, boo]}
   - {key: veterans_day, name: "Veterans Day", type: holiday, rule: {kind: fixed, month: 11, day: 11}, theme_words: [veteran, veterans day, patriotic]}
-  - {key: sale_11_11, name: "TikTok Shop 11.11 Sale", type: sale, ship_by: false, idea_template: "{seed} gift", rule: {kind: fixed, month: 11, day: 11}, theme_words: [gift, christmas gift]}
+  - {key: sale_11_11, name: "TikTok Shop 11.11 Sale", type: sale, ship_by: false, idea_template: "{seed} gift", rule: {kind: fixed, month: 11, day: 8}, duration_days: 4, theme_words: [gift, christmas gift]}
   - {key: thanksgiving, name: "Thanksgiving", type: holiday, rule: {kind: nth_weekday, month: 11, weekday: thu, n: 4}, theme_words: [thanksgiving, thankful, turkey, fall]}
-  - {key: black_friday, idea_template: "{seed} christmas gift", name: "Black Friday", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: 1}, theme_words: [christmas gift, gift]}
-  - {key: cyber_monday, idea_template: "{seed} christmas gift", name: "Cyber Monday", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: 4}, theme_words: [christmas gift, gift]}
-  - {key: sale_12_12, idea_template: "{seed} christmas gift", name: "TikTok Shop 12.12 Sale", type: sale, ship_by: false, rule: {kind: fixed, month: 12, day: 12}, theme_words: [christmas gift, christmas]}
-  - {key: christmas, name: "Christmas", type: holiday, rule: {kind: fixed, month: 12, day: 25}, theme_words: [christmas, xmas, santa, ugly sweater, family christmas]}
+  - {key: black_friday, idea_template: "{seed} christmas gift", name: "Black Friday – Cyber Monday", note: "Kiểm tra hạn đăng ký chiến dịch trong TikTok Shop Seller Center.", type: sale, ship_by: false, rule: {kind: offset, of: thanksgiving, days: -12}, duration_days: 17, theme_words: [christmas gift, gift]}
+  - {key: sale_12_12, idea_template: "{seed} christmas gift", name: "TikTok Shop 12.12 Sale", type: sale, ship_by: false, rule: {kind: fixed, month: 12, day: 9}, duration_days: 4, theme_words: [christmas gift, christmas]}
+  - {key: christmas, name: "Christmas", type: holiday, lead_days: {design: 90, launch: 60, push: 40}, note: "Khách mua quà Christmas từ đợt Black Friday — nên lên sản phẩm trước giữa tháng 11.", rule: {kind: fixed, month: 12, day: 25}, theme_words: [christmas, xmas, santa, ugly sweater, family christmas]}
   - {key: womens_history_month, name: "Women's History Month", type: awareness, rule: {kind: month, month: 3}, theme_words: [women history, feminist, girl power]}
   - {key: earth_day, name: "Earth Day", type: occasion, rule: {kind: fixed, month: 4, day: 22}, theme_words: [earth day, planet, nature]}
   - {key: cinco_de_mayo, name: "Cinco de Mayo", type: holiday, rule: {kind: fixed, month: 5, day: 5}, theme_words: [cinco de mayo, fiesta, taco]}

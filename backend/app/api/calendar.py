@@ -1,10 +1,11 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.analysis.us_calendar import (
-    PHASE_ADVICE,
+    advice_for,
     PHASE_LABEL,
     load_calendar,
     milestones,
@@ -24,13 +25,14 @@ def get_calendar(
     today: date | None = None,
     session: Session = Depends(get_session),
 ) -> CalendarPage:
-    today = today or datetime.now(timezone.utc).date()
-    defs, fulfillment_days = load_calendar()
+    today = today or datetime.now(ZoneInfo("America/New_York")).date()
+    cfg = load_calendar()
+    defs, fulfillment_days, buffer = cfg.events, cfg.fulfillment_days, cfg.ship_buffer_days
     scores = latest_scores(session)
     events = []
     for occ in occurrences(defs, today, days):
-        m = milestones(occ, fulfillment_days)
-        current = phase(occ, today, fulfillment_days)
+        m = milestones(occ, fulfillment_days, buffer)
+        current = phase(occ, today, fulfillment_days, buffer)
         events.append(
             CalendarEventOut(
                 key=occ.event.key,
@@ -41,14 +43,15 @@ def get_calendar(
                 days_until=(occ.start - today).days,
                 phase=current,
                 phase_label=PHASE_LABEL[current],
-                advice=PHASE_ADVICE[current],
+                advice=advice_for(occ, current, today, m),
                 note=occ.event.note,
                 design_start=m.design_start,
                 launch_by=m.launch_by,
                 push_from=m.push_from,
                 ship_by=m.ship_by,
+                order_by=m.order_by,
                 theme_words=list(occ.event.theme_words),
-                seed_ideas=seed_ideas(session, occ, scores),
+                seed_ideas=seed_ideas(session, occ, scores, defs),
                 radar_matches=radar_matches(session, occ, scores),
             )
         )
