@@ -1,6 +1,29 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Archivo, Be_Vietnam_Pro, IBM_Plex_Mono } from "next/font/google";
+import AppShell from "@/components/ui/AppShell";
 import "./globals.css";
+
+const archivo = Archivo({
+  subsets: ["latin", "vietnamese"],
+  weight: "variable",
+  axes: ["wdth"],
+  variable: "--font-archivo",
+  display: "swap",
+});
+
+const beVietnam = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600"],
+  variable: "--font-be-vietnam",
+  display: "swap",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500"],
+  variable: "--font-plex-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "POD Trend Radar",
@@ -9,32 +32,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi">
-      <body className="min-h-screen bg-zinc-50 text-zinc-900 antialiased">
-        <header className="border-b border-zinc-200 bg-white">
-          <nav className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3 text-sm">
-            <span className="font-semibold">POD Trend Radar</span>
-            <Link href="/" className="text-zinc-600 hover:text-zinc-900">
-              Trend Radar
-            </Link>
-            <Link href="/signals" className="text-zinc-600 hover:text-zinc-900">
-              Listing Signals
-            </Link>
-            <Link href="/amazon" className="text-zinc-600 hover:text-zinc-900">
-              Amazon
-            </Link>
-            <Link href="/products" className="text-zinc-600 hover:text-zinc-900">
-              Best Sellers
-            </Link>
-            <Link href="/calendar" className="text-zinc-600 hover:text-zinc-900">
-              Lịch mùa vụ
-            </Link>
-            <Link href="/settings" className="text-zinc-600 hover:text-zinc-900">
-              Cài đặt
-            </Link>
-          </nav>
-        </header>
-        <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+    <html lang="vi" className={`${archivo.variable} ${beVietnam.variable} ${plexMono.variable}`}>
+      <body className="min-h-screen bg-paper font-sans text-ink antialiased">
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

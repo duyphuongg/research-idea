@@ -1,1 +1,85 @@
 @import "tailwindcss";
+
+/* Press Room design tokens — see docs/superpowers/specs/2026-10-07-ui-redesign.md */
+@theme {
+  --color-paper: #eef1f4;
+  --color-sheet: #ffffff;
+  --color-ink: #15171e;
+  --color-ink-2: #5b6170;
+  --color-rule: #d5dae1;
+  --color-cyan: #0096b7;
+  --color-magenta: #c8246e;
+  --color-yellow: #e3a600;
+  --color-go: #1f8a5b;
+  --color-stop: #c8371d;
+
+  --shadow-card: 0 1px 0 #d5dae1;
+}
+
+/* Font families come from next/font CSS variables set on <html>. */
+@theme inline {
+  --font-display: var(--font-archivo), "Arial Narrow", system-ui, sans-serif;
+  --font-sans: var(--font-be-vietnam), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+/* Archivo width axis: 112 for titles, 125 for the logo / labels. */
+@utility font-wide {
+  font-stretch: 112%;
+}
+@utility font-wider {
+  font-stretch: 125%;
+}
+
+/* Garment-label eyebrow: Archivo, 11px, UPPERCASE, tracked. */
+@utility eyebrow {
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-paper);
+  }
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-cyan) 25%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  /* On the dark sidebar the ink ring would be invisible. */
+  .on-ink :focus-visible {
+    outline-color: #ffffff;
+  }
+}
+
+@layer utilities {
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
