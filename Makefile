@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now install-daily uninstall-daily daily-status up down telegram-setup
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status up down telegram-setup
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -53,6 +53,9 @@ DAILY_HOURS ?= 8 20
 
 scan-now:
 	cd backend && .venv/bin/python scripts/daily_scan.py
+
+backup:
+	cd backend && .venv/bin/python scripts/daily_scan.py --backup-only
 
 install-daily:
 	mkdir -p backend/data/logs $(HOME)/Library/LaunchAgents

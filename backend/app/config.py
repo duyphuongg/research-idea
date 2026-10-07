@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     raw_retention_days: int = 30
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
-    app_url: str | None = None  # e.g. http://<mac>.<tailnet>.ts.net:3737 — used for links in Telegram
+    app_url: str | None = None
+    backup_dir: str = "data/backups"  # relative to backend/; e.g. an iCloud Drive folder to keep copies off this disk
+    backup_keep: int = 14  # daily copies kept  # e.g. http://<mac>.<tailnet>.ts.net:3737 — used for links in Telegram
     cors_origins: list[str] = ["http://localhost:3737"]
 
 
