@@ -99,3 +99,19 @@ def test_amazon_previous_date_is_per_category(session):
     session.flush()
     alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
     assert [(a.kind, a.subject_id) for a in alerts] == [("amazon", a_new.id)]
+
+
+def test_amazon_skips_categories_stale_versus_global_latest(session):
+    a_new = _product(session, "sa1", "New A", source="amazon")
+    b_new = _product(session, "sb1", "New B", source="amazon")
+    d, d1, d2 = TODAY, date(2026, 10, 7), date(2026, 10, 6)
+    session.add_all([
+        AmazonRank(product_id=a_new.id, date=d1, category_key="cat_a", list_name="bestsellers", rank=50),
+        AmazonRank(product_id=a_new.id, date=d, category_key="cat_a", list_name="bestsellers", rank=3),
+        # cat_b failed on the latest scan: its newest data is D-1, older than the global latest D
+        AmazonRank(product_id=b_new.id, date=d2, category_key="cat_b", list_name="bestsellers", rank=50),
+        AmazonRank(product_id=b_new.id, date=d1, category_key="cat_b", list_name="bestsellers", rank=3),
+    ])
+    session.flush()
+    alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
+    assert [(a.kind, a.subject_id) for a in alerts] == [("amazon", a_new.id)]

@@ -86,13 +86,17 @@ def _hot_rows(session: Session, seeds: list[str]) -> list[HotRow]:
 
 def _amazon_rows(session: Session, cfg: AlertsConfig) -> list[AmazonRow]:
     """Top-N rows of each category's latest bestsellers date, compared with that category's own previous
-    date. A category with no previous date (new, or failed every earlier day) yields no rows."""
+    date. A category with no previous date (new, or failed every earlier day) yields no rows, and a category
+    whose latest date is older than the global latest (it failed the last scan) is skipped."""
     best = AmazonRank.list_name == "bestsellers"
     latest_by_cat = dict(session.execute(
         select(AmazonRank.category_key, func.max(AmazonRank.date)).where(best).group_by(AmazonRank.category_key)
     ).all())
+    global_latest = max(latest_by_cat.values(), default=None)
     out = []
     for cat, latest in sorted(latest_by_cat.items()):
+        if latest != global_latest:
+            continue  # category failed the most recent scan: its data is stale
         in_cat = (best, AmazonRank.category_key == cat)
         prev = session.scalar(select(func.max(AmazonRank.date)).where(*in_cat, AmazonRank.date < latest))
         if prev is None:
