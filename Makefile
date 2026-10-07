@@ -27,7 +27,9 @@ up:
 	if [ -n "$$NAME" ]; then echo "Từ điện thoại/máy khác (Tailscale): http://$$NAME:$(UI_PORT)"; fi
 
 down:
-	-@lsof -ti tcp:8000 | xargs kill 2>/dev/null; lsof -ti tcp:$(UI_PORT) | xargs kill 2>/dev/null; echo "Đã tắt backend và giao diện."
+	-@lsof -ti tcp:8000 | xargs kill 2>/dev/null; lsof -ti tcp:$(UI_PORT) | xargs kill 2>/dev/null; \
+	for i in $$(seq 1 20); do lsof -ti tcp:8000 -sTCP:LISTEN >/dev/null 2>&1 || lsof -ti tcp:$(UI_PORT) -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 0.5; done; \
+	echo "Đã tắt backend và giao diện."
 
 dev-backend:
 	cd backend && .venv/bin/uvicorn --factory app.main:create_app --reload --port 8000
