@@ -211,3 +211,25 @@ async def test_replace_only_touches_own_source_date_and_metric(session_factory):
     await run_scan(session_factory, [ReplacingConnector({"a": 1})], today=TODAY)
     with session_factory() as s:
         assert s.scalar(select(func.count()).select_from(TrendSignal)) == 4
+
+
+async def test_run_scan_uses_passed_settings_for_telegram(session_factory):
+    import httpx
+    import respx
+
+    from app.models import Alert
+
+    with session_factory() as s:
+        s.add(Alert(kind="listing", subject_id=1, level=1, priority=1.0, title="Tee", reason="r",
+                    image_url=None, link="/signals", external_url=None, watch_keyword=None,
+                    scan_date=TODAY, created_at=utcnow()))
+        s.commit()
+    settings = Settings(_env_file=None, scheduler_enabled=False, telegram_bot_token="1:t", telegram_chat_id="42")
+    with respx.mock(assert_all_called=False) as mock:
+        route = mock.post("https://api.telegram.org/bot1:t/sendMessage").mock(
+            return_value=httpx.Response(200, json={"ok": True}))
+        await run_scan(session_factory, [], today=TODAY, settings=settings)
+    assert route.call_count == 1
+    with session_factory() as s:
+        from app.models import Alert as A
+        assert s.scalar(select(A.sent_at)) is not None

@@ -49,6 +49,7 @@ async def execute_scan(
             connectors,
             jobs=jobs,
             retention_days=app.state.settings.raw_retention_days,
+            settings=app.state.settings,
         )
     finally:
         app.state.scan_lock.release()

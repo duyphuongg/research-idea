@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.connectors.base import Connector
 from app.db import utcnow
 from app.models import RawPayload, ScanRun, Seed, TrendSignal
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.notify.telegram import send_pending
 from app.pipeline.rescore import rescore
 from app.pipeline.store import persist_batch
@@ -29,6 +29,7 @@ async def run_scan(
     jobs: Sequence["ScanJob"] = (),
     today: date | None = None,
     retention_days: int = 30,
+    settings: Settings | None = None,
 ) -> list[int]:
     today = today or datetime.now(timezone.utc).date()
     with session_factory() as session:
@@ -59,8 +60,10 @@ async def run_scan(
 
     try:
         with session_factory() as session:
-            await send_pending(session, get_settings())
-            session.commit()
+            try:
+                await send_pending(session, settings or get_settings())
+            finally:  # keep sent_at for alerts already delivered
+                session.commit()
     except Exception:  # Telegram must never break a scan
         logger.exception("Telegram delivery failed")
 

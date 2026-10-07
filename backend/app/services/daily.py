@@ -33,5 +33,6 @@ async def run_daily_scan(
         logger.info("Skipping daily scan: no enabled sources")
         return []
     return await run_scan(
-        session_factory, connectors, jobs=jobs, retention_days=settings.raw_retention_days
+        session_factory, connectors, jobs=jobs, retention_days=settings.raw_retention_days,
+        settings=settings,
     )

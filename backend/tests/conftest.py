@@ -59,3 +59,11 @@ def make_client(settings, session_factory):
 @pytest.fixture
 def client(make_client):
     return make_client()
+
+
+@pytest.fixture(autouse=True)
+def _no_real_telegram(monkeypatch):
+    """run_scan falls back to get_settings(), which reads backend/.env; never let tests reach Telegram."""
+    import app.pipeline.scan as scan_mod
+
+    monkeypatch.setattr(scan_mod, "get_settings", lambda: Settings(_env_file=None, scheduler_enabled=False))
