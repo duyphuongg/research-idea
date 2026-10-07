@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- POD Trend Radar: quét tất cả nguồn mỗi ngày. Cài bằng `make install-daily`. -->
+<!-- POD Trend Radar: quét tất cả nguồn theo các giờ trong ngày (DAILY_HOURS). Cài bằng `make install-daily`. -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
@@ -13,12 +13,9 @@
   <key>WorkingDirectory</key>
   <string>__ROOT__/backend</string>
   <key>StartCalendarInterval</key>
-  <dict>
-    <key>Hour</key>
-    <integer>__HOUR__</integer>
-    <key>Minute</key>
-    <integer>0</integer>
-  </dict>
+  <array>
+__INTERVALS__
+  </array>
   <key>StandardOutPath</key>
   <string>__ROOT__/backend/data/logs/daily-scan.log</string>
   <key>StandardErrorPath</key>

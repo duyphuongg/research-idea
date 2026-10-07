@@ -46,14 +46,14 @@ Velocity/🔥 cần ít nhất 2 lần quét cách nhau ≥ 3 ngày.
 ### Quét tự động mỗi ngày (macOS)
 
 ```bash
-make install-daily              # quét tất cả nguồn mỗi ngày lúc 8:00 (giờ máy)
-make install-daily DAILY_HOUR=20  # đổi giờ
+make install-daily                    # quét tất cả nguồn lúc 8:00 và 20:00 mỗi ngày (giờ máy)
+make install-daily DAILY_HOURS="9"    # đổi giờ (1 hoặc nhiều giờ, cách nhau dấu cách)
 make daily-status               # trạng thái + log gần nhất
 make scan-now                   # quét ngay trong terminal
 make uninstall-daily            # gỡ
 ```
 
-Dùng launchd: không cần mở backend; nếu máy đang ngủ đúng giờ, macOS chạy bù khi máy thức. Một lần quét ~8–10 phút. Log: `backend/data/logs/daily-scan.log`.
+Dùng launchd: không cần mở backend; nếu máy đang ngủ đúng giờ, macOS chạy bù khi máy thức. Một lần quét ~8–10 phút. Số liệu lưu theo ngày (UTC): lần quét tối cập nhật lại số của ngày đó cho mới hơn, nên mức tăng/ngày vẫn so giữa các ngày. Log: `backend/data/logs/daily-scan.log`.
 Khi dùng cách này, đặt `SCHEDULER_ENABLED=false` trong `backend/.env` để backend không quét thêm lần nữa (giờ quét trong trang Cài đặt khi đó không còn tác dụng). Nếu muốn dùng scheduler của backend thay vì launchd: `make uninstall-daily` và đặt `SCHEDULER_ENABLED=true` (backend phải luôn chạy).
 
 ## Trend Radar (Phase 2)

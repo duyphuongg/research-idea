@@ -45,18 +45,21 @@ rescore:
 # --- Quét tự động mỗi ngày (macOS launchd) ---
 DAILY_LABEL := io.podtrendradar.daily-scan
 DAILY_PLIST := $(HOME)/Library/LaunchAgents/$(DAILY_LABEL).plist
-DAILY_HOUR ?= 8
+DAILY_HOURS ?= 8 20
 
 scan-now:
 	cd backend && .venv/bin/python scripts/daily_scan.py
 
 install-daily:
 	mkdir -p backend/data/logs $(HOME)/Library/LaunchAgents
-	sed -e "s#__ROOT__#$(CURDIR)#g" -e "s#__HOUR__#$(DAILY_HOUR)#g" -e "s#__LABEL__#$(DAILY_LABEL)#g" \
-		deploy/launchd/daily-scan.plist.template > $(DAILY_PLIST)
+	sed -e "s#__ROOT__#$(CURDIR)#g" -e "s#__LABEL__#$(DAILY_LABEL)#g" deploy/launchd/daily-scan.plist.template \
+		| awk -v hours="$(DAILY_HOURS)" '/__INTERVALS__/ { n = split(hours, h, " "); for (i = 1; i <= n; i++) \
+			printf "    <dict><key>Hour</key><integer>%d</integer><key>Minute</key><integer>0</integer></dict>\n", h[i]; next } 1' \
+		> $(DAILY_PLIST)
+	plutil -lint $(DAILY_PLIST) >/dev/null
 	-launchctl bootout gui/$$(id -u) $(DAILY_PLIST) 2>/dev/null
 	launchctl bootstrap gui/$$(id -u) $(DAILY_PLIST)
-	@echo "Đã cài: quét mỗi ngày lúc $(DAILY_HOUR):00 (giờ máy). Log: backend/data/logs/daily-scan.log"
+	@echo "Đã cài: quét mỗi ngày lúc $(foreach h,$(DAILY_HOURS),$(h):00) (giờ máy). Log: backend/data/logs/daily-scan.log"
 
 uninstall-daily:
 	-launchctl bootout gui/$$(id -u) $(DAILY_PLIST)

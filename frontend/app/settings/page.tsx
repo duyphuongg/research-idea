@@ -155,7 +155,7 @@ export default function SettingsPage() {
                   </span>
                 </div>
                 <p className="max-w-2xl text-xs text-ink-2">
-                  Đang quét tự động mỗi ngày bằng lịch của máy (make install-daily); giờ này chỉ dùng khi bật scheduler của backend.
+                  Đang quét tự động lúc 8:00 và 20:00 mỗi ngày bằng lịch của máy (make install-daily); giờ này chỉ dùng khi bật scheduler của backend.
                 </p>
               </div>
             )}
