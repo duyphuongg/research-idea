@@ -15,11 +15,18 @@ def _unread(session: Session) -> int:
     return session.scalar(select(func.count()).select_from(Alert).where(Alert.read_at.is_(None))) or 0
 
 
+def _alert_out(a: Alert) -> AlertOut:
+    return AlertOut(
+        id=a.id, kind=a.kind, level=a.level, title=a.title, reason=a.reason, image_url=a.image_url,
+        link=a.link, external_url=a.external_url, watch_keyword=a.watch_keyword, scan_date=a.scan_date,
+        created_at=a.created_at, read=a.read_at is not None,
+    )
+
+
 @router.get("/alerts", response_model=AlertPage)
 def list_alerts(limit: int = Query(100, ge=1, le=500), session: Session = Depends(get_session)):
     rows = session.scalars(select(Alert).order_by(Alert.created_at.desc(), Alert.id.desc()).limit(limit))
-    items = [AlertOut.model_validate({**{c: getattr(a, c) for c in AlertOut.model_fields if c != "read"},
-                                      "read": a.read_at is not None}) for a in rows]
+    items = [_alert_out(a) for a in rows]
     return AlertPage(unread=_unread(session), items=items)
 
 

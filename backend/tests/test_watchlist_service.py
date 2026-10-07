@@ -46,3 +46,13 @@ def test_watch_keywords_and_children(session):
     session.flush()
     assert [s.keyword for s in watch_keywords(session)] == ["game day"]
     assert child_keyword_ids(session, "game day") == [child.id]
+
+
+def test_seed_keyword_ids_prefers_normalized_form(session):
+    from app.keywords import get_or_create_keyword
+    from app.services.watchlist import seed_keyword_ids
+
+    assert seed_keyword_ids(session, "Game Days") == []
+    canon = get_or_create_keyword(session, "game day")  # created first, so it has the lower id
+    norm = get_or_create_keyword(session, "game days")
+    assert seed_keyword_ids(session, "Game Days") == [norm.id, canon.id]

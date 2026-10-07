@@ -252,8 +252,6 @@ class AmazonPage(BaseModel):
 
 
 class AlertOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     kind: str
     level: int

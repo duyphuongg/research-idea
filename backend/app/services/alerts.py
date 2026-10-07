@@ -12,17 +12,11 @@ from app.analysis.alerts import (
 )
 from app.analysis.listing_signals import load_signals_config
 from app.db import utcnow
-from app.keywords import canonical_keyword, normalize_keyword
 from app.models import (
     Alert, AmazonRank, Keyword, KeywordScore, ListingSignal, Product, ProductKeyword,
 )
 from app.services.hot import compute_product_metrics
-from app.services.watchlist import child_keyword_ids, listing_matches, watch_keywords
-
-
-def _seed_keyword_ids(session: Session, seed: str) -> list[int]:
-    texts = {normalize_keyword(seed), canonical_keyword(seed)}
-    return list(session.scalars(select(Keyword.id).where(Keyword.text.in_(texts))))
+from app.services.watchlist import child_keyword_ids, listing_matches, seed_keyword_ids, watch_keywords
 
 
 def _niche_rows(session: Session, seeds: list[str]) -> list[NicheRow]:
@@ -31,7 +25,7 @@ def _niche_rows(session: Session, seeds: list[str]) -> list[NicheRow]:
         return []
     owner: dict[int, str] = {}
     for seed in seeds:
-        for kid in _seed_keyword_ids(session, seed) + child_keyword_ids(session, seed):
+        for kid in seed_keyword_ids(session, seed) + child_keyword_ids(session, seed):
             owner.setdefault(kid, seed)
     if not owner:
         return []
@@ -68,7 +62,7 @@ def _listing_rows(session: Session, seeds: list[str]) -> list[ListingRow]:
 def _hot_rows(session: Session, seeds: list[str]) -> list[HotRow]:
     seed_by_kid: dict[int, str] = {}
     for seed in seeds:
-        for kid in _seed_keyword_ids(session, seed):
+        for kid in seed_keyword_ids(session, seed):
             seed_by_kid.setdefault(kid, seed)
     if not seed_by_kid:
         return []

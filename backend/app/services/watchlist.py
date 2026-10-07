@@ -29,9 +29,17 @@ def listing_matches(keyword: str, discovery_query: str, title: str, suffix: str)
     return discovery_query == f"{kw} {suffix}" or kw in title.lower()
 
 
+def seed_keyword_ids(session: Session, seed_text: str) -> list[int]:
+    """Keyword ids for a seed (its normalized and canonical forms), the normalized form first."""
+    norm = normalize_keyword(seed_text)
+    texts = {norm, canonical_keyword(seed_text)}
+    return list(session.scalars(
+        select(Keyword.id).where(Keyword.text.in_(texts)).order_by(Keyword.text != norm, Keyword.id)
+    ))
+
+
 def child_keyword_ids(session: Session, seed_text: str) -> list[int]:
-    texts = {normalize_keyword(seed_text), canonical_keyword(seed_text)}
-    parent_ids = list(session.scalars(select(Keyword.id).where(Keyword.text.in_(texts))))
+    parent_ids = seed_keyword_ids(session, seed_text)
     if not parent_ids:
         return []
     return sorted(set(session.scalars(

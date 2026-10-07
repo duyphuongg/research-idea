@@ -9,9 +9,10 @@ from app.analysis.listing_signals import load_signals_config
 from app.api.deps import get_session
 from app.api.schemas import WatchChild, WatchItem, WatchPage, WatchThumb
 from app.db import utcnow
-from app.keywords import canonical_keyword, normalize_keyword
 from app.models import Alert, Keyword, KeywordScore, ListingSignal, Product
-from app.services.watchlist import child_keyword_ids, listing_keyword_filter, watch_keywords
+from app.services.watchlist import (
+    child_keyword_ids, listing_keyword_filter, seed_keyword_ids, watch_keywords,
+)
 
 router = APIRouter(prefix="/api")
 SHOWN = ("super_breakout", "steady_grower")
@@ -39,9 +40,8 @@ def watchlist(session: Session = Depends(get_session)):
 
     seed_kw = {}
     for seed in seeds:
-        texts = [normalize_keyword(seed.keyword), canonical_keyword(seed.keyword)]
-        seed_kw[seed.id] = session.scalar(select(Keyword).where(Keyword.text.in_(texts)).order_by(
-            Keyword.text != texts[0]))
+        ids = seed_keyword_ids(session, seed.keyword)
+        seed_kw[seed.id] = session.get(Keyword, ids[0]) if ids else None
     children = {seed.id: child_keyword_ids(session, seed.keyword) for seed in seeds}
 
     all_ids = {k.id for k in seed_kw.values() if k} | {i for ids in children.values() for i in ids}
