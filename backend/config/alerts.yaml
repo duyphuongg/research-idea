@@ -1,0 +1,6 @@
+# Thông báo (Tin mới + Telegram) — kiểm tra sau mỗi lần quét. Chỉnh tự do.
+niche_min_score: 60        # 🚀 ngách bứt phá: điểm tối thiểu
+niche_min_growth: 0.20     # … và tăng trưởng > 20%
+amazon_top_n: 20           # 🛒 sản phẩm mới lọt top N Best Sellers
+cooldown_days: 7           # không báo lại cùng ngách/sản phẩm trong N ngày (trừ khi lên mức cao hơn)
+telegram_max_items: 5      # số tin kèm ảnh mỗi lần quét; còn lại gom thành 1 dòng tóm tắt

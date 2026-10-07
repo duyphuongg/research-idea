@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -185,3 +186,26 @@ class AmazonRank(Base):
     category_key: Mapped[str] = mapped_column(String(40))
     list_name: Mapped[str] = mapped_column(String(20))
     rank: Mapped[int] = mapped_column(Integer)
+
+
+class Alert(Base):
+    """Something worth telling the user after a scan (Tin mới page + Telegram)."""
+
+    __tablename__ = "alerts"
+    __table_args__ = (Index("ix_alerts_kind_subject_created", "kind", "subject_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))  # niche | listing | hot_product | amazon
+    subject_id: Mapped[int] = mapped_column(Integer)  # keyword id (niche) or product id
+    level: Mapped[int] = mapped_column(Integer, default=1)
+    priority: Mapped[float] = mapped_column(Float, default=0.0)  # higher = more important within a kind
+    title: Mapped[str] = mapped_column(String(300))
+    reason: Mapped[str] = mapped_column(String(300))
+    image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    link: Mapped[str] = mapped_column(String(300))  # in-app path
+    external_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    watch_keyword: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    scan_date: Mapped[date] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
