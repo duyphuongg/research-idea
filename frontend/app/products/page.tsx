@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
 import SourceHealthBanner from "@/components/SourceHealthBanner";
 import { Button, ButtonLink, Checkbox, EmptyState, Notice, PageHeader, Select } from "@/components/ui";
@@ -26,7 +27,22 @@ const TYPES: { value: ProductType | ""; label: string }[] = [
 type Result = { key: string; data?: ProductPage; error?: string };
 
 export default function ProductsPage() {
-  const [query, setQuery] = useState<ProductQuery>({ sort: "velocity", limit: PAGE_SIZE, offset: 0 });
+  return (
+    <Suspense fallback={null}>
+      <ProductsView />
+    </Suspense>
+  );
+}
+
+function ProductsView() {
+  const params = useSearchParams();
+  const paramKeywordId = Number(params.get("keyword_id"));
+  const [query, setQuery] = useState<ProductQuery>({
+    sort: "velocity",
+    limit: PAGE_SIZE,
+    offset: 0,
+    keyword_id: Number.isInteger(paramKeywordId) && paramKeywordId > 0 ? paramKeywordId : undefined,
+  });
   const [result, setResult] = useState<Result | null>(null);
   const [seeds, setSeeds] = useState<Seed[]>([]);
   const key = JSON.stringify(query);

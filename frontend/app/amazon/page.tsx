@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import SourceHealthBanner from "@/components/SourceHealthBanner";
 import { LicensedTag } from "@/components/SignalCard";
 import { ButtonLink, Card, Checkbox, Delta, EmptyState, ImageZoom, InkDot, Notice, PageHeader, Select, Tabs } from "@/components/ui";
@@ -38,7 +39,17 @@ function isStale(date: string): boolean {
 }
 
 export default function AmazonPageView() {
-  const [category, setCategory] = useState("women_tshirts");
+  return (
+    <Suspense fallback={null}>
+      <AmazonView />
+    </Suspense>
+  );
+}
+
+function AmazonView() {
+  const params = useSearchParams();
+  const paramCategory = CATEGORY_KEYS.find((k) => k === params.get("category"));
+  const [category, setCategory] = useState(paramCategory ?? "women_tshirts");
   const [list, setList] = useState<AmazonList>("bestsellers");
   const [hideLicensed, setHideLicensed] = useState(false);
   const [result, setResult] = useState<Result | null>(null);

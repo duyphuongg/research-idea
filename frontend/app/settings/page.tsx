@@ -1,6 +1,7 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { ApiError, api, type AppSettings, type ScanRun, type Seed } from "@/lib/api";
 import { Button, Card, Checkbox, InkDot, Notice, PageHeader, Section, Select, StatusBadge } from "@/components/ui";
 import { sourceInk, sourceLabel } from "@/lib/sources";
@@ -14,7 +15,6 @@ export default function SettingsPage() {
   const [seeds, setSeeds] = useState<Seed[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [scans, setScans] = useState<ScanRun[]>([]);
-  const [newSeed, setNewSeed] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   const loadSeeds = useCallback(() => api.listSeeds().then(setSeeds), []);
@@ -32,20 +32,6 @@ export default function SettingsPage() {
     const timer = setInterval(() => loadScans().catch(() => {}), 3000);
     return () => clearInterval(timer);
   }, [anyRunning, loadScans]);
-
-  async function addSeed(e: FormEvent) {
-    e.preventDefault();
-    const keyword = newSeed.trim();
-    if (!keyword) return;
-    try {
-      await api.addSeed(keyword);
-      setNewSeed("");
-      setMessage(null);
-      await loadSeeds();
-    } catch (err) {
-      setMessage(err instanceof ApiError && err.status === 409 ? `"${keyword}" đã có trong watchlist` : errorText(err));
-    }
-  }
 
   async function removeSeed(id: number) {
     try {
@@ -84,23 +70,20 @@ export default function SettingsPage() {
       <div className="space-y-6">
         <Card className="p-5">
           <Section title="Watchlist keyword">
-            <form onSubmit={addSeed} className="flex gap-2">
-              <input
-                value={newSeed}
-                onChange={(e) => setNewSeed(e.target.value)}
-                placeholder="vd: nurse, dog mom, fishing"
-                aria-label="Keyword mới"
-                className="h-9 min-w-0 flex-1 rounded-md border border-rule bg-sheet px-3 text-sm text-ink placeholder:text-ink-2/70 hover:border-ink-2 sm:max-w-xs sm:flex-none sm:basis-72"
-              />
-              <Button type="submit" variant="primary">
-                Thêm
-              </Button>
-            </form>
+            <p className="text-sm text-ink-2">
+              Thêm/bỏ keyword ở trang{" "}
+              <Link href="/watchlist" className="font-medium text-ink underline underline-offset-2">
+                Watchlist
+              </Link>
+              .
+            </p>
             <div className="flex flex-wrap gap-2">
               {seeds.length === 0 && <p className="text-sm text-ink-2">Chưa có keyword nào.</p>}
               {seeds.map((s) => (
                 <span key={s.id} className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper py-0.5 pl-3 pr-1 text-sm text-ink">
-                  {s.keyword}
+                  <Link href={`/trends/${s.keyword_id}`} className="hover:underline">
+                    {s.keyword}
+                  </Link>
                   <button
                     onClick={() => removeSeed(s.id)}
                     className="inline-flex size-5 items-center justify-center rounded-full text-ink-2 hover:bg-stop/10 hover:text-stop"

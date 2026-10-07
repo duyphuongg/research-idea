@@ -1,10 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import SignalCard from "@/components/SignalCard";
 import { Button, ButtonLink, EmptyState, InkDot, Notice, PageHeader, Select, Tabs } from "@/components/ui";
-import { api, type SignalPage, type SignalQuery, type SignalSort } from "@/lib/api";
+import { api, type SignalPage, type SignalQuery, type SignalSort, type Seed } from "@/lib/api";
 
 const PAGE_SIZE = 60;
 
@@ -45,6 +45,8 @@ const STATUS_VALUES = TABS.map((t) => t.value);
 
 function SignalsView() {
   const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const paramStatus = STATUS_VALUES.find((v) => v === params.get("status"));
   const [query, setQuery] = useState<SignalQuery>({
     status: paramStatus ?? "signals",
@@ -53,9 +55,23 @@ function SignalsView() {
     limit: PAGE_SIZE,
     offset: 0,
   });
+  const [seeds, setSeeds] = useState<Seed[]>([]);
   const [result, setResult] = useState<Result | null>(null);
   const key = JSON.stringify(query);
   const loading = result?.key !== key;
+
+  useEffect(() => {
+    api.listSeeds().then(setSeeds).catch(() => setSeeds([]));
+  }, []);
+
+  // Keep ?keyword= and ?status= in the URL (only those two) so filters are shareable and deep-linkable.
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (query.keyword) next.set("keyword", query.keyword);
+    if (query.status && query.status !== "signals") next.set("status", query.status);
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [query.keyword, query.status, pathname, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +106,22 @@ function SignalsView() {
         description="Mẫu áo mới (≤ 30 ngày) của shop ở Mỹ đang tăng lượt xem / lượt lưu nhanh."
         actions={
           <>
+            <Select
+              size="md"
+              aria-label="Keyword"
+              value={query.keyword ?? ""}
+              onChange={(e) => update({ keyword: e.target.value || undefined })}
+            >
+              <option value="">Mọi keyword</option>
+              {query.keyword && !seeds.some((s) => s.keyword === query.keyword) && (
+                <option value={query.keyword}>{query.keyword}</option>
+              )}
+              {seeds.map((s) => (
+                <option key={s.id} value={s.keyword}>
+                  {s.keyword}
+                </option>
+              ))}
+            </Select>
             <Select
               size="md"
               aria-label="Tuổi listing"
