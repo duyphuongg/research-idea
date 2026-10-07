@@ -29,9 +29,20 @@ make dev-frontend   # http://localhost:3000
 ```
 
 Vào **Cài đặt** → thêm keyword (vd `nurse`, `dog mom`) → **Quét ngay** → xem **Best Sellers**.
-Scheduler tự quét mỗi ngày theo giờ UTC đã chọn (backend phải đang chạy).
-
 Velocity/🔥 cần ít nhất 2 lần quét cách nhau ≥ 3 ngày.
+
+### Quét tự động mỗi ngày (macOS)
+
+```bash
+make install-daily              # quét tất cả nguồn mỗi ngày lúc 8:00 (giờ máy)
+make install-daily DAILY_HOUR=20  # đổi giờ
+make daily-status               # trạng thái + log gần nhất
+make scan-now                   # quét ngay trong terminal
+make uninstall-daily            # gỡ
+```
+
+Dùng launchd: không cần mở backend; nếu máy đang ngủ đúng giờ, macOS chạy bù khi máy thức. Một lần quét ~8–10 phút. Log: `backend/data/logs/daily-scan.log`.
+Khi dùng cách này, đặt `SCHEDULER_ENABLED=false` trong `backend/.env` để backend không quét thêm lần nữa (giờ quét trong trang Cài đặt khi đó không còn tác dụng). Nếu muốn dùng scheduler của backend thay vì launchd: `make uninstall-daily` và đặt `SCHEDULER_ENABLED=true` (backend phải luôn chạy).
 
 ## Trend Radar (Phase 2)
 
