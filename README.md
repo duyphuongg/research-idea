@@ -24,9 +24,11 @@ make migrate
 ## Chạy
 
 ```bash
-make dev-backend    # http://localhost:8000  (docs: /docs)
-make dev-frontend   # http://localhost:3000
+make up     # bật backend + giao diện và mở http://localhost:3000
+make down   # tắt
 ```
+
+(Chạy riêng từng phần khi phát triển: `make dev-backend` — API ở http://localhost:8000, tài liệu API ở /docs; `make dev-frontend`.)
 
 Vào **Cài đặt** → thêm keyword (vd `nurse`, `dog mom`) → **Quét ngay** → xem **Best Sellers**.
 Velocity/🔥 cần ít nhất 2 lần quét cách nhau ≥ 3 ngày.

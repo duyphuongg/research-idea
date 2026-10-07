@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now install-daily uninstall-daily daily-status
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now install-daily uninstall-daily daily-status up down
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -7,6 +7,20 @@ install:
 
 migrate:
 	cd backend && .venv/bin/alembic upgrade head
+
+# --- Mở / tắt giao diện bằng 1 lệnh ---
+up:
+	@mkdir -p backend/data/logs
+	@if lsof -ti tcp:8000 >/dev/null 2>&1; then echo "Backend đã chạy sẵn (cổng 8000)"; \
+	else (cd backend && nohup .venv/bin/uvicorn --factory app.main:create_app --port 8000 > data/logs/backend.log 2>&1 &) ; echo "Đang bật backend…"; fi
+	@if lsof -ti tcp:3000 >/dev/null 2>&1; then echo "Giao diện đã chạy sẵn (cổng 3000)"; \
+	else (cd frontend && nohup npm run dev -- -p 3000 > ../backend/data/logs/frontend.log 2>&1 &) ; echo "Đang bật giao diện…"; fi
+	@for i in $$(seq 1 90); do curl -s -o /dev/null localhost:3000 && curl -s -o /dev/null localhost:8000/api/ping && break; sleep 1; done
+	@open http://localhost:3000
+	@echo "Giao diện: http://localhost:3000 — tắt bằng: make down (log: backend/data/logs/)"
+
+down:
+	-@lsof -ti tcp:8000 | xargs kill 2>/dev/null; lsof -ti tcp:3000 | xargs kill 2>/dev/null; echo "Đã tắt backend và giao diện."
 
 dev-backend:
 	cd backend && .venv/bin/uvicorn --factory app.main:create_app --reload --port 8000
