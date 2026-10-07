@@ -5,10 +5,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api import alerts as alerts_api
 from app.api import amazon as amazon_api
 from app.api import calendar as calendar_api
 from app.api import signals as signals_api
-from app.api import health, products, scans, seeds, trends
+from app.api import health, products, scans, seeds, trends, watchlist
 from app.api import settings as settings_api
 from app.config import Settings, get_settings
 from app.connectors.registry import ConnectorFactory, build_connectors
@@ -57,6 +58,7 @@ def create_app(
     def ping() -> dict[str, bool]:
         return {"ok": True}
 
-    for module in (products, seeds, settings_api, scans, health, trends, calendar_api, signals_api, amazon_api):
+    for module in (products, seeds, settings_api, scans, health, trends, calendar_api, signals_api, amazon_api,
+                   alerts_api, watchlist):
         app.include_router(module.router)
     return app

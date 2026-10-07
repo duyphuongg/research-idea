@@ -249,3 +249,66 @@ class AmazonPage(BaseModel):
     list: str
     categories: list[AmazonCategoryOut]
     items: list[AmazonItem]
+
+
+class AlertOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    kind: str
+    level: int
+    title: str
+    reason: str
+    image_url: str | None
+    link: str
+    external_url: str | None
+    watch_keyword: str | None
+    scan_date: date
+    created_at: datetime
+    read: bool
+
+
+class AlertPage(BaseModel):
+    unread: int
+    items: list[AlertOut]
+
+
+class UnreadCount(BaseModel):
+    unread: int
+
+
+class TelegramStatus(BaseModel):
+    configured: bool
+    app_url: str | None
+
+
+class WatchChild(BaseModel):
+    keyword_id: int
+    keyword: str
+    score: float
+
+
+class WatchThumb(BaseModel):
+    product_id: int
+    image_url: str | None
+    title: str
+    url: str
+    status: str
+
+
+class WatchItem(BaseModel):
+    seed_id: int
+    keyword: str
+    keyword_id: int | None
+    score: float | None
+    growth: float | None
+    children_total: int
+    children: list[WatchChild]
+    listings: dict[str, int]
+    thumbnails: list[WatchThumb]
+    alerts_7d: int
+
+
+class WatchPage(BaseModel):
+    date: date | None
+    items: list[WatchItem]
