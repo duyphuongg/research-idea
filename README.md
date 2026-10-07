@@ -143,7 +143,7 @@ Sau mỗi lần quét (8:00 và 20:00), bot gửi **1 thông báo duy nhất** c
 
 - **Im lặng** (không rung/chuông) trừ khi có tin 🚀 ngách bứt phá hoặc 🔥 Super Breakout.
 - **Giờ yên lặng** 22:00–7:00 (giờ máy): không gửi gì, tin được giữ lại và gửi ở lần quét kế tiếp. Chỉnh `quiet_start` / `quiet_end` trong `backend/config/alerts.yaml` (đặt bằng nhau để tắt).
-- **Tổng kết tuần**: lần quét đầu tiên mỗi tuần (thường sáng thứ Hai 8:00) gửi thêm 1 tin tổng kết: ngách tăng mạnh nhất 7 ngày, Watchlist (điểm · số listing bứt phá · số tin), sự kiện sắp tới theo lịch mùa vụ, và số tin tuần qua. Xem trước và gửi ngay bằng `make digest-now` (không ảnh hưởng lịch gửi thứ Hai).
+- **Tổng kết tuần**: lần quét đầu tiên mỗi tuần (thường sáng thứ Hai 8:00) gửi thêm 1 tin "Tổng kết 7 ngày qua" (thứ Hai tới Chủ nhật trước đó; lần chạy đầu sau khi cài chỉ ghi nhận tuần hiện tại, tin đầu tiên gửi vào thứ Hai tuần sau): ngách tăng mạnh nhất 7 ngày, Watchlist (điểm · số listing bứt phá · số tin), sự kiện sắp tới theo lịch mùa vụ, và số tin tuần qua. Xem trước và gửi ngay bằng `make digest-now` (không ảnh hưởng lịch gửi thứ Hai).
 
 Trang Tin mới có nút **Gửi tin thử**. Token chỉ nằm trong `backend/.env`, không hiện ra giao diện hay log. Telegram lỗi không làm hỏng lần quét; tin chưa gửi được sẽ gửi lại ở lần quét sau (trong 2 ngày), tin tổng kết gửi lỗi sẽ thử lại ở lần quét kế tiếp.
 

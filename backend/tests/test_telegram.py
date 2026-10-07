@@ -252,6 +252,35 @@ async def test_caption_fits_telegram_limit(session):
     assert all(a.sent_at == NOW for a in session.query(Alert))
 
 
+def _u16(text: str) -> int:
+    return len(_visible(text).encode("utf-16-le")) // 2
+
+
+async def test_caption_counts_utf16_units(session):
+    for i in range(5):
+        _alert(session, i, priority=float(10 - i), title="🔥" * 90, reason="🎃" * 120)
+    with respx.mock(assert_all_called=False) as mock:
+        album, _, _ = _routes(mock)
+        await send_pending(session, _settings(), now=NOW, local_now=LOCAL)
+    caption = _body(album.calls[0])["media"][0]["caption"]
+    assert _u16(caption) <= 1024
+    assert len(_visible(caption)) < _u16(caption)  # emoji are 2 UTF-16 units each
+
+
+async def test_watch_keyword_capped_in_caption(session):
+    _alert(session, 1)
+    alert = session.query(Alert).one()
+    alert.watch_keyword = "k" * 100
+    session.flush()
+    with respx.mock(assert_all_called=False) as mock:
+        album, photo, msg = _routes(mock)
+        await send_pending(session, _settings(), now=NOW, local_now=LOCAL)
+    sent = [c for r in (album, photo, msg) for c in r.calls][0]
+    body = _body(sent)
+    text = body.get("caption") or body["text"]
+    assert "k" * 40 in text and "k" * 41 not in text
+
+
 async def test_token_never_logged_by_httpx(session, caplog):
     _alert(session, 1)
     _alert(session, 2)

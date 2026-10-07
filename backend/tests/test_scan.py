@@ -213,20 +213,36 @@ async def test_replace_only_touches_own_source_date_and_metric(session_factory):
         assert s.scalar(select(func.count()).select_from(TrendSignal)) == 4
 
 
-async def test_run_scan_uses_passed_settings_for_telegram(session_factory):
+def _no_quiet_hours(monkeypatch):
+    from app.analysis.alerts import AlertsConfig
+
+    cfg = AlertsConfig(quiet_start=0, quiet_end=0)  # quiet hours off: independent of the wall clock
+    monkeypatch.setattr("app.notify.telegram.load_alerts_config", lambda: cfg)
+    monkeypatch.setattr("app.services.digest.load_alerts_config", lambda: cfg)
+
+
+def _pending_alert(session):
+    from app.models import Alert
+
+    session.add(Alert(kind="listing", subject_id=1, level=1, priority=1.0, title="Tee", reason="r",
+                      image_url=None, link="/signals", external_url=None, watch_keyword=None,
+                      scan_date=TODAY, created_at=utcnow()))
+
+
+async def test_run_scan_uses_passed_settings_for_telegram(session_factory, monkeypatch):
     import httpx
     import respx
 
     from app.models import Alert
 
+    _no_quiet_hours(monkeypatch)
+
+    async def no_digest(*a, **k):  # only the alert notification is under test here
+        return False
+
+    monkeypatch.setattr("app.pipeline.scan.maybe_send_weekly_digest", no_digest)
     with session_factory() as s:
-        s.add(Alert(kind="listing", subject_id=1, level=1, priority=1.0, title="Tee", reason="r",
-                    image_url=None, link="/signals", external_url=None, watch_keyword=None,
-                    scan_date=TODAY, created_at=utcnow()))
-        # this week's digest already went out: only the alert notification is sent here
-        from app.services.digest import iso_week
-        from app.settings_store import set_setting
-        set_setting(s, "digest_last_week", iso_week(datetime.now().astimezone().date()))
+        _pending_alert(s)
         s.commit()
     settings = Settings(_env_file=None, scheduler_enabled=False, telegram_bot_token="1:t", telegram_chat_id="42")
     with respx.mock(assert_all_called=False) as mock:
@@ -235,5 +251,26 @@ async def test_run_scan_uses_passed_settings_for_telegram(session_factory):
         await run_scan(session_factory, [], today=TODAY, settings=settings)
     assert route.call_count == 1
     with session_factory() as s:
-        from app.models import Alert as A
-        assert s.scalar(select(A.sent_at)) is not None
+        assert s.scalar(select(Alert.sent_at)) is not None
+
+
+async def test_run_scan_sends_digest_and_persists_week_marker(session_factory, monkeypatch):
+    import httpx
+    import respx
+
+    from app.services.digest import iso_week
+    from app.settings_store import get_setting, set_setting
+
+    _no_quiet_hours(monkeypatch)
+    with session_factory() as s:
+        set_setting(s, "digest_last_week", "2000-W01")  # an earlier week: the digest is due
+        s.commit()
+    settings = Settings(_env_file=None, scheduler_enabled=False, telegram_bot_token="1:t", telegram_chat_id="42")
+    with respx.mock(assert_all_called=False) as mock:
+        route = mock.post("https://api.telegram.org/bot1:t/sendMessage").mock(
+            return_value=httpx.Response(200, json={"ok": True}))
+        await run_scan(session_factory, [], today=TODAY, settings=settings)
+    assert route.call_count == 1
+    assert "Tổng kết" in route.calls[0].request.content.decode()
+    with session_factory() as s:  # a fresh session: the marker was committed
+        assert get_setting(s, "digest_last_week") == iso_week(datetime.now().astimezone().date())

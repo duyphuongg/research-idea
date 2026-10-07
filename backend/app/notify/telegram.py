@@ -25,7 +25,8 @@ API = "https://api.telegram.org"
 PENDING_DAYS = 2
 TITLE_LIMIT = 90  # raw lengths, cut before escaping so entities and tags stay whole
 REASON_LIMIT = 120
-CAPTION_LIMIT = 1024  # Telegram's photo/album caption limit, in visible characters
+CAPTION_LIMIT = 1024  # Telegram's photo/album caption limit, in visible UTF-16 code units
+KEYWORD_LIMIT = 40
 
 KIND_STYLE = {
     "niche": ("🚀", "Ngách bứt phá"),
@@ -82,7 +83,7 @@ def _item(n: int, alert: Alert, app_url: str | None) -> str:
     icon, label = KIND_STYLE.get(alert.kind, ("🔔", alert.kind))
     head = f"{n}. {icon} <b>{label}</b>"
     if alert.watch_keyword:
-        head += f" · {html.escape(alert.watch_keyword)}"
+        head += f" · {html.escape(alert.watch_keyword[:KEYWORD_LIMIT])}"
     title = html.escape(alert.title[:TITLE_LIMIT])
     if app_url:
         title = f'<a href="{html.escape(app_url + alert.link, quote=True)}">{title}</a>'
@@ -102,11 +103,12 @@ def _caption(total: int, items: list[Alert], rest_count: int, app_url: str | Non
 
 def _visible_len(text: str) -> int:
     """Length Telegram counts: the text after parsing HTML tags and entities."""
-    return len(html.unescape(re.sub(r"<[^>]+>", "", text)))
+    visible = html.unescape(re.sub(r"<[^>]+>", "", text))
+    return len(visible.encode("utf-16-le")) // 2  # Telegram counts UTF-16 code units (emoji = 2)
 
 
 def build_caption(pending: list[Alert], max_items: int, app_url: str | None) -> tuple[str, list[Alert]]:
-    """One HTML caption for the whole batch (≤ CAPTION_LIMIT visible chars) and the alerts it lists."""
+    """One HTML caption for the whole batch (≤ CAPTION_LIMIT visible UTF-16 units) and the alerts it lists."""
     count = max(1, min(max_items, len(pending)))
     while True:
         items = pending[:count]
@@ -128,7 +130,9 @@ async def _deliver(client: httpx.AsyncClient, settings: Settings, caption: str, 
                              {"photo": photos[0], "caption": caption, "parse_mode": "HTML", **quiet})
     else:
         return await _post(client, settings, "sendMessage", {**_message(caption), **quiet})
-    if status != 400:  # 400 = Telegram could not fetch an image: retry once as plain text
+    # 400 = Telegram could not fetch an image, or rejected the caption (too long / bad HTML): the plain
+    # text message below covers all of these, so retry once as text
+    if status != 400:
         return status
     return await _post(client, settings, "sendMessage", {**_message(caption), **quiet})
 

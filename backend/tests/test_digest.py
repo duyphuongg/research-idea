@@ -12,7 +12,7 @@ from app.keywords import get_or_create_keyword
 from app.models import Alert, KeywordScore, ListingSignal, Product, Seed
 from app.pipeline.scan import run_scan
 from app.services.digest import build_digest, maybe_send_weekly_digest
-from app.settings_store import get_setting
+from app.settings_store import get_setting, set_setting
 
 TODAY = date(2026, 10, 7)  # Wednesday; Halloween is 24 days away
 NOW = datetime(2026, 10, 7, 1, 0)  # UTC
@@ -59,7 +59,7 @@ def _listing(session, i, title, status, query="graphic tee", updated=L):
 
 def test_header_always_present(session):
     text = build_digest(session, TODAY, None, now=NOW)
-    assert text.startswith("📊 <b>Tổng kết tuần 05/10 – 11/10</b>")
+    assert text.startswith("📊 <b>Tổng kết 7 ngày qua (30/09 – 06/10)</b>")
 
 
 def test_rising_section_with_history(session):
@@ -165,6 +165,7 @@ def test_many_seeds_stay_under_limit(session):
 
 async def test_weekly_digest_once_per_week(session):
     cfg = AlertsConfig()
+    set_setting(session, "digest_last_week", "2026-W40")  # not the first run
     with respx.mock() as mock:
         route = mock.post(f"{BASE}/sendMessage").mock(return_value=OK)
         assert await maybe_send_weekly_digest(session, _settings(), local_now=MONDAY_8, cfg=cfg)
@@ -172,13 +173,21 @@ async def test_weekly_digest_once_per_week(session):
                                                   cfg=cfg)
         assert route.call_count == 1
         body = json.loads(route.calls[0].request.content.decode())
-        assert body["text"].startswith("📊 <b>Tổng kết tuần 05/10 – 11/10</b>")
+        assert body["text"].startswith("📊 <b>Tổng kết 7 ngày qua (28/09 – 04/10)</b>")
         assert body["parse_mode"] == "HTML" and not body.get("disable_notification")
         assert get_setting(session, "digest_last_week") == "2026-W41"
         assert await maybe_send_weekly_digest(session, _settings(), local_now=MONDAY_8 + timedelta(days=7),
                                               cfg=cfg)
         assert route.call_count == 2
     assert get_setting(session, "digest_last_week") == "2026-W42"
+
+
+async def test_weekly_digest_first_run_only_stores_week(session):
+    with respx.mock(assert_all_called=False) as mock:
+        assert not await maybe_send_weekly_digest(session, _settings(), local_now=MONDAY_8 + timedelta(days=2),
+                                                  cfg=AlertsConfig())
+    assert not mock.calls
+    assert get_setting(session, "digest_last_week") == "2026-W41"
 
 
 async def test_weekly_digest_not_in_quiet_hours(session):
@@ -196,10 +205,11 @@ async def test_weekly_digest_not_configured(session):
 
 
 async def test_weekly_digest_failure_not_stored(session):
+    set_setting(session, "digest_last_week", "2026-W40")
     with respx.mock() as mock:
         mock.post(f"{BASE}/sendMessage").mock(return_value=httpx.Response(500))
         assert not await maybe_send_weekly_digest(session, _settings(), local_now=MONDAY_8, cfg=AlertsConfig())
-    assert get_setting(session, "digest_last_week") is None
+    assert get_setting(session, "digest_last_week") == "2026-W40"
 
 
 async def test_run_scan_without_telegram_sends_nothing(session_factory):

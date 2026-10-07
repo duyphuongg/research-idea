@@ -139,10 +139,10 @@ def _join(sections: list[list[str]]) -> str:
 
 
 def build_digest(session: Session, today: date, app_url: str | None, *, now: datetime | None = None) -> str:
-    """HTML digest (≤ TEXT_LIMIT chars) for the ISO week containing `today`. `now` is naive UTC."""
+    """HTML digest (≤ TEXT_LIMIT chars) for the 7 days before `today`. `now` is naive UTC."""
     since = (now or utcnow()) - timedelta(days=7)
-    monday = today - timedelta(days=today.weekday())
-    header = [f"📊 <b>Tổng kết tuần {monday:%d/%m} – {monday + timedelta(days=6):%d/%m}</b>"]
+    start, end = today - timedelta(days=7), today - timedelta(days=1)
+    header = [f"📊 <b>Tổng kết 7 ngày qua ({start:%d/%m} – {end:%d/%m})</b>"]
     body = [_rising(session, app_url), _watchlist(session, since), _upcoming(today)]
     footer = _alert_summary(session, since, app_url)
     while len(text := _join([header, *body, footer])) > TEXT_LIMIT:
@@ -171,7 +171,11 @@ async def maybe_send_weekly_digest(session: Session, settings: Settings, *, loca
     if in_quiet_hours(local_now.hour, cfg):
         return False
     week = iso_week(local_now.date())
-    if get_setting(session, "digest_last_week") == week:
+    last = get_setting(session, "digest_last_week")
+    if last is None:  # first run after deploy: no mid-week digest, the first one goes out next week
+        set_setting(session, "digest_last_week", week)
+        return False
+    if last == week:
         return False
     text = build_digest(session, local_now.date(), settings.app_url)
     try:

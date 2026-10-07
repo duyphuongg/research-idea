@@ -1,10 +1,13 @@
 """Alert rules: which niches/products are worth telling the user about after a scan."""
 
+import logging
 from collections.abc import Iterable
 from dataclasses import dataclass, fields
 from datetime import datetime, timedelta
 
 from app.config_files import load_yaml
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -24,6 +27,11 @@ def load_alerts_config() -> AlertsConfig:
     for f in fields(AlertsConfig):
         if f.name in data:
             kwargs[f.name] = int(data[f.name]) if f.type in (int, "int") else float(data[f.name])
+    for name in ("quiet_start", "quiet_end"):
+        if name in kwargs and not 0 <= kwargs[name] <= 23:
+            logger.warning("alerts.yaml: %s=%s is outside 0-23, using the default %s",
+                           name, kwargs[name], getattr(AlertsConfig, name))
+            del kwargs[name]
     return AlertsConfig(**kwargs)
 
 

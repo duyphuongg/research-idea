@@ -120,7 +120,7 @@ async def maybe_send_weekly_digest(session, settings, *, local_now: datetime | N
 
 **`build_digest` sections** (omit a section entirely when it has no rows; the header always present):
 ```
-📊 <b>Tổng kết tuần {monday:%d/%m} – {sunday:%d/%m}</b>     (week containing `today`)
+📊 <b>Tổng kết 7 ngày qua ({today-7:%d/%m} – {today-1:%d/%m})</b>     (the window the content covers)
 
 🚀 <b>Ngách tăng mạnh nhất 7 ngày</b>
 1. football mom game day — 64 (+12)
