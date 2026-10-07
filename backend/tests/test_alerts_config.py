@@ -5,7 +5,8 @@ from app.config import Settings
 
 def test_defaults_match_yaml():
     assert load_alerts_config() == AlertsConfig(
-        niche_min_score=60, niche_min_growth=0.20, amazon_top_n=20, cooldown_days=7, telegram_max_items=5
+        niche_min_score=60, niche_min_growth=0.20, amazon_top_n=20, cooldown_days=7, telegram_max_items=5,
+        quiet_start=22, quiet_end=7,
     )
 
 

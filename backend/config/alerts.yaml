@@ -3,4 +3,6 @@ niche_min_score: 60        # 🚀 ngách bứt phá: điểm tối thiểu
 niche_min_growth: 0.20     # … và tăng trưởng > 20%
 amazon_top_n: 20           # 🛒 sản phẩm mới lọt top N Best Sellers
 cooldown_days: 7           # không báo lại cùng ngách/sản phẩm trong N ngày (trừ khi lên mức cao hơn)
-telegram_max_items: 5      # số tin kèm ảnh mỗi lần quét; còn lại gom thành 1 dòng tóm tắt
+telegram_max_items: 5      # số tin liệt kê (kèm ảnh) trong 1 thông báo mỗi lần quét; còn lại: "… và N tin khác"
+quiet_start: 22            # giờ yên lặng (giờ máy): không gửi Telegram từ 22:00 …
+quiet_end: 7               # … đến 7:00; tin được giữ lại và gửi ở lần quét kế tiếp. Đặt bằng nhau để tắt.

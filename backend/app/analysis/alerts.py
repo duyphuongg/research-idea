@@ -14,6 +14,8 @@ class AlertsConfig:
     amazon_top_n: int = 20
     cooldown_days: int = 7
     telegram_max_items: int = 5
+    quiet_start: int = 22  # local hour; no Telegram from quiet_start until quiet_end (equal = off)
+    quiet_end: int = 7
 
 
 def load_alerts_config() -> AlertsConfig:
