@@ -55,6 +55,9 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.shop_sold_count !== null && <> · shop đã bán {formatNumber(product.shop_sold_count)}</>} · đăng{" "}
           {timeAgo(product.listed_at)}
         </p>
+        {product.licensed && (
+          <p className="text-xs text-amber-700">⚠️ Có thể có bản quyền — đừng sao chép</p>
+        )}
         {product.keywords.length > 0 && (
           <div className="mt-auto flex flex-wrap gap-1 pt-1">
             {product.keywords.map((k) => (

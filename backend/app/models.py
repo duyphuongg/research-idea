@@ -174,7 +174,7 @@ class ListingSignal(Base):
 
 
 class AmazonRank(Base):
-    """Daily Amazon list rank (e.g. movers & shakers) of a product within a category."""
+    """Daily Amazon list rank (bestsellers or new_releases) of a product within a category."""
 
     __tablename__ = "amazon_ranks"
     __table_args__ = (UniqueConstraint("product_id", "date", "category_key", "list_name"),)

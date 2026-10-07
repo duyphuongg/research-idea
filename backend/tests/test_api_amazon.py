@@ -75,3 +75,22 @@ def test_hide_licensed(client, data):
 def test_unknown_category_or_list(client):
     assert client.get("/api/amazon?category=nope").status_code == 422
     assert client.get("/api/amazon?list=nope").status_code == 422
+
+
+def test_first_day_has_no_new_entries(client, session):
+    a = _product(session, "F1")
+    b = _product(session, "F2")
+    _rank(session, a, D2, 1)
+    _rank(session, b, D2, 2)
+    session.commit()
+    items = client.get("/api/amazon").json()["items"]
+    assert [i["is_new_entry"] for i in items] == [False, False]
+
+
+def test_old_history_outside_window_means_no_new_entries(client, session):
+    a = _product(session, "G1")
+    _rank(session, a, date(2026, 9, 1), 5)
+    _rank(session, a, D2, 1)
+    session.commit()
+    (item,) = client.get("/api/amazon").json()["items"]
+    assert item["is_new_entry"] is False and item["prev_rank"] == 5

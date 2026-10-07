@@ -159,20 +159,20 @@ def test_trusted_source_signal_without_parent_is_relevant(session):
 
 def test_persists_amazon_ranks_and_licensed_flag(session):
     product = make_product(source="amazon", external_id="B001", licensed=True)
-    rank = NormalizedRank("B001", "tshirt", "movers", 7, D1)
+    rank = NormalizedRank("B001", "tshirt", "bestsellers", 7, D1)
     written = persist_batch(session, NormalizedBatch(products=[product], ranks=[rank]), D1)
     session.commit()
 
     assert written == 2
     assert session.scalar(select(Product)).licensed is True
     row = session.scalar(select(AmazonRank))
-    assert (row.category_key, row.list_name, row.rank, row.date) == ("tshirt", "movers", 7, D1)
+    assert (row.category_key, row.list_name, row.rank, row.date) == ("tshirt", "bestsellers", 7, D1)
 
 
 def test_same_day_amazon_rank_is_updated(session):
     product = make_product(source="amazon", external_id="B001")
-    persist_batch(session, NormalizedBatch(products=[product], ranks=[NormalizedRank("B001", "tshirt", "movers", 7, D1)]), D1)
-    persist_batch(session, NormalizedBatch(ranks=[NormalizedRank("B001", "tshirt", "movers", 3, D1)]), D1)
+    persist_batch(session, NormalizedBatch(products=[product], ranks=[NormalizedRank("B001", "tshirt", "bestsellers", 7, D1)]), D1)
+    persist_batch(session, NormalizedBatch(ranks=[NormalizedRank("B001", "tshirt", "bestsellers", 3, D1)]), D1)
     session.commit()
 
     assert count(session, AmazonRank) == 1
@@ -181,7 +181,7 @@ def test_same_day_amazon_rank_is_updated(session):
 
 def test_amazon_rank_for_unknown_asin_is_skipped(session):
     written = persist_batch(
-        session, NormalizedBatch(ranks=[NormalizedRank("NOPE", "tshirt", "movers", 1, D1)]), D1
+        session, NormalizedBatch(ranks=[NormalizedRank("NOPE", "tshirt", "bestsellers", 1, D1)]), D1
     )
     session.commit()
 

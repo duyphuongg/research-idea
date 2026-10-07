@@ -38,6 +38,7 @@ def list_products(
     sort: SortKey = "velocity",
     limit: int = Query(60, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    hide_licensed: bool = False,
     session: Session = Depends(get_session),
 ) -> ProductPage:
     products = session.scalars(
@@ -58,7 +59,9 @@ def list_products(
         p.id: compute_velocity(points[p.id], p.listed_at.date() if p.listed_at else None)
         for p in products
     }
-    hot = hot_ids((p.id, (p.source, p.product_type), metrics[p.id][1]) for p in products)
+    hot = hot_ids(
+        (p.id, (p.source, p.product_type), metrics[p.id][1]) for p in products if not p.licensed
+    )
 
     keyword_texts: dict[int, list[str]] = defaultdict(list)
     keyword_ids: dict[int, set[int]] = defaultdict(set)
@@ -77,6 +80,7 @@ def list_products(
         if (source is None or p.source == source)
         and (product_type is None or p.product_type == product_type)
         and (keyword_id is None or keyword_id in keyword_ids[p.id])
+        and not (hide_licensed and p.licensed)
     ]
     items.sort(key=SORTS[sort])
     return ProductPage(total=len(items), items=items[offset : offset + limit])
@@ -107,4 +111,5 @@ def _to_out(
         velocity=metric[1],
         hot=hot,
         keywords=keywords,
+        licensed=p.licensed,
     )

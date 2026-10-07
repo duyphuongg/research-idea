@@ -154,3 +154,60 @@ async def test_failing_job_does_not_stop_rescore(session_factory):
     assert ids == []
     with session_factory() as s:
         assert s.scalar(select(func.count()).select_from(KeywordScore)) == 1
+
+
+class ReplacingConnector(FakeConnector):
+    replace_daily_signals = True
+
+    def __init__(self, phrases, name="repl"):
+        super().__init__(name=name, products=[])
+        self.phrases = phrases
+
+    def normalize(self, raw, today):
+        from app.connectors.base import NormalizedBatch, NormalizedSignal
+
+        return NormalizedBatch(signals=[
+            NormalizedSignal(p, self.name, "title_phrase_count", v, today, origin="discovered")
+            for p, v in self.phrases.items()
+        ])
+
+
+async def test_replace_daily_signals_retracts_same_day_rows(session_factory):
+    from app.models import Keyword, TrendSignal
+
+    await run_scan(session_factory, [ReplacingConnector({"old phrase": 3, "keep": 4})], today=TODAY)
+    await run_scan(session_factory, [ReplacingConnector({"keep": 5})], today=TODAY)
+    with session_factory() as s:
+        rows = {
+            kw: v for kw, v in s.execute(
+                select(Keyword.text, TrendSignal.value).join(TrendSignal, TrendSignal.keyword_id == Keyword.id)
+                .where(TrendSignal.source == "repl")
+            )
+        }
+    assert rows == {"keep": 5.0}
+
+
+async def test_non_replacing_connector_keeps_old_signals(session_factory):
+    from app.models import TrendSignal
+
+    class Plain(ReplacingConnector):
+        replace_daily_signals = False
+
+    await run_scan(session_factory, [Plain({"a": 1})], today=TODAY)
+    await run_scan(session_factory, [Plain({"b": 1})], today=TODAY)
+    with session_factory() as s:
+        assert s.scalar(select(func.count()).select_from(TrendSignal)) == 2
+
+
+async def test_replace_only_touches_own_source_date_and_metric(session_factory):
+    from app.keywords import get_or_create_keyword
+    from app.models import TrendSignal
+
+    with session_factory() as s:
+        kw = get_or_create_keyword(s, "x")
+        for src, d, m in [("other", TODAY, "title_phrase_count"), ("repl", TODAY - timedelta(days=1), "title_phrase_count"), ("repl", TODAY, "other_metric")]:
+            s.add(TrendSignal(keyword_id=kw.id, source=src, metric=m, value=1, date=d))
+        s.commit()
+    await run_scan(session_factory, [ReplacingConnector({"a": 1})], today=TODAY)
+    with session_factory() as s:
+        assert s.scalar(select(func.count()).select_from(TrendSignal)) == 4

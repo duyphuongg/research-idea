@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.connectors.base import Connector
 from app.db import utcnow
-from app.models import RawPayload, ScanRun, Seed
+from app.models import RawPayload, ScanRun, Seed, TrendSignal
 from app.pipeline.rescore import rescore
 from app.pipeline.store import persist_batch
 
@@ -95,6 +95,16 @@ async def _run_one(
             session.commit()
         normalized = connector.normalize(raw, today)
         with session_factory() as session:
+            if getattr(connector, "replace_daily_signals", False):
+                metrics = {sig.metric for sig in normalized.signals}
+                if metrics:  # same-day rerun: retract rows this batch no longer produces
+                    session.execute(
+                        delete(TrendSignal).where(
+                            TrendSignal.source == connector.name,
+                            TrendSignal.date == today,
+                            TrendSignal.metric.in_(metrics),
+                        )
+                    )
             records = persist_batch(session, normalized, today)
             session.commit()
         if raw.errors:

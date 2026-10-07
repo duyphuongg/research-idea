@@ -25,6 +25,7 @@ class ProductOut(BaseModel):
     velocity: float | None
     hot: bool
     keywords: list[str]
+    licensed: bool | None = None
 
 
 class ProductPage(BaseModel):

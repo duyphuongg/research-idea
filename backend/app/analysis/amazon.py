@@ -1,6 +1,7 @@
 """Pure helpers for the Amazon lite pipeline: config, URLs, licensing, parsing, phrases."""
 
 import re
+import unicodedata
 from collections import Counter
 from dataclasses import dataclass
 
@@ -82,7 +83,9 @@ def list_url(list_name: str, node: str, page: int) -> str:
 
 
 def _norm_license(text: str) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"[-/.'\u2019]", " ", text.lower())).strip()
+    text = unicodedata.normalize("NFKD", text.lower())
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"\s+", " ", re.sub(r"[-/.'\u2019]", " ", text)).strip()
 
 
 def is_licensed(title: str, terms: tuple[str, ...] | list[str]) -> bool:

@@ -68,6 +68,14 @@ def amazon_ranks(
     ):
         prev[pid] = rank
         recent.add(pid)
+    window_has_history = (
+        session.scalar(
+            select(func.count())
+            .select_from(AmazonRank)
+            .where(*scope, AmazonRank.date < latest, AmazonRank.date >= since)
+        )
+        or 0
+    ) > 0
     # Product in an earlier row older than the window still has a prev_rank.
     for pid in set(ids) - set(prev):
         older = session.scalar(
@@ -100,7 +108,7 @@ def amazon_ranks(
                 rank=rank_row.rank,
                 prev_rank=prev_rank,
                 rank_change=None if prev_rank is None else prev_rank - rank_row.rank,
-                is_new_entry=product.id not in recent,
+                is_new_entry=window_has_history and product.id not in recent,
                 title=product.title,
                 url=product.url,
                 image_url=product.image_url,

@@ -143,3 +143,16 @@ def test_listing_signal_only_products_excluded(client, session):
     session.commit()
     got = ids(client.get("/api/products"))
     assert only.id not in got and both.id in got and plain.id in got
+
+
+def test_licensed_flag_not_hot_and_hide_param(client, session, catalog):
+    session.get(Product, catalog["A"]).licensed = True
+    session.commit()
+    items = {i["id"]: i for i in client.get("/api/products").json()["items"]}
+    assert items[catalog["A"]]["licensed"] is True
+    assert items[catalog["A"]]["hot"] is False
+    assert items[catalog["B"]]["licensed"] is None
+    resp = client.get("/api/products?hide_licensed=true")
+    assert catalog["A"] not in ids(resp)
+    assert resp.json()["total"] == 2
+    assert catalog["A"] in ids(client.get("/api/products?hide_licensed=false"))

@@ -28,6 +28,15 @@ type Result = { key: string; data?: AmazonPage; error?: string };
 
 const selectClass = "rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm";
 
+// Stale = older than yesterday (local date), so a normal daily scan never warns.
+function isStale(date: string): boolean {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const yesterday = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return date < yesterday;
+}
+
 function RankChange({ change, isNew }: { change: number | null; isNew: boolean }) {
   if (isNew) return <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700">Mới</span>;
   if (change === null || change === 0) return <span className="text-zinc-400">—</span>;
@@ -91,6 +100,17 @@ export default function AmazonPageView() {
         Dữ liệu từ trang Best Sellers / New Releases công khai của Amazon (Mỹ), cập nhật mỗi lần quét. Hạng là trong
         danh mục, không phải doanh số.
       </p>
+
+      {!loading && result?.data?.date && (
+        <p className="mb-3 text-sm text-zinc-600">
+          Cập nhật: {result.data.date}
+          {isStale(result.data.date) && (
+            <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+              ⚠️ Dữ liệu đã cũ — lần quét gần nhất có thể bị chặn hoặc lỗi.
+            </span>
+          )}
+        </p>
+      )}
 
       {result?.error && !loading && <p className="text-sm text-red-600">Không tải được dữ liệu: {result.error}</p>}
       {loading && <p className="text-sm text-zinc-500">Đang tải…</p>}

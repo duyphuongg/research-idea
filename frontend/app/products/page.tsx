@@ -92,6 +92,14 @@ export default function ProductsPage() {
             </option>
           ))}
         </select>
+        <label className="flex items-center gap-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={query.hide_licensed ?? false}
+            onChange={(e) => update({ hide_licensed: e.target.checked || undefined })}
+          />
+          Ẩn sản phẩm có bản quyền
+        </label>
       </div>
       <p className="mb-4 text-xs text-zinc-500">
         Lượt xem / favorites / reviews và mức tăng 7 ngày là chỉ số ước tính (proxy), không phải doanh số thật. Chỉ

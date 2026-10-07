@@ -30,6 +30,7 @@ export type Product = {
   velocity: number | null;
   hot: boolean;
   keywords: string[];
+  licensed: boolean | null;
 };
 
 export type ProductPage = { total: number; items: Product[] };
@@ -41,6 +42,7 @@ export type ProductQuery = {
   sort?: ProductSort;
   limit?: number;
   offset?: number;
+  hide_licensed?: boolean;
 };
 
 export type SignalStatus = "super_breakout" | "steady_grower" | "graduated" | "calibrating" | "normal" | "gone";
@@ -222,7 +224,9 @@ function toQuery(params: Record<string, string | number | undefined>): string {
 }
 
 export const api = {
-  listProducts: (q: ProductQuery = {}) => request<ProductPage>(`/api/products${toQuery(q)}`),
+  listProducts: (q: ProductQuery = {}) => request<ProductPage>(
+      `/api/products${toQuery({ ...q, hide_licensed: q.hide_licensed ? "true" : undefined })}`,
+    ),
   listSignals: (q: SignalQuery = {}) => request<SignalPage>(`/api/signals${toQuery(q)}`),
   listTrends: (q: TrendQuery = {}) =>
     request<TrendPage>(

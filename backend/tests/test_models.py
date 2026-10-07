@@ -95,9 +95,9 @@ def test_amazon_rank_unique_per_product_date_category_list(session):
     p = Product(source="amazon", external_id="B001", title="T", url="u", product_type="tshirt")
     session.add(p)
     session.flush()
-    session.add(AmazonRank(product_id=p.id, date=date(2026, 10, 7), category_key="tshirt", list_name="movers", rank=3))
+    session.add(AmazonRank(product_id=p.id, date=date(2026, 10, 7), category_key="tshirt", list_name="bestsellers", rank=3))
     session.commit()
-    session.add(AmazonRank(product_id=p.id, date=date(2026, 10, 7), category_key="tshirt", list_name="movers", rank=4))
+    session.add(AmazonRank(product_id=p.id, date=date(2026, 10, 7), category_key="tshirt", list_name="bestsellers", rank=4))
     with pytest.raises(IntegrityError):
         session.commit()
     session.rollback()

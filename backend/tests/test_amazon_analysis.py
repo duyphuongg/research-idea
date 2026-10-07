@@ -165,3 +165,25 @@ def test_is_non_pod_and_config():
     assert is_non_pod("Women Mesh Sheer Top", cfg.non_pod_terms)
     assert not is_non_pod("Meshach Funny Shirt", cfg.non_pod_terms)
     assert "sleeve" in cfg.phrase_ignore_words
+
+
+def test_license_matching_strips_accents():
+    from app.analysis.amazon import is_licensed
+
+    assert is_licensed("Pokémon Pikachu Shirt", ("pokemon",))
+    assert is_licensed("Pokemon Shirt", ("pokémon",))
+
+
+def test_new_licensed_and_ignore_terms_in_config():
+    from app.analysis.amazon import is_licensed, load_amazon_config, title_phrases
+
+    cfg = load_amazon_config()
+    for t in ("hocus pocus", "jack daniel's", "blink-182", "officially licensed", "chucky", "wednesday addams"):
+        assert t in cfg.licensed_terms
+    assert is_licensed("Hocus Pocus Sanderson Sisters Tee", cfg.licensed_terms)
+    assert is_licensed("Jack Daniel's Logo", cfg.licensed_terms)
+    for w in ("pouch", "pocket", "kangaroo", "print", "printed", "front", "back", "version", "letter",
+              "3d", "costume", "cosplay", "set", "piece", "pcs", "matching"):
+        assert w in cfg.phrase_ignore_words
+    titles = ["Kangaroo Pouch Pocket Spooky Ghost"] * 3
+    assert title_phrases(titles, 3, 10, cfg.phrase_ignore_words) == [("spooky ghost", 3)]

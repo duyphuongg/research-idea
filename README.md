@@ -66,11 +66,12 @@ Chạy riêng: `POST /api/scans` với `{"sources": ["etsy_signals"]}`.
 ## Amazon (bản gọn)
 
 Nguồn **Amazon** (amazon.com, thị trường Mỹ) lấy Best Sellers và New Releases của 8 danh mục áo/hoodie, mỗi danh sách top 100, bằng trình duyệt Chromium tự động (`make install` đã cài Chromium qua Playwright).
-- Mỗi lần quét mất khoảng 4–5 phút.
+- Mỗi lần quét mất ~6 phút.
 - Trang **Amazon** hiện thứ hạng theo danh mục/danh sách; sản phẩm có cờ **bản quyền** (tên thương hiệu/IP có thể bị khiếu nại) để bạn tránh.
 - Cụm từ phổ biến trong tiêu đề được đưa vào Trend Radar (tín hiệu `title_phrase_count`).
 - Chạy riêng: `POST /api/scans` với `{"sources": ["amazon"]}`.
-- Cảnh báo: Amazon có thể chặn truy cập tự động (captcha/chặn). Khi đó trạng thái nguồn hiện lỗi; không có cơ chế né chặn, hãy thử lại sau.
+- Cảnh báo: Amazon có thể chặn truy cập tự động (captcha/chặn). Khi đó trạng thái nguồn hiện lỗi, hãy thử lại sau.
+- Nguồn này dùng trình duyệt Chromium headless mặc định, nghỉ 4–8 giây giữa trang, dừng ngay khi bị chặn. Việc tự động thu thập dữ liệu trái với Điều khoản sử dụng của Amazon — bạn tự cân nhắc rủi ro; có thể tắt nguồn Amazon trong Cài đặt.
 
 ## Lịch mùa vụ (Mỹ)
 
