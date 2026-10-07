@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { HalftoneMeter, StatusBadge } from "@/components/ui";
+import { HalftoneMeter, ImageZoom, StatusBadge } from "@/components/ui";
 import type { SignalItem, SignalStatus } from "@/lib/api";
 import { formatNumber, formatPrice } from "@/lib/format";
 
@@ -18,28 +18,32 @@ export const STATUS_LABEL: Record<SignalStatus, string> = {
 export const CARD_CLASS =
   "group flex min-w-0 flex-col overflow-hidden rounded-md border border-rule bg-sheet shadow-card transition-colors hover:border-ink-2";
 
-/** 4:5 product image on paper, with optional overlays in the corners. */
+/** 4:5 product image on paper (click to zoom), with optional overlays in the corners. */
 export function CardImage({
   src,
   alt,
+  href,
   topLeft,
   topRight,
 }: {
   src: string | null;
   alt: string;
+  href?: string;
   topLeft?: ReactNode;
   topRight?: ReactNode;
 }) {
   return (
     <div className="relative aspect-[4/5] border-b border-rule bg-paper">
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={alt} className="h-full w-full object-cover" loading="lazy" />
+        <ImageZoom src={src} alt={alt} href={href} className="relative z-10 h-full w-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt={alt} className="h-full w-full object-cover" loading="lazy" />
+        </ImageZoom>
       ) : (
         <div className="flex h-full items-center justify-center text-xs text-ink-2">Không có ảnh</div>
       )}
-      {topLeft && <div className="absolute left-2 top-2 flex flex-wrap gap-1">{topLeft}</div>}
-      {topRight && <div className="absolute right-2 top-2">{topRight}</div>}
+      {topLeft && <div className="pointer-events-none absolute left-2 top-2 z-20 flex flex-wrap gap-1">{topLeft}</div>}
+      {topRight && <div className="pointer-events-none absolute right-2 top-2 z-20">{topRight}</div>}
     </div>
   );
 }
@@ -93,6 +97,7 @@ export default function SignalCard({ item }: { item: SignalItem }) {
       <CardImage
         src={item.image_url}
         alt={item.title}
+        href={item.url}
         topLeft={
           <span className="inline-flex rounded-full bg-sheet">
             <StatusBadge kind="signal" status={item.status} />

@@ -16,6 +16,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <CardImage
         src={product.image_url}
         alt={product.title}
+        href={product.url}
         topLeft={
           product.hot ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-ink bg-ink px-2 py-0.5 text-xs font-medium leading-4 text-white">

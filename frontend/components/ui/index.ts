@@ -5,6 +5,7 @@ export { default as Checkbox } from "./Checkbox";
 export { default as Delta } from "./Delta";
 export { default as EmptyState } from "./EmptyState";
 export { default as HalftoneMeter } from "./HalftoneMeter";
+export { default as ImageZoom } from "./ImageZoom";
 export { default as InkDot } from "./InkDot";
 export { default as Notice } from "./Notice";
 export { default as PageHeader } from "./PageHeader";

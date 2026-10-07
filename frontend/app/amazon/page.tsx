@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import SourceHealthBanner from "@/components/SourceHealthBanner";
 import { LicensedTag } from "@/components/SignalCard";
-import { ButtonLink, Card, Checkbox, Delta, EmptyState, InkDot, Notice, PageHeader, Select, Tabs } from "@/components/ui";
+import { ButtonLink, Card, Checkbox, Delta, EmptyState, ImageZoom, InkDot, Notice, PageHeader, Select, Tabs } from "@/components/ui";
 import { api, type AmazonList, type AmazonPage } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 
@@ -158,15 +158,17 @@ export default function AmazonPageView() {
                   {!it.is_new_entry && it.rank_change !== null && <Delta value={it.rank_change} unit="" ratio={false} className="text-xs" />}
                 </div>
                 {it.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={it.image_url}
-                    alt={it.title}
-                    className="size-14 shrink-0 rounded-md border border-rule bg-paper object-cover"
-                    loading="lazy"
-                  />
+                  <ImageZoom src={it.image_url} alt={it.title} href={it.url} className="size-14 shrink-0 sm:size-16">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={it.image_url}
+                      alt={it.title}
+                      className="size-full rounded-md border border-rule bg-paper object-cover transition-colors hover:border-ink-2"
+                      loading="lazy"
+                    />
+                  </ImageZoom>
                 ) : (
-                  <div className="size-14 shrink-0 rounded-md border border-rule bg-paper" />
+                  <div className="size-14 shrink-0 rounded-md border border-rule bg-paper sm:size-16" />
                 )}
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <a
