@@ -1,5 +1,6 @@
 from datetime import date
 
+import pytest
 from sqlalchemy import select
 
 from app.keywords import get_or_create_keyword
@@ -19,6 +20,36 @@ def test_listing_matches():
     assert listing_matches("Pickleball", "pickleball shirt", "x", "shirt")
     assert listing_matches("pickleball", "graphic tee", "Funny PICKLEBALL Tee", "shirt")
     assert not listing_matches("pickleball", "graphic tee", "tennis tee", "shirt")
+
+
+MATCH_CASES = [
+    ("nurse", "Funny Nurse Shirt", True),
+    ("nurse", "Nurses Week Tee", True),
+    ("nurse", "Nursery Rhyme Tee", False),
+    ("game day", "Game-Day Football Tee", True),
+    ("game day", "Endgame Dayton Tee", False),
+    ("football mom", "Football Moms Club", True),
+    ("100%", "Tennis 100% tee", True),
+    ("100", "Tennis 1000 tee", False),
+    ("pickleball", "PICKLEBALL Queen", True),
+    ("", "Anything", False),
+]
+
+
+@pytest.mark.parametrize("keyword,title,expected", MATCH_CASES)
+def test_whole_word_matching_python(keyword, title, expected):
+    assert listing_matches(keyword, "graphic tee", title, "shirt") is expected
+
+
+@pytest.mark.parametrize("keyword,title,expected", MATCH_CASES)
+def test_whole_word_matching_sql(session, keyword, title, expected):
+    p = _listing(session, 1, title, "graphic tee")
+    session.flush()
+    ids = session.scalars(
+        select(Product.id).join(ListingSignal, ListingSignal.product_id == Product.id)
+        .where(listing_keyword_filter(keyword, "shirt"))
+    ).all()
+    assert (ids == [p.id]) is expected
 
 
 def test_listing_keyword_filter_sql(session):
