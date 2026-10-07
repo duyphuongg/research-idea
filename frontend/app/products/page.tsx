@@ -60,6 +60,7 @@ export default function ProductsPage() {
         <select className={selectClass} value={query.source ?? ""} onChange={(e) => update({ source: e.target.value || undefined })}>
           <option value="">Tất cả nguồn</option>
           <option value="etsy">Etsy</option>
+          <option value="amazon">Amazon</option>
         </select>
         <select
           className={selectClass}
