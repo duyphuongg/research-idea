@@ -36,7 +36,7 @@ export default function WatchCard({ item, onRemove }: { item: WatchItem; onRemov
               <Link key={c.keyword_id} href={`/trends/${c.keyword_id}`} className={`${TAG_CHIP} text-ink hover:border-ink-2`}>
                 <span aria-hidden="true" className="mr-1 size-1.5 shrink-0 rounded-full bg-cyan" />
                 {c.keyword}
-                {c.score !== null && <span className="ml-1.5 font-mono text-ink-2">{Math.round(c.score)}</span>}
+                <span className="ml-1.5 font-mono text-ink-2">{Math.round(c.score)}</span>
               </Link>
             ))}
           </div>
@@ -75,9 +75,11 @@ export default function WatchCard({ item, onRemove }: { item: WatchItem; onRemov
       </Row>
 
       <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-rule pt-3">
-        <ButtonLink size="sm" href={`/trends/${item.keyword_id}`}>
-          Xem chi tiết
-        </ButtonLink>
+        {item.keyword_id !== null && (
+          <ButtonLink size="sm" href={`/trends/${item.keyword_id}`}>
+            Xem chi tiết
+          </ButtonLink>
+        )}
         <ButtonLink size="sm" href={`/signals?keyword=${encodeURIComponent(item.keyword)}&status=all`}>
           Xem listing
         </ButtonLink>

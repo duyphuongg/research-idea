@@ -223,11 +223,11 @@ export type TelegramStatus = { configured: boolean; app_url: string | null };
 export type WatchItem = {
   seed_id: number;
   keyword: string;
-  keyword_id: number;
+  keyword_id: number | null;
   score: number | null;
   growth: number | null;
   children_total: number;
-  children: { keyword_id: number; keyword: string; score: number | null }[];
+  children: { keyword_id: number; keyword: string; score: number }[];
   listings: { super_breakout: number; steady_grower: number };
   thumbnails: { product_id: number; image_url: string | null; title: string; url: string; status: SignalStatus }[];
   alerts_7d: number;

@@ -7,7 +7,7 @@ import { api, ApiError, type AlertItem, type AlertKind, type TelegramStatus } fr
 
 const KIND: Record<AlertKind, { icon: string; label: string }> = {
   niche: { icon: "🚀", label: "Ngách bứt phá" },
-  listing: { icon: "🔥", label: "Mẫu Etsy tăng mạnh" },
+  listing: { icon: "🔥", label: "Etsy bứt phá" },
   hot_product: { icon: "⭐", label: "Sản phẩm hot" },
   amazon: { icon: "🛒", label: "Amazon mới vào top" },
 };
@@ -18,7 +18,18 @@ function formatDate(iso: string): string {
 }
 
 function errorText(err: unknown): string {
-  return err instanceof ApiError || err instanceof Error ? err.message : String(err);
+  if (err instanceof ApiError) {
+    try {
+      const body: unknown = JSON.parse(err.message);
+      if (body && typeof body === "object" && "detail" in body && typeof body.detail === "string") {
+        return body.detail;
+      }
+    } catch {
+      // not JSON: fall through to the raw message
+    }
+    return err.message;
+  }
+  return err instanceof Error ? err.message : String(err);
 }
 
 export default function AlertsPage() {
@@ -81,7 +92,7 @@ export default function AlertsPage() {
       <PageHeader
         eyebrow="Tin mới"
         title="Tin mới"
-        description="Phát hiện sau mỗi lần quét (8:00 và 20:00): ngách bứt phá, mẫu Etsy tăng mạnh, sản phẩm hot, Amazon mới vào top."
+        description="Phát hiện sau mỗi lần quét (8:00 và 20:00): ngách bứt phá, Etsy bứt phá, sản phẩm hot, Amazon mới vào top."
       />
 
       <Card className="mb-6">
