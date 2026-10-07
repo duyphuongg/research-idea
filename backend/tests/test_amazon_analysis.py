@@ -1,6 +1,7 @@
 from app.analysis.amazon import (
     AmazonConfig,
     is_licensed,
+    is_non_pod,
     list_url,
     load_amazon_config,
     parse_rating,
@@ -100,7 +101,7 @@ def test_title_phrases_real_titles():
         "in October We Wear Pink Black Women Breast Cancer Awareness T-Shirt",
     ] * 3
     phrases = [p for p, _ in title_phrases(titles, 3, 40)]
-    assert "spooky season" in phrases
+    assert any("spooky season" in p for p in phrases)
     assert "breast cancer awareness" in phrases
     bad = {"top", "tee", "shirt", "tshirt", "t", "sweatshirt", "hoodie", "gift", "women", "in", "i", "this"}
     for p in phrases:
@@ -145,3 +146,22 @@ def test_parse_edge_cases():
     assert parse_reviews("-5") is None
     assert parse_reviews("1,234 ratings") is None
     assert parse_rating("10 out of 5") is None
+
+
+def test_title_phrases_ignores_garment_descriptors():
+    t = "Women Long Sleeve Crew Neck Graphic Pullover Spooky Season Ghost Sweatshirt"
+    phrases = dict(title_phrases([t] * 3, 3, 40))
+    assert any("spooky season" in p for p in phrases)
+    banned = {"sleeve", "neck", "pullover", "graphic", "long", "crew"}
+    assert not any(banned & set(p.split()) for p in phrases)
+    # configurable extra ignore words
+    extra = dict(title_phrases(["Spooky Season Ghost Vibes"] * 3, 3, 40, ignore_words=("ghost",)))
+    assert "spooky season" in extra and not any("ghost" in p for p in extra)
+
+
+def test_is_non_pod_and_config():
+    cfg = load_amazon_config()
+    assert is_non_pod("Modify by Amazon Custom T-Shirt", cfg.non_pod_terms)
+    assert is_non_pod("Women Mesh Sheer Top", cfg.non_pod_terms)
+    assert not is_non_pod("Meshach Funny Shirt", cfg.non_pod_terms)
+    assert "sleeve" in cfg.phrase_ignore_words

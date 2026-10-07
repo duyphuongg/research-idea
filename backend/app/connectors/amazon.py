@@ -13,6 +13,8 @@ from typing import Any
 from app.analysis.amazon import (
     AmazonConfig,
     is_licensed,
+    is_non_pod,
+    PAGE_SIZE,
     list_url,
     load_amazon_config,
     parse_rating,
@@ -44,7 +46,8 @@ _EXTRACT_JS = """els => els.map(e => {
   const rating = e.querySelector('i[class*="a-icon-star"] span, .a-icon-alt');
   const reviews = e.querySelector('a[href*="product-reviews"] span.a-size-small');
   return {rank: rank && rank.innerText, href: a && a.getAttribute('href'),
-          title: img && img.getAttribute('alt'), img: img && img.getAttribute('src'),
+          title: img && img.getAttribute('alt'),
+          text: a && (a.innerText || a.getAttribute('aria-label') || a.getAttribute('title')), img: img && img.getAttribute('src'),
           rating: rating && rating.innerText, reviews: reviews && reviews.innerText};
 })"""
 
@@ -169,13 +172,17 @@ class AmazonConnector:
                 continue
             list_name = payload.get("list", "")
             seen: set[str] = set()
-            for item in payload.get("items", []):
+            page_no = int(payload.get("page", 1) or 1)
+            for pos, item in enumerate(payload.get("items", []), start=1):
                 m = _ASIN_RE.search(item.get("href") or "")
                 rm = _RANK_RE.search(item.get("rank") or "")
-                title = (item.get("title") or "").strip()
-                if not m or not rm or not title or m.group(1) in seen:
+                title = (item.get("title") or item.get("text") or "").strip()
+                title = re.sub(r"\s+", " ", title)
+                if not m or not title or m.group(1) in seen:
                     continue
-                asin, rank = m.group(1), int(rm.group(1))
+                # Rank badge can be missing (lazy render): fall back to list position.
+                asin = m.group(1)
+                rank = int(rm.group(1)) if rm else (page_no - 1) * PAGE_SIZE + pos
                 seen.add(asin)
                 ranks.append(NormalizedRank(asin, category.key, list_name, rank, today))
                 product = NormalizedProduct(
@@ -201,12 +208,17 @@ class AmazonConnector:
                     best[asin] = (key, product)
 
         products = [p for _, p in best.values()]
-        titles = [p.title for p in products if not p.licensed]
+        titles = [
+            p.title for p in products
+            if not p.licensed and not is_non_pod(p.title, cfg.non_pod_terms)
+        ]
         signals = [
             NormalizedSignal(
                 keyword=phrase, source="amazon", metric="title_phrase_count",
                 value=count, date=today, origin="discovered",
             )
-            for phrase, count in title_phrases(titles, cfg.min_phrase_products, cfg.max_phrases)
+            for phrase, count in title_phrases(
+                titles, cfg.min_phrase_products, cfg.max_phrases, cfg.phrase_ignore_words
+            )
         ]
         return NormalizedBatch(products=products, signals=signals, ranks=ranks)

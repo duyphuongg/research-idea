@@ -136,3 +136,31 @@ def test_enabled_reflects_playwright(monkeypatch):
     assert conn.enabled() is False
     monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
     assert conn.enabled() is True
+
+
+def test_normalize_excludes_non_pod_titles_from_phrases_but_keeps_products():
+    conn, _ = make(FakeLoader(ok), cfg())
+    conn._config = AmazonConfig(
+        categories=cfg().categories, non_pod_terms=("modify by amazon",), min_phrase_products=3
+    )
+    items = [
+        {"rank": f"#{i}", "href": f"/dp/B0AAAAAA0{i}", "title": "Modify by Amazon Custom Spooky Season Ghost", "img": None}
+        for i in range(1, 4)
+    ]
+    raw = RawBatch("amazon", [{"category": "women_tshirts", "list": "bestsellers", "page": 1, "items": items}], [])
+    batch = conn.normalize(raw, TODAY)
+    assert len(batch.products) == 3
+    assert batch.signals == []
+
+
+def test_normalize_falls_back_to_link_text_and_position():
+    conn, _ = make(FakeLoader(ok), cfg())
+    items = [
+        {"rank": "#1", "href": "/dp/B0AAAAAA01", "title": "First", "img": None},
+        {"rank": None, "href": "/dp/B0AAAAAA02", "title": None, "text": "  Linked title  ", "img": None},
+    ]
+    raw = RawBatch("amazon", [{"category": "women_tshirts", "list": "bestsellers", "page": 2, "items": items}], [])
+    batch = conn.normalize(raw, TODAY)
+    by_id = {p.external_id: p for p in batch.products}
+    assert by_id["B0AAAAAA02"].title == "Linked title"
+    assert by_id["B0AAAAAA02"].rank == 52  # page 2, 2nd position

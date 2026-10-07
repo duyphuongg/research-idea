@@ -22,6 +22,16 @@ _IGNORED = STOPWORDS | APPAREL_WORDS | (GENERIC_WORDS - _DESCRIPTORS) | frozense
     {"top", "tee", "shirt", "tshirt", "t", "sweatshirt", "hoodie", "gift"}
 )
 
+_DESCRIPTOR_IGNORED = frozenset({
+    "sleeve", "sleeves", "long", "short", "crew", "neck", "crewneck", "pullover", "graphic",
+    "oversized", "oversize", "fit", "fitted", "loose", "cotton", "soft", "casual", "raglan",
+    "vneck", "v", "blouse", "blouses", "tunic", "tank", "tops", "top", "jersey", "baseball",
+    "quarter", "zip", "hooded", "lightweight", "heavyweight", "plus", "size",
+})
+_IGNORED = _IGNORED | _DESCRIPTOR_IGNORED
+_APPAREL_IGNORED = _APPAREL_IGNORED | _DESCRIPTOR_IGNORED
+PAGE_SIZE = 50
+
 _URLS = {
     "bestsellers": "https://www.amazon.com/gp/bestsellers/fashion/{node}?pg={page}",
     "new_releases": "https://www.amazon.com/gp/new-releases/fashion/{node}?pg={page}",
@@ -39,6 +49,8 @@ class AmazonCategory:
 class AmazonConfig:
     categories: tuple[AmazonCategory, ...]
     licensed_terms: tuple[str, ...] = ()
+    non_pod_terms: tuple[str, ...] = ()
+    phrase_ignore_words: tuple[str, ...] = ()
     lists: tuple[str, ...] = ("bestsellers", "new_releases")
     pages: int = 2
     delay_seconds: tuple[float, float] = (4.0, 8.0)
@@ -58,6 +70,8 @@ def load_amazon_config() -> AmazonConfig:
         pages=int(raw.get("pages", 2)),
         delay_seconds=(float(delay[0]), float(delay[1])),
         licensed_terms=tuple(str(t).lower() for t in raw.get("licensed_terms", [])),
+        non_pod_terms=tuple(str(t).lower() for t in raw.get("non_pod_terms", [])),
+        phrase_ignore_words=tuple(str(t).lower() for t in raw.get("phrase_ignore_words", [])),
         min_phrase_products=int(raw.get("min_phrase_products", 3)),
         max_phrases=int(raw.get("max_phrases", 40)),
     )
@@ -79,6 +93,11 @@ def is_licensed(title: str, terms: tuple[str, ...] | list[str]) -> bool:
         if t and re.search(rf"(?<![a-z0-9]){re.escape(t)}(?![a-z0-9])", low):
             return True
     return False
+
+
+def is_non_pod(title: str, terms: tuple[str, ...] | list[str]) -> bool:
+    """Same whole-phrase matching as is_licensed, for blank/multipack/non-POD listings."""
+    return is_licensed(title, terms)
 
 
 def parse_reviews(text: str | None) -> int | None:
@@ -117,9 +136,13 @@ def _segments(title: str) -> list[list[str]]:
 
 
 def title_phrases(
-    titles: list[str], min_products: int, max_phrases: int
+    titles: list[str],
+    min_products: int,
+    max_phrases: int,
+    ignore_words: tuple[str, ...] | list[str] = (),
 ) -> list[tuple[str, int]]:
     """2-3 word phrases counted once per title; see plan Global Constraints."""
+    extra = frozenset(w.lower() for w in ignore_words)
     counts: Counter[tuple[str, ...]] = Counter()
     occurrences: Counter[tuple[str, ...]] = Counter()
     for title in titles:
@@ -131,6 +154,7 @@ def title_phrases(
                     gram = tuple(toks[i : i + n])
                     if any(
                         singularize(w) in _APPAREL_IGNORED or w in _APPAREL_IGNORED
+                        or singularize(w) in extra or w in extra
                         for w in gram
                     ):
                         continue
