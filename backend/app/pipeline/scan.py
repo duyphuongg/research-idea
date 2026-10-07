@@ -42,14 +42,38 @@ async def run_scan(
     return run_ids
 
 
+def start_run(session_factory: sessionmaker[Session], source: str) -> int:
+    with session_factory() as session:
+        run = ScanRun(source=source, status="running")
+        session.add(run)
+        session.commit()
+        return run.id
+
+
+def finish_run(
+    session_factory: sessionmaker[Session],
+    run_id: int,
+    source: str,
+    status: str,
+    records: int,
+    error: str | None,
+) -> None:
+    try:
+        with session_factory() as session:
+            run = session.get(ScanRun, run_id)
+            run.status = status
+            run.records = records
+            run.error = error
+            run.finished_at = utcnow()
+            session.commit()
+    except Exception:
+        logger.exception("Could not finalize scan run %s for %s", run_id, source)
+
+
 async def _run_one(
     session_factory: sessionmaker[Session], connector: Connector, keywords: list[str], today: date
 ) -> int:
-    with session_factory() as session:
-        run = ScanRun(source=connector.name, status="running")
-        session.add(run)
-        session.commit()
-        run_id = run.id
+    run_id = start_run(session_factory, connector.name)
 
     status, records, error = "ok", 0, None
     try:
@@ -69,16 +93,7 @@ async def _run_one(
         logger.exception("Connector %s failed", connector.name)
         status, error = "failed", f"{type(exc).__name__}: {exc}"[:MAX_ERROR_LEN]
 
-    try:
-        with session_factory() as session:
-            run = session.get(ScanRun, run_id)
-            run.status = status
-            run.records = records
-            run.error = error
-            run.finished_at = utcnow()
-            session.commit()
-    except Exception:
-        logger.exception("Could not finalize scan run %s for %s", run_id, connector.name)
+    finish_run(session_factory, run_id, connector.name, status, records, error)
     return run_id
 
 
