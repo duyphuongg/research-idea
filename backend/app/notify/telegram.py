@@ -22,7 +22,8 @@ for _name in ("httpx", "httpcore"):
 
 API = "https://api.telegram.org"
 PENDING_DAYS = 2
-CAPTION_LIMIT = 1024
+TITLE_LIMIT = 200  # raw lengths, cut before escaping so entities and tags stay whole
+REASON_LIMIT = 300
 
 KIND_STYLE = {
     "niche": ("🚀", "Ngách bứt phá"),
@@ -51,10 +52,10 @@ def format_caption(alert: Alert, app_url: str | None) -> str:
     if alert.external_url:
         label = "Amazon" if "amazon." in alert.external_url else "Etsy"
         links.append(f'<a href="{html.escape(alert.external_url, quote=True)}">{label}</a>')
-    lines = [head, html.escape(alert.title), html.escape(alert.reason)]
+    lines = [head, html.escape(alert.title[:TITLE_LIMIT]), html.escape(alert.reason[:REASON_LIMIT])]
     if links:
         lines.append(" · ".join(links))
-    return "\n".join(lines)[:CAPTION_LIMIT]
+    return "\n".join(lines)
 
 
 async def _post(client: httpx.AsyncClient, settings: Settings, method: str, payload: dict) -> int:
@@ -116,8 +117,11 @@ async def send_pending(session: Session, settings: Settings, cfg: AlertsConfig |
         for alert in top:
             try:
                 status = await _send_alert(client, settings, alert)
-            except TelegramError as exc:
+            except TelegramError as exc:  # transport failure: Telegram unreachable, leave the rest pending
                 logger.warning("Telegram send failed: %s", exc)
+                return sent
+            except Exception as exc:  # never let one alert lose the sent_at of the others
+                logger.warning("Telegram send failed: %s", type(exc).__name__)
                 continue
             if status == 200:
                 alert.sent_at = now
@@ -128,7 +132,7 @@ async def send_pending(session: Session, settings: Settings, cfg: AlertsConfig |
                 logger.warning("Telegram send failed: %s", status)
         if rest:
             text = f"… và {len(rest)} tin khác"
-            text += f" — xem trong app: {settings.app_url}/alerts" if settings.app_url else ""
+            text += f" — xem trong app: {html.escape(settings.app_url + '/alerts')}" if settings.app_url else ""
             try:
                 status = await _post(client, settings, "sendMessage", _message(text))
             except TelegramError as exc:

@@ -93,3 +93,49 @@ async def test_token_never_logged_by_httpx(session, caplog):
         n = await send_pending(session, _settings(), now=NOW)
     assert n == 1
     assert TOKEN not in caplog.text
+
+
+def test_caption_truncates_fields_before_escaping():
+    a = Alert(kind="listing", subject_id=1, level=1, priority=1, title="&" * 900, reason="<" * 900,
+              image_url=None, link="/signals", external_url="https://www.etsy.com/listing/1",
+              watch_keyword="pickleball", scan_date=NOW.date())
+    text = format_caption(a, "http://mac:3737")
+    import html as _html
+    import re
+    assert len(_html.unescape(re.sub(r"<[^>]+>", "", text))) <= 1024  # Telegram counts the parsed text
+    assert text.count("&amp;") == 200 and text.count("&lt;") == 300
+    assert text.endswith('<a href="https://www.etsy.com/listing/1">Etsy</a>')
+
+
+async def test_unexpected_error_skips_one_alert_and_keeps_others(session):
+    _alert(session, 1, priority=3)
+    _alert(session, 2, priority=2)
+    _alert(session, 3, priority=1)
+    with respx.mock() as mock:
+        mock.post(f"{BASE}/sendPhoto").mock(side_effect=[
+            httpx.Response(200, json={"ok": True}), RuntimeError("weird"), httpx.Response(200, json={"ok": True}),
+        ])
+        n = await send_pending(session, _settings(), now=NOW)
+    assert n == 2
+    assert sorted(a.subject_id for a in session.query(Alert) if a.sent_at) == [1, 3]
+
+
+async def test_transport_error_stops_the_run(session):
+    for i in range(3):
+        _alert(session, i, priority=float(10 - i))
+    with respx.mock() as mock:
+        photo = mock.post(f"{BASE}/sendPhoto").mock(side_effect=httpx.ConnectTimeout("slow"))
+        n = await send_pending(session, _settings(), now=NOW)
+    assert n == 0 and photo.call_count == 1
+    assert all(a.sent_at is None for a in session.query(Alert))
+
+
+async def test_summary_escapes_app_url(session):
+    for i in range(2):
+        _alert(session, i)
+    with respx.mock() as mock:
+        mock.post(f"{BASE}/sendPhoto").mock(return_value=httpx.Response(200, json={"ok": True}))
+        msg = mock.post(f"{BASE}/sendMessage").mock(return_value=httpx.Response(200, json={"ok": True}))
+        await send_pending(session, Settings(_env_file=None, telegram_bot_token=TOKEN, telegram_chat_id="42", app_url="http://h/?a=1&b=<2>"), AlertsConfig(telegram_max_items=1), now=NOW)
+    body = msg.calls[0].request.content.decode()
+    assert "a=1&amp;b=&lt;2&gt;/alerts" in body
