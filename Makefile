@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now install-daily uninstall-daily daily-status up down
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now install-daily uninstall-daily daily-status up down telegram-setup
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -71,3 +71,6 @@ uninstall-daily:
 daily-status:
 	@launchctl print gui/$$(id -u)/$(DAILY_LABEL) 2>/dev/null | grep -E "state =|last exit code|runs =" || echo "Chưa cài (make install-daily)"
 	@tail -n 25 backend/data/logs/daily-scan.log 2>/dev/null || true
+
+telegram-setup:
+	cd backend && .venv/bin/python scripts/telegram_setup.py
