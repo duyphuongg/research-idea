@@ -4,14 +4,13 @@ from datetime import date, timedelta
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.analysis.scoring import HISTORY_DAYS, Series, Weights, load_weights, score_keywords
 from app.analysis.pod_filter import (
     PodFilterRules,
     adds_only_product_words,
     is_pod_relevant,
     load_rules,
 )
-from app.pipeline.store import TRUSTED_SOURCES
+from app.analysis.scoring import HISTORY_DAYS, Series, Weights, load_weights, score_keywords
 from app.keywords import canonical_keyword
 from app.models import (
     Keyword,
@@ -21,6 +20,7 @@ from app.models import (
     Seed,
     TrendSignal,
 )
+from app.pipeline.store import TRUSTED_SOURCES
 
 
 def refilter(session: Session, rules: PodFilterRules | None = None) -> int:

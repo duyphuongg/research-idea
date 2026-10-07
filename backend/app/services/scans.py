@@ -39,7 +39,8 @@ def try_begin_scan(app: Any) -> bool:
     return app.state.scan_lock.acquire(blocking=False)
 
 
-async def execute_scan(app: Any, connectors: list[Connector], jobs: Sequence[ScanJob] = ()
+async def execute_scan(
+    app: Any, connectors: list[Connector], jobs: Sequence[ScanJob] = ()
 ) -> list[int]:
     """Run a scan; the caller must already hold the lock from try_begin_scan."""
     try:

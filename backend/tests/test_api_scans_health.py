@@ -107,3 +107,24 @@ def test_start_scan_runs_jobs_only(make_client):
 def test_start_scan_requires_connector_or_job(make_client):
     client = make_client(connector_factory=lambda *a: [], job_factory=lambda *a: [])
     assert client.post("/api/scans", json={}).status_code == 400
+
+
+def test_start_scan_selects_connectors_and_jobs_by_source(make_client):
+    async def noop(sf, kw, today):
+        return 0
+
+    def connectors(settings, overrides, only):
+        return [FakeConnector(name="etsy")] if only is None or "etsy" in only else []
+
+    def jobs(settings, overrides, only):
+        return [ScanJob("etsy_signals", noop)] if only is None or "etsy_signals" in only else []
+
+    client = make_client(connector_factory=connectors, job_factory=jobs)
+
+    resp = client.post("/api/scans", json={"sources": ["etsy"]})
+    assert resp.status_code == 202
+    assert resp.json() == {"sources": ["etsy"]}
+
+    resp = client.post("/api/scans", json={"sources": ["etsy_signals"]})
+    assert resp.status_code == 202
+    assert resp.json() == {"sources": ["etsy_signals"]}

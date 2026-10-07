@@ -1,4 +1,5 @@
 import threading
+from datetime import date
 from types import SimpleNamespace
 
 from sqlalchemy import select
@@ -6,6 +7,7 @@ from sqlalchemy import select
 from app.config import Settings
 from app.db import utcnow
 from app.models import ScanRun, Seed
+from app.pipeline.jobs import ScanJob
 from app.scheduler import JOB_ID, reschedule, scheduled_scan, start_scheduler
 from app.settings_store import set_setting
 from tests.fakes import FakeConnector
@@ -88,3 +90,26 @@ async def test_scheduled_scan_skips_when_lock_held(session_factory):
 
     assert _runs(session_factory) == []
     assert fake.received_keywords is None
+
+
+async def test_scheduled_scan_runs_jobs_and_releases_lock(session_factory):
+    with session_factory() as s:
+        s.add(Seed(keyword="nurse"))
+        s.commit()
+    calls = []
+
+    async def record(sf, keywords, today):
+        calls.append((sf, keywords, today))
+        return 0
+
+    app = _scan_app(session_factory, FakeConnector())
+    app.state.connector_factory = lambda s, o, only: []
+    app.state.job_factory = lambda s, o, only: [ScanJob("etsy_signals", record)]
+
+    await scheduled_scan(app)
+
+    [(sf, keywords, today)] = calls
+    assert sf is session_factory
+    assert "nurse" in keywords
+    assert isinstance(today, date)
+    assert app.state.scan_lock.acquire(blocking=False)

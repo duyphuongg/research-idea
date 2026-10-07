@@ -8,7 +8,7 @@ from app.connectors.base import NormalizedBatch, NormalizedProduct, NormalizedSi
 from app.keywords import get_or_create_keyword, normalize_keyword
 from app.models import KeywordRelation, Product, ProductKeyword, ProductSnapshot, TrendSignal
 
-
+# sources whose discovered tags come from real apparel listings — treated as having a parent by the POD filter; keep in sync with app.pipeline.listing_signals.SOURCE
 TRUSTED_SOURCES = frozenset({"etsy_signals"})
 
 
