@@ -81,3 +81,15 @@ async def test_bad_photo_falls_back_to_text(session):
         msg = mock.post(f"{BASE}/sendMessage").mock(return_value=httpx.Response(200, json={"ok": True}))
         n = await send_pending(session, _settings(), now=NOW)
     assert n == 1 and msg.call_count == 1
+
+
+async def test_token_never_logged_by_httpx(session, caplog):
+    import logging
+    _alert(session, 1)
+    caplog.set_level(logging.DEBUG)
+    # real httpx client (respx patches the transport), so httpx's own request logging runs
+    with respx.mock() as mock:
+        mock.post(f"{BASE}/sendPhoto").mock(return_value=httpx.Response(200, json={"ok": True}))
+        n = await send_pending(session, _settings(), now=NOW)
+    assert n == 1
+    assert TOKEN not in caplog.text

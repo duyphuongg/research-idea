@@ -16,6 +16,10 @@ from app.models import Alert
 
 logger = logging.getLogger(__name__)
 
+# httpx logs every request at INFO with the full URL, which contains the bot token.
+for _name in ("httpx", "httpcore"):
+    logging.getLogger(_name).setLevel(logging.WARNING)
+
 API = "https://api.telegram.org"
 PENDING_DAYS = 2
 CAPTION_LIMIT = 1024
@@ -58,7 +62,7 @@ async def _post(client: httpx.AsyncClient, settings: Settings, method: str, payl
     url = f"{API}/bot{settings.telegram_bot_token}/{method}"
     try:
         resp = await client.post(url, json={"chat_id": settings.telegram_chat_id, **payload})
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, httpx.InvalidURL) as exc:
         raise TelegramError(f"Telegram request failed: {type(exc).__name__}") from None
     return resp.status_code
 
