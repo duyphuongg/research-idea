@@ -129,3 +129,17 @@ def test_views_shop_sales_and_metric_exposed(client, session):
     [item] = client.get("/api/products").json()["items"]
     assert (item["views"], item["shop_sold_count"], item["velocity_metric"]) == (300, 777, "views")
     assert item["delta_7d"] == pytest.approx(200)
+
+
+def test_listing_signal_only_products_excluded(client, session):
+    from app.models import ListingSignal
+
+    only = add_product(session, "S1", "tshirt", datetime(2026, 9, 13), [(date(2026, 9, 27), 5)])
+    both = add_product(session, "S2", "tshirt", datetime(2026, 9, 13), [(date(2026, 9, 27), 5)], keyword="nurse")
+    plain = add_product(session, "S3", "tshirt", datetime(2026, 9, 13), [(date(2026, 9, 27), 5)])
+    session.flush()
+    for p in (only, both):
+        session.add(ListingSignal(product_id=p.id, discovered_on=date(2026, 9, 27), status="normal", discovery_query="q"))
+    session.commit()
+    got = ids(client.get("/api/products"))
+    assert only.id not in got and both.id in got and plain.id in got

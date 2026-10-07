@@ -279,3 +279,72 @@ async def test_detail_missing_shop_is_not_marked_gone(session_factory):
     with session_factory() as s:
         rows = {s.get(Product, r.product_id).external_id: r for r in s.scalars(select(ListingSignal))}
         assert rows["502"].status != "gone"
+
+
+async def test_search_401_fails_fast(session_factory):
+    config = SignalsConfig(queries=("a", "b", "c"), pages_per_query=1)
+    with respx.mock:
+        route = respx.get(url__startswith=SEARCH_URL).mock(return_value=httpx.Response(401))
+        run_id = await run_listing_signals(
+            session_factory, "k", [], DAY1, config=config, client_factory=client_factory
+        )
+    assert route.call_count == 1
+    with session_factory() as s:
+        run = s.get(ScanRun, run_id)
+        assert run.status == "failed" and "HTTP 401" in run.error
+
+
+async def test_search_aborts_after_three_consecutive_failures(session_factory):
+    config = SignalsConfig(queries=("a", "b", "c", "d", "e"), pages_per_query=1)
+    with respx.mock:
+        route = respx.get(url__startswith=SEARCH_URL).mock(return_value=httpx.Response(404))
+        run_id = await run_listing_signals(
+            session_factory, "k", [], DAY1, config=config, client_factory=client_factory
+        )
+    assert route.call_count == 3
+    with session_factory() as s:
+        run = s.get(ScanRun, run_id)
+        assert run.status == "failed"
+        assert "search aborted after 3 consecutive failed queries" in run.error
+
+
+async def test_tag_counts_use_canonical_form(session_factory):
+    details = [
+        listing(801, "A Shirt", 10, 1, ["funny shirt"]),
+        listing(802, "B Shirt", 10, 1, ["Funny Shirts"]),
+    ]
+    day1 = ({"results": [{k: d[k] for k in ("listing_id", "original_creation_timestamp")} for d in details]},
+            {"results": details})
+    await run_day(session_factory, DAY1, day1)
+    bumped = [{**details[0], "views": 400, "num_favorers": 60}, {**details[1], "views": 400, "num_favorers": 60}]
+    await run_day(session_factory, DAY2, (day1[0], {"results": bumped}))
+    with session_factory() as s:
+        sigs = s.scalars(select(TrendSignal)).all()
+        assert [(t.value) for t in sigs] == [2.0]
+
+
+async def test_tracked_only_snapshots_pruned(session_factory):
+    from datetime import timedelta
+
+    from app.models import ProductKeyword, ProductSnapshot
+    from app.keywords import get_or_create_keyword
+
+    await run_day(session_factory, DAY1, day(100, 10, 50, 2))
+    old = DAY2 - timedelta(days=CONFIG.track_days + 8)
+    recent = DAY2 - timedelta(days=CONFIG.track_days)
+    with session_factory() as s:
+        tracked_pid = s.scalars(select(Product.id).where(Product.external_id == "501")).one()
+        other = Product(source="etsy", external_id="900", title="x", url="u", product_type="tshirt")
+        s.add(other)
+        s.flush()
+        kw = get_or_create_keyword(s, "nurse")
+        s.add(ProductKeyword(product_id=other.id, keyword_id=kw.id, rank=1, last_seen=DAY1))
+        for pid in (tracked_pid, other.id):
+            s.add(ProductSnapshot(product_id=pid, date=old, favorites=1))
+            s.add(ProductSnapshot(product_id=pid, date=recent, favorites=1))
+        s.commit()
+    await run_day(session_factory, DAY2, day(160, 22, 80, 4))
+    with session_factory() as s:
+        dates = lambda pid: {x.date for x in s.scalars(select(ProductSnapshot).where(ProductSnapshot.product_id == pid))}
+        assert old not in dates(tracked_pid) and recent in dates(tracked_pid)
+        assert old in dates(other.id)

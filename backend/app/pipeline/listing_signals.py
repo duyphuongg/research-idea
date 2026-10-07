@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 
 import httpx
-from sqlalchemy import or_, select, update
+from sqlalchemy import delete, exists, or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.analysis.listing_signals import (
@@ -22,8 +22,8 @@ from app.analysis.velocity import SnapshotPoint
 from app.connectors.base import ConnectorError, NormalizedBatch, NormalizedSignal
 from app.connectors.etsy import BASE_URL, _created_at, _to_product
 from app.connectors.http import RateLimiter, Sleep, request_with_retry
-from app.keywords import normalize_keyword
-from app.models import ListingSignal, Product, ProductSnapshot
+from app.keywords import canonical_keyword
+from app.models import ListingSignal, Product, ProductKeyword, ProductSnapshot
 from app.pipeline.scan import MAX_ERROR_LEN, finish_run, start_run
 from app.pipeline.store import persist_batch, upsert_product
 
@@ -33,6 +33,7 @@ PAGE_SIZE = 100
 BATCH_SIZE = 100
 MAX_CONSECUTIVE_FAILED_CHUNKS = 3
 MIN_RETURNED_FRACTION = 0.5
+MAX_CONSECUTIVE_FAILED_QUERIES = 3
 FATAL_STATUSES = {401, 403}
 
 
@@ -187,12 +188,22 @@ async def collect_listings(
     queries = list(config.queries) + [f"{seed} {config.seed_query_suffix}" for seed in seeds]
     oldest = datetime.combine(today - timedelta(days=config.max_age_days), time.min)
     discovery: dict[str, str] = {}
+    failed_in_a_row = 0
     for query in dict.fromkeys(queries):
         try:
             found = await client.search_new(query, config.pages_per_query)
         except ConnectorError as exc:
+            if exc.status in FATAL_STATUSES:
+                raise
             errors.append(f"{query}: {exc}")
+            failed_in_a_row += 1
+            if failed_in_a_row >= MAX_CONSECUTIVE_FAILED_QUERIES:
+                errors.append(
+                    f"search aborted after {MAX_CONSECUTIVE_FAILED_QUERIES} consecutive failed queries"
+                )
+                break
             continue
+        failed_in_a_row = 0
         for item in found:
             if item.get("listing_id") is None:
                 continue
@@ -290,6 +301,22 @@ def mark_gone(session: Session, external_ids: set[str], today: date) -> int:
     return result.rowcount
 
 
+def prune_tracked_snapshots(session: Session, today: date, config: SignalsConfig) -> int:
+    """Drop old snapshots of tracked-only products (listing signal, no keyword link)."""
+    cutoff = today - timedelta(days=config.track_days + 7)
+    result = session.execute(
+        delete(ProductSnapshot).where(
+            ProductSnapshot.date < cutoff,
+            ProductSnapshot.product_id.in_(
+                select(ListingSignal.product_id).where(
+                    ~exists().where(ProductKeyword.product_id == ListingSignal.product_id)
+                )
+            ),
+        )
+    )
+    return result.rowcount
+
+
 def tag_signals(session: Session, config: SignalsConfig, today: date) -> NormalizedBatch:
     """Tags carried by today's breakout listings (counted once per listing) -> trend signals."""
     rows = session.scalars(
@@ -299,7 +326,7 @@ def tag_signals(session: Session, config: SignalsConfig, today: date) -> Normali
     )
     counts: Counter[str] = Counter()
     for tags in rows:
-        counts.update({normalize_keyword(t) for t in (tags or []) if normalize_keyword(t)})
+        counts.update({c for c in (canonical_keyword(t) for t in (tags or [])) if c})
     ranked = sorted(
         ((tag, n) for tag, n in counts.items() if n >= config.min_tag_listings),
         key=lambda kv: (-kv[1], kv[0]),
@@ -374,6 +401,7 @@ async def run_listing_signals(
             gone_total += mark_gone(session, missing, today)
             batch = tag_signals(session, config, today)
             persist_batch(session, batch, today)
+            prune_tracked_snapshots(session, today, config)
             session.commit()
         records += len(batch.signals)
         logger.info("Listing signals: %d tracked listings marked gone", gone_total)

@@ -54,8 +54,8 @@ TikTok Creative Center và Google Trends (biểu đồ quan tâm) chưa hỗ tr�
 
 ## Etsy Listing Signals
 
-Trang **Tín hiệu listing** theo dõi listing áo mới (≤ 30 ngày tuổi) của shop Mỹ trên Etsy (giá USD), cập nhật hằng ngày cho tới khi listing 45 ngày tuổi.
-Mỗi listing được xếp vào một nhóm: **Super Breakout**, **Steady Grower**, **Graduated**, **Calibrating** (chưa đủ dữ liệu) hoặc **Đã gỡ** (listing không còn trên Etsy).
+Trang **Listing Signals** theo dõi listing áo mới (≤ 30 ngày tuổi) của shop Mỹ trên Etsy (giá USD), cập nhật hằng ngày cho tới khi listing 45 ngày tuổi.
+Mỗi listing được xếp vào một nhóm: **Super Breakout**, **Steady Grower**, **Graduated**, **Calibrating** (chưa đủ dữ liệu) hoặc **Đã gỡ** (listing không còn trên Etsy hoặc không còn là áo của shop US, giá USD).
 DSR = lượt lưu mới / lượt xem mới giữa hai lần quét.
 Ngưỡng phân nhóm và các truy vấn tìm listing chỉnh trong `backend/config/listing_signals.yaml`.
 Cần ít nhất 2 lần quét (2 ngày) mới có tín hiệu; lần đầu mọi listing đều là Calibrating.

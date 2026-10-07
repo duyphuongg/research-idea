@@ -89,7 +89,7 @@ export default function SignalsPage() {
       </div>
       <p className="mb-4 text-xs text-zinc-500">
         Listing áo mới (≤ 30 ngày) của shop ở Mỹ, cập nhật hằng ngày. Lượt lưu = favorites; DSR = lượt lưu mới / lượt xem
-        mới. Cần ≥ 2 lần quét để có tín hiệu.
+        mới. Cần ≥ 2 lần quét để có tín hiệu. Lượt xem / lượt lưu là chỉ số ước tính (proxy), không phải doanh số thật.
       </p>
 
       <div className="mb-4 flex flex-wrap gap-2 text-sm">
@@ -111,11 +111,19 @@ export default function SignalsPage() {
 
       {result?.error && !loading && <p className="text-sm text-red-600">Không tải được dữ liệu: {result.error}</p>}
       {loading && <p className="text-sm text-zinc-500">Đang tải…</p>}
-      {!loading && result?.data && result.data.items.length === 0 && (
-        <p className="text-sm text-zinc-500">
-          Chưa có dữ liệu — bấm “Quét ngay” trong Cài đặt; tín hiệu xuất hiện sau 2 ngày quét.
-        </p>
-      )}
+      {!loading && result?.data && result.data.items.length === 0 &&
+        (result.data.updated_on ? (
+          <p className="text-sm text-zinc-500">
+            Đang hiệu chỉnh {counts?.calibrating ?? 0} listing — tín hiệu xuất hiện sau lần quét ngày mai.{" "}
+            <button className="text-blue-700 underline" onClick={() => update({ status: "calibrating" })}>
+              Xem tab Calibrating
+            </button>
+          </p>
+        ) : (
+          <p className="text-sm text-zinc-500">
+            Chưa có dữ liệu — bấm “Quét ngay” trong Cài đặt; tín hiệu xuất hiện sau 2 ngày quét.
+          </p>
+        ))}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {result?.data?.items.map((item) => <SignalCard key={item.product_id} item={item} />)}

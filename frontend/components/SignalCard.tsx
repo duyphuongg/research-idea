@@ -22,7 +22,13 @@ const STATUS_CLASS: Record<SignalStatus, string> = {
 
 function formatDelta(delta: number | null): string {
   if (delta === null) return "—";
-  return `${delta > 0 ? "+" : ""}${Math.round(delta)}/ngày`;
+  const text = Math.abs(delta) < 10 ? delta.toFixed(1) : String(Math.round(delta));
+  return `${delta > 0 ? "+" : ""}${text}/ngày`;
+}
+
+function deltaClass(delta: number | null): string {
+  if (delta === null || delta === 0) return "text-zinc-500";
+  return delta > 0 ? "text-green-600" : "text-red-600";
 }
 
 function formatDsr(dsr: number | null): string {
@@ -68,12 +74,12 @@ export default function SignalCard({ item }: { item: SignalItem }) {
           <p>
             <span className="block text-[10px] uppercase text-zinc-400">Views</span>
             {formatNumber(item.views)}
-            <span className="block text-green-600">{formatDelta(item.delta_views)}</span>
+            <span className={`block ${deltaClass(item.delta_views)}`}>{formatDelta(item.delta_views)}</span>
           </p>
           <p>
             <span className="block text-[10px] uppercase text-zinc-400">Lưu</span>
             {formatNumber(item.saves)}
-            <span className="block text-green-600">{formatDelta(item.delta_saves)}</span>
+            <span className={`block ${deltaClass(item.delta_saves)}`}>{formatDelta(item.delta_saves)}</span>
           </p>
           <p>
             <span className="block text-[10px] uppercase text-zinc-400">DSR</span>

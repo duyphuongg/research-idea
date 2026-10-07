@@ -3,13 +3,13 @@ from collections.abc import Callable
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.analysis.velocity import SnapshotPoint, compute_velocity, hot_ids, velocity_metric
 from app.api.deps import get_session
 from app.api.schemas import ProductOut, ProductPage
-from app.models import Keyword, Product, ProductKeyword
+from app.models import Keyword, ListingSignal, Product, ProductKeyword
 
 router = APIRouter(prefix="/api")
 
@@ -42,6 +42,10 @@ def list_products(
 ) -> ProductPage:
     products = session.scalars(
         select(Product)
+        .where(
+            ~exists().where(ListingSignal.product_id == Product.id)
+            | exists().where(ProductKeyword.product_id == Product.id)
+        )
         .order_by(Product.id)
         .options(selectinload(Product.snapshots))
     ).all()
