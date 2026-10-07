@@ -64,3 +64,32 @@ def metrics(age, saves, dsave, dsr):
 )
 def test_classify(m, expected):
     assert classify(m, Thresholds()) == expected
+
+
+def test_metrics_pick_base_per_metric_when_a_scan_is_missing_views():
+    points = [pt(date(2026, 10, 5), 100, 10), pt(date(2026, 10, 6), None, 14), pt(TODAY, 160, 22)]
+    m = compute_metrics(points, None, TODAY)
+    assert (m.views, m.saves) == (160, 22)
+    assert m.delta_views == pytest.approx(30)  # base Oct 5, span 2
+    assert m.delta_saves == pytest.approx(8)  # base Oct 6, span 1
+    assert m.dsr == pytest.approx(0.2)  # pair Oct 5 -> Oct 7
+
+
+def test_decreasing_favorites_classify_normal():
+    m = compute_metrics([pt(date(2026, 10, 6), 100, 20), pt(TODAY, 200, 15)], date(2026, 10, 1), TODAY)
+    assert m.delta_saves == pytest.approx(-5)
+    assert classify(m, Thresholds()) == "normal"
+
+
+def test_dsr_min_views_boundary():
+    at = compute_metrics([pt(date(2026, 10, 6), 100, 10), pt(TODAY, 110, 12)], None, TODAY)
+    assert at.dsr == pytest.approx(0.2)
+    below = compute_metrics([pt(date(2026, 10, 6), 100, 10), pt(TODAY, 109, 12)], None, TODAY)
+    assert below.dsr is None
+
+
+def test_classify_boundaries():
+    t = Thresholds()
+    assert classify(metrics(14, 22, 5.0, 0.15), t) == "super_breakout"
+    assert classify(metrics(30, 40, 2, 0.01), t) == "normal"
+    assert classify(metrics(31, 40, 2, 0.01), t) == "graduated"

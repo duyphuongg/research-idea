@@ -71,34 +71,51 @@ def load_signals_config() -> SignalsConfig:
     )
 
 
+def _delta(pairs: list[tuple[date, int]]) -> float | None:
+    """Per-day change between the latest value and the most recent one >= 1 day earlier."""
+    if not pairs:
+        return None
+    latest_d, latest_v = pairs[-1]
+    base = [p for p in pairs[:-1] if p[0] <= latest_d - timedelta(days=1)]
+    if not base:
+        return None
+    return (latest_v - base[-1][1]) / (latest_d - base[-1][0]).days
+
+
 def compute_metrics(
     points: list[SnapshotPoint],
     listed_on: date | None,
     today: date,
     min_dsr_views: int = Thresholds().dsr_min_delta_views,
 ) -> ListingMetrics:
-    usable = sorted(
-        (p for p in points if p.views is not None or p.favorites is not None),
-        key=lambda p: p.date,
-    )
+    """Per-listing growth metrics.
+
+    Each metric picks its own latest/base points (ignoring None values): base is the most
+    recent point at least one day before that metric's latest. DSR uses a common pair where
+    both views and favorites are present. If several points share a date, the later one in
+    input order wins as "latest" (the pipeline passes one snapshot per day).
+    """
+    ordered = sorted(points, key=lambda p: p.date)  # stable: input order kept within a date
     age = (today - listed_on).days if listed_on else None
-    if not usable:
-        return ListingMetrics(age, None, None, None, None, None)
-    latest = usable[-1]
-    earlier = [p for p in usable[:-1] if p.date <= latest.date - timedelta(days=1)]
-    base = earlier[-1] if earlier else None
-    delta_views = delta_saves = dsr = None
-    if base is not None:
-        span = (latest.date - base.date).days
-        if latest.views is not None and base.views is not None:
-            delta_views = (latest.views - base.views) / span
-        if latest.favorites is not None and base.favorites is not None:
-            delta_saves = (latest.favorites - base.favorites) / span
-        if delta_views is not None and delta_saves is not None:
-            total_views = latest.views - base.views
+    views = [(p.date, p.views) for p in ordered if p.views is not None]
+    saves = [(p.date, p.favorites) for p in ordered if p.favorites is not None]
+    both = [(p.date, p.views, p.favorites) for p in ordered if p.views is not None and p.favorites is not None]
+    dsr = None
+    if both:
+        latest = both[-1]
+        base = [p for p in both[:-1] if p[0] <= latest[0] - timedelta(days=1)]
+        if base:
+            total_views = latest[1] - base[-1][1]
             if total_views >= min_dsr_views:
-                dsr = (latest.favorites - base.favorites) / total_views
-    return ListingMetrics(age, latest.views, latest.favorites, delta_views, delta_saves, dsr)
+                dsr = (latest[2] - base[-1][2]) / total_views
+    return ListingMetrics(
+        age,
+        views[-1][1] if views else None,
+        saves[-1][1] if saves else None,
+        _delta(views),
+        _delta(saves),
+        dsr,
+    )
 
 
 def classify(m: ListingMetrics, t: Thresholds) -> str:
