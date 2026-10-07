@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from app.analysis.velocity import SnapshotPoint
 from app.config_files import load_yaml
 
-SIGNAL_STATUSES = ("super_breakout", "steady_grower", "graduated", "calibrating", "normal")
+SIGNAL_STATUSES = ("super_breakout", "steady_grower", "graduated", "calibrating", "normal", "gone")
 BREAKOUT_STATUSES = ("super_breakout", "steady_grower")
 
 

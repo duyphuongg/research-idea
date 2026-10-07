@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from datetime import date, datetime, time, timedelta
 from typing import Any
 
@@ -39,6 +39,7 @@ class EtsySignalsClient:
         self._sleep = sleep
         self._limiter = RateLimiter(min_interval, sleep=sleep)
         self._client: httpx.AsyncClient | None = None
+        self.failed_ids: set[str] = set()
 
     async def __aenter__(self) -> "EtsySignalsClient":
         self._client = httpx.AsyncClient(
@@ -55,9 +56,12 @@ class EtsySignalsClient:
             self._client, "GET", path, params=params, limiter=self._limiter, sleep=self._sleep
         )
         try:
-            return response.json()
+            data = response.json()
         except ValueError as exc:
             raise ConnectorError(f"invalid JSON from {path}") from exc
+        if not isinstance(data, dict) or not isinstance(data.get("results", []), list):
+            raise ConnectorError(f"unexpected response shape from {path}")
+        return data
 
     async def search_new(self, query: str, pages: int) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
@@ -73,19 +77,44 @@ class EtsySignalsClient:
                 break
         return results
 
-    async def fetch_batch(self, ids: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
-        details: list[dict[str, Any]] = []
-        errors: list[str] = []
+    async def _fetch_chunk(self, chunk: list[str]) -> list[dict[str, Any]]:
+        data = await self._get_json(
+            "/listings/batch", {"listing_ids": ",".join(chunk), "includes": "Images,Shop"}
+        )
+        return data.get("results", [])
+
+    async def _fetch_bisecting(
+        self, chunk: list[str]
+    ) -> AsyncIterator[tuple[list[dict[str, Any]], str | None]]:
+        try:
+            details = await self._fetch_chunk(chunk)
+        except ConnectorError as exc:
+            if len(chunk) == 1:
+                self.failed_ids.update(chunk)
+                yield [], f"listing {chunk[0]}: {exc}"
+                return
+            mid = len(chunk) // 2
+            for half in (chunk[:mid], chunk[mid:]):
+                async for result in self._fetch_bisecting(half):
+                    yield result
+            return
+        yield details, None
+
+    async def iter_batches(
+        self, ids: list[str]
+    ) -> AsyncIterator[tuple[list[dict[str, Any]], str | None]]:
+        """Yield (details, error) per fetched piece; failing chunks are bisected down to single ids."""
         for start in range(0, len(ids), BATCH_SIZE):
-            chunk = ids[start : start + BATCH_SIZE]
-            try:
-                data = await self._get_json(
-                    "/listings/batch", {"listing_ids": ",".join(chunk), "includes": "Images,Shop"}
-                )
-                details.extend(data.get("results", []))
-            except ConnectorError as exc:
-                errors.append(f"batch {start}: {exc}")
-        return details, errors
+            async for result in self._fetch_bisecting(ids[start : start + BATCH_SIZE]):
+                yield result
+
+
+def trim_images(listing: dict[str, Any]) -> dict[str, Any]:
+    """Keep only the first image (all _to_product needs) to bound memory."""
+    images = listing.get("images")
+    if isinstance(images, list):
+        listing["images"] = images[:1]
+    return listing
 
 
 def tracked_listing_ids(session: Session, today: date, config: SignalsConfig) -> set[str]:
@@ -96,6 +125,7 @@ def tracked_listing_ids(session: Session, today: date, config: SignalsConfig) ->
         .join(ListingSignal, ListingSignal.product_id == Product.id)
         .where(
             Product.source == "etsy",
+            ListingSignal.status != "gone",
             or_(
                 Product.listed_at >= cutoff_dt,
                 (Product.listed_at.is_(None)) & (ListingSignal.discovered_on >= cutoff),
@@ -105,13 +135,24 @@ def tracked_listing_ids(session: Session, today: date, config: SignalsConfig) ->
     return set(rows)
 
 
+def gone_listing_ids(session: Session) -> set[str]:
+    return set(
+        session.scalars(
+            select(Product.external_id)
+            .join(ListingSignal, ListingSignal.product_id == Product.id)
+            .where(Product.source == "etsy", ListingSignal.status == "gone")
+        )
+    )
+
+
 async def collect_listings(
     client: EtsySignalsClient,
     config: SignalsConfig,
     seeds: list[str],
     tracked: set[str],
     today: date,
-) -> tuple[list[dict[str, Any]], dict[str, str], list[str]]:
+    skip: set[str] | frozenset[str] = frozenset(),
+) -> tuple[list[str], dict[str, str], list[str]]:
     errors: list[str] = []
     queries = list(config.queries) + [f"{seed} {config.seed_query_suffix}" for seed in seeds]
     oldest = datetime.combine(today - timedelta(days=config.max_age_days), time.min)
@@ -126,7 +167,7 @@ async def collect_listings(
             if item.get("listing_id") is None:
                 continue
             lid = str(item["listing_id"])
-            if lid in tracked or lid in discovery:
+            if lid in tracked or lid in discovery or lid in skip:
                 continue
             created = _created_at(item)
             if created is None or created < oldest:
@@ -135,11 +176,7 @@ async def collect_listings(
     capacity = max(0, config.max_tracked - len(tracked))
     discovery = dict(list(discovery.items())[:capacity])
     ids = sorted(tracked) + list(discovery)
-    details: list[dict[str, Any]] = []
-    if ids:
-        details, fetch_errors = await client.fetch_batch(ids)
-        errors.extend(fetch_errors)
-    return details, discovery, errors
+    return ids, discovery, errors
 
 
 def persist_listings(
@@ -148,13 +185,16 @@ def persist_listings(
     discovery: dict[str, str],
     today: date,
     config: SignalsConfig,
-) -> tuple[int, int]:
-    discovered = refreshed = 0
+    tracked: set[str] | frozenset[str] = frozenset(),
+) -> tuple[int, int, int]:
+    discovered = refreshed = gone = 0
     for listing in details:
         if listing.get("listing_id") is None:
             continue
         item = _to_product(listing, None, 0)
         if item is None:
+            if str(listing["listing_id"]) in tracked:
+                gone += mark_gone(session, {str(listing["listing_id"])}, today)
             continue
         product = upsert_product(session, item, today)
         signal = session.get(ListingSignal, product.id)
@@ -193,7 +233,22 @@ def persist_listings(
         else:
             refreshed += 1
     session.flush()
-    return discovered, refreshed
+    return discovered, refreshed, gone
+
+
+def mark_gone(session: Session, external_ids: set[str], today: date) -> int:
+    if not external_ids:
+        return 0
+    signals = session.scalars(
+        select(ListingSignal)
+        .join(Product, ListingSignal.product_id == Product.id)
+        .where(Product.source == "etsy", Product.external_id.in_(external_ids))
+    ).all()
+    for signal in signals:
+        signal.status = "gone"
+        signal.updated_on = today
+    session.flush()
+    return len(signals)
 
 
 def tag_signals(session: Session, config: SignalsConfig, today: date) -> NormalizedBatch:
@@ -240,18 +295,43 @@ async def run_listing_signals(
     try:
         with session_factory() as session:
             tracked = tracked_listing_ids(session, today, config)
+            skip = gone_listing_ids(session)
+        records = gone_total = 0
+        got_details = False
+        seen: set[str] = set()
         async with client_factory(api_key) as client:
-            details, discovery, errors = await collect_listings(
-                client, config, keywords, tracked, today
+            ids, discovery, errors = await collect_listings(
+                client, config, keywords, tracked, today, skip
             )
+            async for details, chunk_error in client.iter_batches(ids):
+                if chunk_error:
+                    errors.append(chunk_error)
+                if not details:
+                    continue
+                got_details = True
+                for listing in details:
+                    trim_images(listing)
+                    if listing.get("listing_id") is not None:
+                        seen.add(str(listing["listing_id"]))
+                with session_factory() as session:
+                    discovered, refreshed, chunk_gone = persist_listings(
+                        session, details, discovery, today, config, tracked
+                    )
+                    session.commit()
+                records += discovered + refreshed
+                gone_total += chunk_gone
+                del details
+            failed_ids = set(client.failed_ids)
+        missing = tracked - seen - failed_ids
         with session_factory() as session:
-            discovered, refreshed = persist_listings(session, details, discovery, today, config)
+            gone_total += mark_gone(session, missing, today)
             batch = tag_signals(session, config, today)
             persist_batch(session, batch, today)
             session.commit()
-        records = discovered + refreshed + len(batch.signals)
+        records += len(batch.signals)
+        logger.info("Listing signals: %d tracked listings marked gone", gone_total)
         if errors:
-            status = "partial" if details else "failed"
+            status = "partial" if got_details else "failed"
             error = "\n".join(errors)[:MAX_ERROR_LEN]
     except Exception as exc:
         logger.exception("Listing signals job failed")
