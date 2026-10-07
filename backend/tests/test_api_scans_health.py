@@ -2,6 +2,7 @@ from sqlalchemy import select
 
 from app.db import utcnow
 from app.models import ScanRun
+from app.pipeline.jobs import ScanJob
 from tests.fakes import FakeConnector
 
 
@@ -89,3 +90,20 @@ def test_startup_marks_running_scans_failed(session_factory, make_client):
         assert run.status == "failed"
         assert run.error == "interrupted (process restart)"
         assert run.finished_at is not None
+
+
+def test_start_scan_runs_jobs_only(make_client):
+    async def fake(sf, keywords, today):
+        return 1
+
+    client = make_client(
+        connector_factory=lambda *a: [], job_factory=lambda *a: [ScanJob("etsy_signals", fake)]
+    )
+    resp = client.post("/api/scans", json={})
+    assert resp.status_code == 202
+    assert resp.json()["sources"] == ["etsy_signals"]
+
+
+def test_start_scan_requires_connector_or_job(make_client):
+    client = make_client(connector_factory=lambda *a: [], job_factory=lambda *a: [])
+    assert client.post("/api/scans", json={}).status_code == 400

@@ -23,6 +23,7 @@ def test_settings_defaults(client):
             {"name": "etsy", "kind": "product", "configured": True, "enabled": True},
             {"name": "google_suggest", "kind": "trend", "configured": True, "enabled": True},
             {"name": "google_daily", "kind": "trend", "configured": True, "enabled": True},
+            {"name": "etsy_signals", "kind": "signals", "configured": True, "enabled": True},
         ],
     }
 
@@ -80,3 +81,10 @@ def test_following_discovered_keyword_marks_it_relevant(client, session):
     assert resp.status_code == 201
     session.expire_all()
     assert session.get(Keyword, kw.id).is_pod_relevant is True
+
+
+def test_settings_can_disable_etsy_signals(client):
+    resp = client.put("/api/settings", json={"connectors_enabled": {"etsy_signals": False}})
+    assert resp.status_code == 200
+    entry = next(c for c in resp.json()["connectors"] if c["name"] == "etsy_signals")
+    assert entry["enabled"] is False

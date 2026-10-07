@@ -113,3 +113,9 @@ def test_flat_keyword_gets_quarter_momentum():
     (result,) = score_keywords(signals, TODAY)
     assert result.growth == pytest.approx(0.03)
     assert result.momentum == 0.25
+
+
+def test_etsy_signals_breakout_tag_count_is_scored():
+    signals = {1: {("etsy_signals", "breakout_tag_count"): [(days_ago(1), 4.0)]}}
+    results = score_keywords(signals, TODAY, Weights(1.0, 1.0, 1.0))
+    assert [r.sources for r in results] == [("etsy_signals",)]

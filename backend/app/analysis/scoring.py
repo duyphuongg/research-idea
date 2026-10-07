@@ -27,6 +27,7 @@ PRIMARY_METRICS = {
     "etsy_tags": "tag_count",
     "google_suggest": "suggest_score",
     "google_daily": "traffic",
+    "etsy_signals": "breakout_tag_count",
 }
 COMPETITION_KEY = ("etsy", "listing_count_tshirt")
 ACTIVE_DAYS = 7

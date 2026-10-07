@@ -18,6 +18,7 @@ def _scan_app(session_factory, fake):
             session_factory=session_factory,
             settings=settings,
             connector_factory=lambda s, o, only: [fake],
+            job_factory=lambda s, o, only: [],
             scan_lock=threading.Lock(),
         )
     )

@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import delete, select
@@ -10,6 +12,9 @@ from app.models import RawPayload, ScanRun, Seed
 from app.pipeline.rescore import rescore
 from app.pipeline.store import persist_batch
 
+if TYPE_CHECKING:  # jobs imports listing_signals, which imports this module
+    from app.pipeline.jobs import ScanJob
+
 logger = logging.getLogger(__name__)
 MAX_ERROR_LEN = 5000
 
@@ -18,6 +23,7 @@ async def run_scan(
     session_factory: sessionmaker[Session],
     connectors: list[Connector],
     *,
+    jobs: Sequence["ScanJob"] = (),
     today: date | None = None,
     retention_days: int = 30,
 ) -> list[int]:
@@ -28,6 +34,11 @@ async def run_scan(
         )
 
     run_ids = [await _run_one(session_factory, c, keywords, today) for c in connectors]
+    for job in jobs:
+        try:  # the job records its own ScanRun
+            run_ids.append(await job.run(session_factory, keywords, today))
+        except Exception:
+            logger.exception("Job %s failed", job.name)
 
     try:
         with session_factory() as session:

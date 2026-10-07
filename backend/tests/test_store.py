@@ -136,3 +136,22 @@ def test_upsert_product_without_keyword_and_with_tags(session):
     upsert_product(session, make_product(keyword=None, tags=None), D2)
     session.commit()
     assert session.get(Product, product.id).tags == ["vintage sasquatch"]  # None keeps old tags
+
+
+def test_trusted_source_signal_without_parent_is_relevant(session):
+    def sig(source, metric):
+        return NormalizedSignal(
+            keyword="vintage sasquatch", source=source, metric=metric, value=3.0, date=D1, origin="discovered"
+        )
+
+    persist_batch(session, NormalizedBatch(signals=[sig("etsy_signals", "breakout_tag_count")]), D1)
+    session.commit()
+    assert session.scalar(select(Keyword).where(Keyword.text == "vintage sasquatch")).is_pod_relevant is True
+
+    persist_batch(
+        session,
+        NormalizedBatch(signals=[NormalizedSignal(keyword="other sasquatch", source="google_daily", metric="traffic", value=3.0, date=D1, origin="discovered")]),
+        D1,
+    )
+    session.commit()
+    assert session.scalar(select(Keyword).where(Keyword.text == "other sasquatch")).is_pod_relevant is False

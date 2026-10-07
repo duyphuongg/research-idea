@@ -11,6 +11,7 @@ from app.analysis.pod_filter import (
     is_pod_relevant,
     load_rules,
 )
+from app.pipeline.store import TRUSTED_SOURCES
 from app.keywords import canonical_keyword
 from app.models import (
     Keyword,
@@ -33,6 +34,13 @@ def refilter(session: Session, rules: PodFilterRules | None = None) -> int:
         )
     ):
         parents[child_id].append(parent_text)
+    trusted = set(
+        session.scalars(
+            select(TrendSignal.keyword_id)
+            .where(TrendSignal.source.in_(TRUSTED_SOURCES))
+            .distinct()
+        )
+    )
     changed = 0
     for k in session.scalars(select(Keyword)):
         if k.text in seed_texts:
@@ -42,7 +50,7 @@ def refilter(session: Session, rules: PodFilterRules | None = None) -> int:
         else:
             kp = parents.get(k.id, [])
             new = is_pod_relevant(
-                k.text, origin=k.origin, has_parent=bool(kp), rules=rules
+                k.text, origin=k.origin, has_parent=bool(kp) or k.id in trusted, rules=rules
             ) and not any(adds_only_product_words(k.text, p) for p in kp)
         if k.is_pod_relevant != new:
             k.is_pod_relevant = new

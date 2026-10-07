@@ -30,7 +30,7 @@ def build_connectors(
 
 
 def connector_status(settings: Settings, enabled_overrides: dict[str, bool]) -> list[dict]:
-    return [
+    statuses = [
         {
             "name": c.name,
             "kind": c.kind,
@@ -39,3 +39,12 @@ def connector_status(settings: Settings, enabled_overrides: dict[str, bool]) -> 
         }
         for c in make_all_connectors(settings)
     ]
+    statuses.append(
+        {
+            "name": "etsy_signals",
+            "kind": "signals",
+            "configured": bool(settings.etsy_api_key),
+            "enabled": enabled_overrides.get("etsy_signals", True),
+        }
+    )
+    return statuses

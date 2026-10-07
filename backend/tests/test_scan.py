@@ -6,6 +6,7 @@ from app.config import Settings
 from app.connectors.registry import build_connectors, connector_status
 from app.db import utcnow
 from app.models import Product, ProductSnapshot, RawPayload, ScanRun, Seed
+from app.pipeline.jobs import ScanJob
 from app.pipeline.scan import run_scan
 from app.services.scans import mark_interrupted_scans
 from tests.fakes import FakeConnector
@@ -119,3 +120,36 @@ def test_mark_interrupted_scans(session):
     assert (a.status, a.error) == ("failed", "interrupted (process restart)")
     assert a.finished_at is not None
     assert b.status == "ok"
+
+
+async def test_run_scan_runs_jobs_with_keywords_and_collects_ids(session_factory):
+    add_seeds(session_factory, "nurse")
+    calls = []
+
+    async def fake_run(sf, keywords, today):
+        calls.append((sf, keywords, today))
+        return 99
+
+    ids = await run_scan(session_factory, [], jobs=[ScanJob("j", fake_run)], today=TODAY)
+
+    assert calls == [(session_factory, ["nurse"], TODAY)]
+    assert ids == [99]
+
+
+async def test_failing_job_does_not_stop_rescore(session_factory):
+    from app.keywords import get_or_create_keyword
+    from app.models import KeywordScore, TrendSignal
+
+    with session_factory() as s:
+        kw = get_or_create_keyword(s, "nurse")
+        s.add(TrendSignal(keyword_id=kw.id, source="etsy", metric="views_per_day", value=5.0, date=TODAY))
+        s.commit()
+
+    async def boom(sf, keywords, today):
+        raise RuntimeError("nope")
+
+    ids = await run_scan(session_factory, [], jobs=[ScanJob("j", boom)], today=TODAY)
+
+    assert ids == []
+    with session_factory() as s:
+        assert s.scalar(select(func.count()).select_from(KeywordScore)) == 1

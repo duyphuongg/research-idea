@@ -45,6 +45,7 @@ def make_client(settings, session_factory):
     clients = []
 
     def _make(**kwargs):
+        kwargs.setdefault("job_factory", lambda settings, overrides, only: [])
         c = TestClient(create_app(settings=settings, session_factory=session_factory, **kwargs))
         c.__enter__()
         clients.append(c)

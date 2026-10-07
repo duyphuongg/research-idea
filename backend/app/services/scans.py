@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import timedelta
 from typing import Any
 
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.connectors.base import Connector
 from app.db import utcnow
 from app.models import ScanRun
+from app.pipeline.jobs import ScanJob
 from app.pipeline.scan import run_scan
 from app.settings_store import get_setting
 
@@ -28,16 +30,23 @@ def resolve_connectors(app: Any, session: Session, only: list[str] | None = None
     return app.state.connector_factory(app.state.settings, overrides, only)
 
 
+def resolve_jobs(app: Any, session: Session, only: list[str] | None = None) -> list[ScanJob]:
+    overrides = get_setting(session, "connectors_enabled")
+    return app.state.job_factory(app.state.settings, overrides, only)
+
+
 def try_begin_scan(app: Any) -> bool:
     return app.state.scan_lock.acquire(blocking=False)
 
 
-async def execute_scan(app: Any, connectors: list[Connector]) -> list[int]:
+async def execute_scan(app: Any, connectors: list[Connector], jobs: Sequence[ScanJob] = ()
+) -> list[int]:
     """Run a scan; the caller must already hold the lock from try_begin_scan."""
     try:
         return await run_scan(
             app.state.session_factory,
             connectors,
+            jobs=jobs,
             retention_days=app.state.settings.raw_retention_days,
         )
     finally:

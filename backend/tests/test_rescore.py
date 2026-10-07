@@ -182,3 +182,15 @@ def test_merge_then_rescore_idempotent(session):
     rescore(session, TODAY)
     session.commit()
     assert session.scalar(select(func.count()).select_from(Keyword)) == n
+
+
+def test_refilter_keeps_trusted_source_keyword_relevant(session):
+    kw = Keyword(text="vintage sasquatch", origin="discovered", is_pod_relevant=True)
+    session.add(kw)
+    session.flush()
+    session.add(TrendSignal(keyword_id=kw.id, source="etsy_signals", metric="breakout_tag_count", value=2.0, date=TODAY))
+    session.commit()
+
+    refilter(session, rules=PodFilterRules(blocklist=(), allow=frozenset()))
+
+    assert kw.is_pod_relevant is True

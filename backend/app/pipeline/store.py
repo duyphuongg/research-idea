@@ -9,6 +9,9 @@ from app.keywords import get_or_create_keyword, normalize_keyword
 from app.models import KeywordRelation, Product, ProductKeyword, ProductSnapshot, TrendSignal
 
 
+TRUSTED_SOURCES = frozenset({"etsy_signals"})
+
+
 def persist_batch(session: Session, batch: NormalizedBatch, today: date) -> int:
     """Upsert signals, products, keyword links and today's snapshots. Does not commit."""
     for signal in batch.signals:
@@ -24,9 +27,8 @@ def _upsert_signal(session: Session, signal: NormalizedSignal) -> None:
         return
     if signal.parent and adds_only_product_words(signal.keyword, signal.parent):
         return
-    keyword = get_or_create_keyword(
-        session, signal.keyword, signal.origin, has_parent=signal.parent is not None
-    )
+    has_parent = signal.parent is not None or signal.source in TRUSTED_SOURCES
+    keyword = get_or_create_keyword(session, signal.keyword, signal.origin, has_parent=has_parent)
     if signal.parent:
         _upsert_relation(session, signal.parent, keyword.id, signal.source, signal.date)
     row = session.scalar(
