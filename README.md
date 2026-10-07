@@ -104,6 +104,30 @@ Mốc tính lùi: thiết kế −8 tuần, lên sản phẩm −6 tuần, đẩ
 Mỗi sự kiện gợi ý ghép với seed của bạn (vd "halloween nurse"); các sự kiện sale ghép dạng "<seed> gift" / "<seed> christmas gift". Đồng thời liệt kê keyword liên quan đang có trên Trend Radar.
 Chỉnh sự kiện / thời gian giao hàng trong `backend/config/us_calendar.yaml`.
 
+## Watchlist & Tin mới
+
+**Watchlist** (`/watchlist`): các keyword bạn theo dõi. Mỗi keyword là một thẻ: điểm, ngách con tìm được (từ tag Etsy và gợi ý Google), số mẫu Etsy đang Super Breakout / Steady Grower kèm ảnh, nút xem chi tiết và xem listing (trang Etsy bứt phá lọc sẵn theo keyword). Etsy, Google gợi ý và Etsy bứt phá dùng Watchlist để tìm; Amazon và Google xu hướng ngày thì không.
+
+**Tin mới** (`/alerts`): sau mỗi lần quét, app tìm và lưu tin:
+
+| Tin | Khi nào | Phạm vi |
+|---|---|---|
+| 🚀 Ngách bứt phá | điểm ≥ 60 và tăng trưởng > 20% | keyword trong Watchlist + ngách con |
+| 🔥 Etsy bứt phá | listing vừa thành Super Breakout (mọi ngách) hoặc Steady Grower (ngách trong Watchlist) | |
+| ⭐ Sản phẩm hot | sản phẩm vừa có nhãn 🔥 ở trang Bán chạy | keyword trong Watchlist |
+| 🛒 Amazon mới vào top | lọt top 20 Best Sellers so với ngày quét trước, bỏ hàng có bản quyền | 8 danh mục áo |
+
+Mỗi ngách/sản phẩm chỉ báo 1 lần trong 7 ngày, trừ khi lên mức cao hơn (Steady Grower → Super Breakout). Ngưỡng chỉnh trong `backend/config/alerts.yaml`. Tin ngách bứt phá cần vài ngày dữ liệu để có tăng trưởng.
+
+### Thông báo Telegram
+
+1. Trong Telegram, chat với **@BotFather** → `/newbot` → đặt tên → nhận **token**.
+2. Mở chat với bot vừa tạo, gửi 1 tin bất kỳ (vd "hi").
+3. Trên Mac: `make telegram-setup` → dán token (không hiện khi gõ). Lệnh tự tìm chat của bạn, hỏi địa chỉ app (mặc định là địa chỉ Tailscale), lưu vào `backend/.env` và gửi tin thử.
+4. Khởi động lại backend: `make down && make up`.
+
+Sau mỗi lần quét (8:00 và 20:00), bot gửi tối đa 5 tin quan trọng nhất (có ảnh, lý do, link mở trong app), còn lại gom thành 1 dòng. Trang Tin mới có nút **Gửi tin thử**. Token chỉ nằm trong `backend/.env`, không hiện ra giao diện hay log. Telegram lỗi không làm hỏng lần quét; tin chưa gửi được sẽ gửi lại ở lần quét sau (trong 2 ngày).
+
 ## Test
 
 ```bash
