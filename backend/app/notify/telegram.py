@@ -71,7 +71,7 @@ async def send_text(settings: Settings, text: str, *, client: httpx.AsyncClient 
         raise TelegramError(f"Telegram trả về HTTP {status}")
 
 
-def _in_quiet_hours(hour: int, cfg: AlertsConfig) -> bool:
+def in_quiet_hours(hour: int, cfg: AlertsConfig) -> bool:
     start, end = cfg.quiet_start, cfg.quiet_end
     if start == end:
         return False
@@ -145,7 +145,7 @@ async def send_pending(session: Session, settings: Settings, cfg: AlertsConfig |
         return 0
     cfg = cfg or load_alerts_config()
     local_now = local_now or datetime.now().astimezone()
-    if _in_quiet_hours(local_now.hour, cfg):
+    if in_quiet_hours(local_now.hour, cfg):
         return 0  # held: the next scan outside quiet hours sends them
     now = now or utcnow()
     pending = list(session.scalars(

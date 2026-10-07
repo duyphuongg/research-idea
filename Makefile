@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -79,6 +79,10 @@ daily-status:
 
 telegram-setup:
 	cd backend && .venv/bin/python scripts/telegram_setup.py
+
+# xem trước + gửi ngay tin tổng kết tuần (không ảnh hưởng lịch gửi thứ Hai)
+digest-now:
+	cd backend && .venv/bin/python scripts/digest_now.py
 
 # --- Tự bật giao diện khi đăng nhập máy ---
 APP_LABEL := io.podtrendradar.app

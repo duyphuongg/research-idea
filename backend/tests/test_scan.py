@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, select
 
@@ -223,6 +223,10 @@ async def test_run_scan_uses_passed_settings_for_telegram(session_factory):
         s.add(Alert(kind="listing", subject_id=1, level=1, priority=1.0, title="Tee", reason="r",
                     image_url=None, link="/signals", external_url=None, watch_keyword=None,
                     scan_date=TODAY, created_at=utcnow()))
+        # this week's digest already went out: only the alert notification is sent here
+        from app.services.digest import iso_week
+        from app.settings_store import set_setting
+        set_setting(s, "digest_last_week", iso_week(datetime.now().astimezone().date()))
         s.commit()
     settings = Settings(_env_file=None, scheduler_enabled=False, telegram_bot_token="1:t", telegram_chat_id="42")
     with respx.mock(assert_all_called=False) as mock:

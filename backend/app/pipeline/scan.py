@@ -14,6 +14,7 @@ from app.notify.telegram import send_pending
 from app.pipeline.rescore import rescore
 from app.pipeline.store import persist_batch
 from app.services.alerts import detect_alerts
+from app.services.digest import maybe_send_weekly_digest
 
 if TYPE_CHECKING:  # jobs imports listing_signals, which imports this module
     from app.pipeline.jobs import ScanJob
@@ -62,7 +63,8 @@ async def run_scan(
         with session_factory() as session:
             try:
                 await send_pending(session, settings or get_settings())
-            finally:  # keep sent_at for alerts already delivered
+                await maybe_send_weekly_digest(session, settings or get_settings())
+            finally:  # keep sent_at for alerts already delivered (and the digest week marker)
                 session.commit()
     except Exception:  # Telegram must never break a scan
         logger.exception("Telegram delivery failed")

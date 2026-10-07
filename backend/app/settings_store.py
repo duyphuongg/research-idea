@@ -8,6 +8,7 @@ from app.models import Setting
 DEFAULTS: dict[str, Any] = {
     "scan_hour_utc": 11,  # 11:00 UTC = 7:00 ET = 18:00 giờ Việt Nam
     "connectors_enabled": {},  # name -> bool; missing means enabled
+    "digest_last_week": None,  # ISO week ("2026-W41") of the last weekly Telegram digest sent
 }
 
 
