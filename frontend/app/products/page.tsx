@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import SourceHealthBanner from "@/components/SourceHealthBanner";
+import { Button, ButtonLink, Checkbox, EmptyState, Notice, PageHeader, Select } from "@/components/ui";
 import { api, type ProductPage, type ProductQuery, type ProductSort, type ProductType, type Seed } from "@/lib/api";
 
 const PAGE_SIZE = 60;
@@ -23,8 +24,6 @@ const TYPES: { value: ProductType | ""; label: string }[] = [
 ];
 
 type Result = { key: string; data?: ProductPage; error?: string };
-
-const selectClass = "rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm";
 
 export default function ProductsPage() {
   const [query, setQuery] = useState<ProductQuery>({ sort: "velocity", limit: PAGE_SIZE, offset: 0 });
@@ -55,15 +54,25 @@ export default function ProductsPage() {
   return (
     <div>
       <SourceHealthBanner />
-      <div className="mb-2 flex flex-wrap items-center gap-3">
-        <h1 className="mr-auto text-xl font-semibold">Best Sellers</h1>
-        <select className={selectClass} value={query.source ?? ""} onChange={(e) => update({ source: e.target.value || undefined })}>
+      <PageHeader
+        eyebrow={
+          <>
+            Bán chạy
+            {result?.data && <span className="font-mono">· {total} sản phẩm</span>}
+          </>
+        }
+        title="Best Sellers"
+        description="Sản phẩm bán chạy theo keyword trên Etsy và Amazon, xếp theo mức tăng gần đây."
+      />
+
+      <div className="mb-3 grid grid-cols-2 items-end gap-3 rounded-md max-sm:[&_select]:w-full sm:flex sm:flex-wrap border border-rule bg-sheet p-3 shadow-card">
+        <Select label="Nguồn" value={query.source ?? ""} onChange={(e) => update({ source: e.target.value || undefined })}>
           <option value="">Tất cả nguồn</option>
           <option value="etsy">Etsy</option>
           <option value="amazon">Amazon</option>
-        </select>
-        <select
-          className={selectClass}
+        </Select>
+        <Select
+          label="Loại áo"
           value={query.type ?? ""}
           onChange={(e) => update({ type: (e.target.value || undefined) as ProductType | undefined })}
         >
@@ -72,9 +81,10 @@ export default function ProductsPage() {
               {t.label}
             </option>
           ))}
-        </select>
-        <select
-          className={selectClass}
+        </Select>
+        <Select
+          label="Keyword"
+          className="sm:max-w-[220px]"
           value={query.keyword_id ?? ""}
           onChange={(e) => update({ keyword_id: e.target.value ? Number(e.target.value) : undefined })}
         >
@@ -84,60 +94,68 @@ export default function ProductsPage() {
               {s.keyword}
             </option>
           ))}
-        </select>
-        <select className={selectClass} value={query.sort} onChange={(e) => update({ sort: e.target.value as ProductSort })}>
+        </Select>
+        <Select label="Sắp xếp" value={query.sort} onChange={(e) => update({ sort: e.target.value as ProductSort })}>
           {SORTS.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
             </option>
           ))}
-        </select>
-        <label className="flex items-center gap-1.5 text-sm">
-          <input
-            type="checkbox"
-            checked={query.hide_licensed ?? false}
-            onChange={(e) => update({ hide_licensed: e.target.checked || undefined })}
-          />
-          Ẩn sản phẩm có bản quyền
-        </label>
+        </Select>
+        <Checkbox
+          className="col-span-2 h-9 sm:ml-auto"
+          label="Ẩn sản phẩm có bản quyền"
+          checked={query.hide_licensed ?? false}
+          onChange={(e) => update({ hide_licensed: e.target.checked || undefined })}
+        />
       </div>
-      <p className="mb-4 text-xs text-zinc-500">
+      <p className="mb-5 text-xs leading-5 text-ink-2">
         Lượt xem / favorites / reviews và mức tăng 7 ngày là chỉ số ước tính (proxy), không phải doanh số thật. Chỉ
         hiển thị shop ở Mỹ. 🔥 = top 10% tăng trưởng trong cùng nguồn và loại áo.
       </p>
 
-      {result?.error && !loading && <p className="text-sm text-red-600">Không tải được dữ liệu: {result.error}</p>}
-      {loading && <p className="text-sm text-zinc-500">Đang tải…</p>}
+      {result?.error && !loading && (
+        <Notice tone="error" title="Không tải được dữ liệu" className="mb-4">
+          <span className="break-all font-mono text-xs">{result.error}</span>
+        </Notice>
+      )}
+      {loading && <p className="py-6 text-sm text-ink-2">Đang tải…</p>}
       {!loading && result?.data && result.data.items.length === 0 && (
-        <p className="text-sm text-zinc-500">
-          Chưa có sản phẩm. Thêm keyword trong <Link href="/settings" className="underline">Cài đặt</Link> rồi bấm &quot;Quét ngay&quot;.
-        </p>
+        <EmptyState
+          title="Chưa có sản phẩm"
+          body={<>Thêm keyword trong <Link href="/settings" className="underline">Cài đặt</Link> rồi bấm &quot;Quét ngay&quot;.</>}
+          action={
+            <ButtonLink href="/settings" variant="primary" size="sm">
+              Mở Cài đặt
+            </ButtonLink>
+          }
+        />
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
         {result?.data?.items.map((p) => <ProductCard key={p.id} product={p} />)}
       </div>
 
       {total > PAGE_SIZE && (
-        <div className="mt-6 flex items-center justify-center gap-4 text-sm">
-          <button
-            className="rounded border px-3 py-1 disabled:opacity-40"
+        <nav aria-label="Phân trang" className="mt-8 flex items-center justify-center gap-4 text-sm">
+          <Button
+            size="sm"
             disabled={offset === 0}
             onClick={() => setQuery((q) => ({ ...q, offset: Math.max(0, offset - PAGE_SIZE) }))}
           >
             ← Trước
-          </button>
-          <span>
+          </Button>
+          <span className="font-mono text-xs text-ink-2">
             {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} / {total}
           </span>
-          <button
-            className="rounded border px-3 py-1 disabled:opacity-40"
+          <Button
+            size="sm"
             disabled={offset + PAGE_SIZE >= total}
             onClick={() => setQuery((q) => ({ ...q, offset: offset + PAGE_SIZE }))}
           >
             Sau →
-          </button>
-        </div>
+          </Button>
+        </nav>
       )}
     </div>
   );
