@@ -249,3 +249,12 @@ Theo mô hình merchtrends.io/etsy/signals, chỉ shop US + USD.
 - Nhóm: super_breakout (≤ 14 ngày, ≥ 5 lưu/ngày, DSR ≥ 15%), graduated (> 30 ngày, ≥ 30 lưu, ≥ 1 lưu/ngày), steady_grower (≥ 2 lưu/ngày, DSR ≥ 5%), calibrating (chưa đủ dữ liệu), normal. Ngưỡng trong yaml.
 - Tag của listing super_breakout/steady_grower (cập nhật hôm nay, xuất hiện ở ≥ 2 listing) → tín hiệu `etsy_signals/breakout_tag_count` cho Trend Radar (nguồn tin cậy: coi như có parent khi lọc POD).
 - API `GET /api/signals`; trang `/signals` dạng thẻ.
+
+## 16. Amazon bản gọn (2026-10-07)
+
+- Nguồn: trang công khai Amazon Best Sellers + New Releases (không có API) của 8 danh mục Novelty: Women T-Shirts 9056923011, Men T-Shirts 9056987011, Women Hoodies 9056928011, Women Sweatshirts 9056929011, Men Hoodies 9056992011, Men Sweatshirts 9056993011, Boys Tops & Tees 9057093011, Girls Tops & Tees 9057039011. Mỗi danh sách 2 trang (top 100). Đã thử từ máy người dùng: tải được, không captcha; trang tìm kiếm Amazon bị chặn (503) nên không dùng.
+- Cào bằng Playwright (Chromium headless), nghỉ ngẫu nhiên 4–8 giây giữa các trang (~32 trang/ngày, ~4–5 phút). Phát hiện bị chặn (captcha / lỗi / 0 sản phẩm) → ghi lỗi "blocked"; 2 trang bị chặn liên tiếp → dừng lần quét Amazon, trạng thái nguồn báo lỗi trên dashboard.
+- Lưu: sản phẩm `source="amazon"` (ASIN, tên, ảnh, sao, số review, loại áo), snapshot hằng ngày (reviews, rating, bsr = hạng trong danh mục), bảng `amazon_ranks` (ngày, danh mục, danh sách, hạng). Giá bỏ qua (hiển thị theo VND do IP Việt Nam).
+- Lọc bản quyền/thương hiệu (`backend/config/amazon.yaml`): sản phẩm có tên chứa thương hiệu/IP (Disney, Marvel, NFL, Peanuts, các đội bóng…, hoặc thương hiệu áo trơn như True Classic, Hanes) bị gắn cờ `licensed`, vẫn hiển thị kèm cảnh báo nhưng không đưa vào Trend Radar.
+- Trend Radar: cụm 2–3 từ xuất hiện trong tên ≥ 3 sản phẩm không bản quyền của danh sách hôm nay → tín hiệu `amazon/title_phrase_count` (nguồn tin cậy).
+- API `GET /api/amazon`; trang `/amazon`: theo danh mục và danh sách, hạng, thay đổi hạng so với hôm qua, nhãn "Mới vào top", cờ bản quyền. Sản phẩm Amazon cũng xuất hiện ở Best Sellers (lọc nguồn Amazon), velocity theo reviews.
