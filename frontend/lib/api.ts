@@ -1,4 +1,6 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+// Same origin by default: Next.js proxies /api/* to the backend (see next.config.ts),
+// so the UI works from any device that can reach port 3000.
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
