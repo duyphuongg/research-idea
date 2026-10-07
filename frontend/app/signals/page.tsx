@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import SignalCard from "@/components/SignalCard";
 import { Button, ButtonLink, EmptyState, InkDot, Notice, PageHeader, Select, Tabs } from "@/components/ui";
 import { api, type SignalPage, type SignalQuery, type SignalSort } from "@/lib/api";
@@ -33,7 +34,25 @@ const SORTS: { value: SignalSort; label: string }[] = [
 type Result = { key: string; data?: SignalPage; error?: string };
 
 export default function SignalsPage() {
-  const [query, setQuery] = useState<SignalQuery>({ status: "signals", sort: "delta_saves", limit: PAGE_SIZE, offset: 0 });
+  return (
+    <Suspense fallback={null}>
+      <SignalsView />
+    </Suspense>
+  );
+}
+
+const STATUS_VALUES = TABS.map((t) => t.value);
+
+function SignalsView() {
+  const params = useSearchParams();
+  const paramStatus = STATUS_VALUES.find((v) => v === params.get("status"));
+  const [query, setQuery] = useState<SignalQuery>({
+    status: paramStatus ?? "signals",
+    keyword: params.get("keyword")?.trim() || undefined,
+    sort: "delta_saves",
+    limit: PAGE_SIZE,
+    offset: 0,
+  });
   const [result, setResult] = useState<Result | null>(null);
   const key = JSON.stringify(query);
   const loading = result?.key !== key;
@@ -101,6 +120,15 @@ export default function SignalsPage() {
         onChange={(v) => update({ status: v })}
         className="mb-3"
       />
+      {query.keyword && (
+        <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-ink">
+          <span className="text-ink-2">Lọc theo keyword:</span>
+          <span className="font-medium">{query.keyword}</span>
+          <Button size="sm" variant="ghost" onClick={() => update({ keyword: undefined })}>
+            Bỏ lọc
+          </Button>
+        </p>
+      )}
       <p className="mb-5 flex items-start gap-2 text-xs leading-5 text-ink-2">
         <InkDot ink="cyan" size={7} className="mt-1.5" />
         <span>

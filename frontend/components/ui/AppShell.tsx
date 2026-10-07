@@ -5,12 +5,15 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import PressStatus from "./PressStatus";
 import RegistrationMark from "./RegistrationMark";
+import { api } from "@/lib/api";
 
 export const NAV_ITEMS = [
   { href: "/", label: "Trend Radar" },
+  { href: "/watchlist", label: "Watchlist" },
   { href: "/signals", label: "Listing Signals" },
   { href: "/amazon", label: "Amazon" },
   { href: "/products", label: "Bán chạy" },
+  { href: "/alerts", label: "Tin mới" },
   { href: "/calendar", label: "Lịch mùa vụ" },
   { href: "/settings", label: "Cài đặt" },
 ] as const;
@@ -35,8 +38,26 @@ function Logo({ className = "" }: { className?: string }) {
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
   const menuButton = useRef<HTMLButtonElement>(null);
   const firstLink = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .unreadAlerts()
+      .then((r) => !cancelled && setUnread(r.unread))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const reset = () => setUnread(0);
+    window.addEventListener("alerts:read", reset);
+    return () => window.removeEventListener("alerts:read", reset);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -117,6 +138,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       className={`absolute inset-y-1.5 left-0 w-[3px] ${active ? "bg-cyan" : "bg-transparent"}`}
                     />
                     {item.label}
+                    {item.href === "/alerts" && unread > 0 && (
+                      <>
+                        <span className="ml-auto rounded-full bg-cyan px-1.5 font-mono text-[11px] font-medium leading-5 text-ink">
+                          {unread > 99 ? "99+" : unread}
+                        </span>
+                        <span className="sr-only"> chưa đọc</span>
+                      </>
+                    )}
                   </Link>
                 </li>
               );

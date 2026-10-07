@@ -75,6 +75,7 @@ export type SignalPage = { updated_on: string | null; counts: Record<string, num
 export type SignalQuery = {
   status?: "signals" | "all" | SignalStatus;
   max_age?: number;
+  keyword?: string;
   sort?: SignalSort;
   limit?: number;
   offset?: number;
@@ -202,6 +203,37 @@ export type AmazonPage = {
 };
 export type AmazonQuery = { category?: string; list?: AmazonList; hide_licensed?: boolean };
 
+export type AlertKind = "niche" | "listing" | "hot_product" | "amazon";
+export type AlertItem = {
+  id: number;
+  kind: AlertKind;
+  level: number;
+  title: string;
+  reason: string;
+  image_url: string | null;
+  link: string;
+  external_url: string | null;
+  watch_keyword: string | null;
+  scan_date: string;
+  created_at: string;
+  read: boolean;
+};
+export type AlertPage = { unread: number; items: AlertItem[] };
+export type TelegramStatus = { configured: boolean; app_url: string | null };
+export type WatchItem = {
+  seed_id: number;
+  keyword: string;
+  keyword_id: number;
+  score: number | null;
+  growth: number | null;
+  children_total: number;
+  children: { keyword_id: number; keyword: string; score: number | null }[];
+  listings: { super_breakout: number; steady_grower: number };
+  thumbnails: { product_id: number; image_url: string | null; title: string; url: string; status: SignalStatus }[];
+  alerts_7d: number;
+};
+export type WatchPage = { date: string | null; items: WatchItem[] };
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -250,5 +282,11 @@ export const api = {
     request<AmazonPage>(
       `/api/amazon${toQuery({ ...q, hide_licensed: q.hide_licensed === undefined ? undefined : String(q.hide_licensed) })}`,
     ),
+  listAlerts: (limit = 100) => request<AlertPage>(`/api/alerts${toQuery({ limit })}`),
+  unreadAlerts: () => request<{ unread: number }>("/api/alerts/unread-count"),
+  markAlertsRead: () => request<{ unread: number }>("/api/alerts/read", { method: "POST" }),
+  telegramStatus: () => request<TelegramStatus>("/api/alerts/telegram"),
+  testTelegram: () => request<{ ok: boolean }>("/api/alerts/test", { method: "POST" }),
+  getWatchlist: () => request<WatchPage>("/api/watchlist"),
   getCalendar: (days = 120) => request<CalendarPage>(`/api/calendar${toQuery({ days })}`),
 };
