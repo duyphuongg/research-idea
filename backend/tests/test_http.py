@@ -76,3 +76,23 @@ async def test_rate_limiter_skips_wait_when_interval_elapsed():
     await limiter.wait()
     await limiter.wait()
     assert sleep.calls == []
+
+
+@respx.mock
+async def test_connector_error_carries_status():
+    respx.get(URL).mock(return_value=httpx.Response(403, text="no"))
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ConnectorError) as err:
+            await request_with_retry(client, "GET", URL, sleep=SleepRecorder())
+    assert err.value.status == 403
+    respx.get(URL).mock(return_value=httpx.Response(503))
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ConnectorError) as err:
+            await request_with_retry(client, "GET", URL, sleep=SleepRecorder())
+    assert err.value.status == 503
+    respx.get(URL).mock(side_effect=httpx.ConnectError("down"))
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ConnectorError) as err:
+            await request_with_retry(client, "GET", URL, sleep=SleepRecorder())
+    assert err.value.status is None
+    assert ConnectorError("x").status is None

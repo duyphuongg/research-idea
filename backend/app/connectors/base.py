@@ -6,6 +6,10 @@ from typing import Any, Protocol
 class ConnectorError(Exception):
     """A connector request failed after retries."""
 
+    def __init__(self, message: str = "", status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
 
 @dataclass
 class RawBatch:

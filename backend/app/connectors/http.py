@@ -61,12 +61,14 @@ async def request_with_retry(
             if resp.status_code not in RETRY_STATUS:
                 if resp.is_error:
                     raise ConnectorError(
-                        f"{method} {url}: HTTP {resp.status_code} {resp.text[:200]}"
+                        f"{method} {url}: HTTP {resp.status_code} {resp.text[:200]}",
+                        status=resp.status_code,
                     )
                 return resp
             if attempt >= retries:
                 raise ConnectorError(
-                    f"{method} {url}: HTTP {resp.status_code} after {retries} retries"
+                    f"{method} {url}: HTTP {resp.status_code} after {retries} retries",
+                    status=resp.status_code,
                 )
         await sleep(backoff * 2**attempt)
         attempt += 1

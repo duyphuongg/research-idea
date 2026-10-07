@@ -216,3 +216,66 @@ async def test_persisted_only_first_image_kept():
 
     item = {"listing_id": 1, "images": [{"a": 1}, {"a": 2}]}
     assert trim_images(item)["images"] == [{"a": 1}]
+
+
+def many_details(n):
+    return [listing(1000 + i, f"Shirt {i}", 10, 1, ["t"]) for i in range(n)]
+
+
+def paged_search(details):
+    def handler(request):
+        off = int(request.url.params["offset"])
+        return httpx.Response(200, json=search_of(details[off : off + 100]))
+
+    return handler
+
+
+async def test_batch_503_is_bounded_and_not_bisected(session_factory):
+    details = many_details(500)
+    config = SignalsConfig(queries=("shirt",), pages_per_query=5)
+    with respx.mock:
+        respx.get(url__startswith=SEARCH_URL).mock(side_effect=paged_search(details))
+        route = respx.get(url__startswith=BATCH_URL).mock(return_value=httpx.Response(503))
+        run_id = await run_listing_signals(
+            session_factory, "k", [], DAY1, config=config, client_factory=client_factory
+        )
+    assert route.call_count <= 3 * 4  # 3 chunks x (1 try + 3 retries)
+    with session_factory() as s:
+        run = s.get(ScanRun, run_id)
+        assert run.status in ("failed", "partial")
+        assert "aborted after 3 consecutive failed batches" in run.error
+
+
+async def test_batch_403_fails_fast(session_factory):
+    details = many_details(300)
+    config = SignalsConfig(queries=("shirt",), pages_per_query=3)
+    with respx.mock:
+        respx.get(url__startswith=SEARCH_URL).mock(side_effect=paged_search(details))
+        route = respx.get(url__startswith=BATCH_URL).mock(return_value=httpx.Response(403))
+        run_id = await run_listing_signals(
+            session_factory, "k", [], DAY1, config=config, client_factory=client_factory
+        )
+    assert route.call_count == 1
+    with session_factory() as s:
+        run = s.get(ScanRun, run_id)
+        assert run.status == "failed" and "HTTP 403" in run.error
+
+
+async def test_empty_batch_response_marks_nothing_gone(session_factory):
+    await run_day(session_factory, DAY1, day(100, 10, 50, 2))
+    search, _ = day(160, 22, 80, 4)
+    await run_day(session_factory, DAY2, (search, {"results": []}))
+    with session_factory() as s:
+        assert {r.status for r in s.scalars(select(ListingSignal))} == {"calibrating"}
+
+
+async def test_detail_missing_shop_is_not_marked_gone(session_factory):
+    await run_day(session_factory, DAY1, day(100, 10, 50, 2))
+    search, batch = day(160, 22, 80, 4)
+    for d in batch["results"]:
+        if d["listing_id"] == 502:
+            del d["shop"]
+    await run_day(session_factory, DAY2, (search, batch))
+    with session_factory() as s:
+        rows = {s.get(Product, r.product_id).external_id: r for r in s.scalars(select(ListingSignal))}
+        assert rows["502"].status != "gone"

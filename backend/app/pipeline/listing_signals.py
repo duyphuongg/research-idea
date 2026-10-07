@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 
 import httpx
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.analysis.listing_signals import (
@@ -31,6 +31,17 @@ logger = logging.getLogger(__name__)
 SOURCE = "etsy_signals"
 PAGE_SIZE = 100
 BATCH_SIZE = 100
+MAX_CONSECUTIVE_FAILED_CHUNKS = 3
+MIN_RETURNED_FRACTION = 0.5
+FATAL_STATUSES = {401, 403}
+
+
+def _is_deterministic(exc: ConnectorError) -> bool:
+    """True when a failure is tied to the request content, so bisecting can isolate it."""
+    if exc.status is not None:
+        return 400 <= exc.status < 500 and exc.status not in FATAL_STATUSES | {429}
+    text = str(exc)
+    return text.startswith(("unexpected response shape", "invalid JSON"))
 
 
 class EtsySignalsClient:
@@ -89,9 +100,15 @@ class EtsySignalsClient:
         try:
             details = await self._fetch_chunk(chunk)
         except ConnectorError as exc:
+            if exc.status in FATAL_STATUSES:
+                raise
             if len(chunk) == 1:
                 self.failed_ids.update(chunk)
                 yield [], f"listing {chunk[0]}: {exc}"
+                return
+            if not _is_deterministic(exc):
+                self.failed_ids.update(chunk)
+                yield [], f"batch of {len(chunk)} listings: {exc}"
                 return
             mid = len(chunk) // 2
             for half in (chunk[:mid], chunk[mid:]):
@@ -103,10 +120,23 @@ class EtsySignalsClient:
     async def iter_batches(
         self, ids: list[str]
     ) -> AsyncIterator[tuple[list[dict[str, Any]], str | None]]:
-        """Yield (details, error) per fetched piece; failing chunks are bisected down to single ids."""
+        """Yield (details, error) per fetched piece.
+
+        Deterministic failures are bisected down to single ids; 401/403 raise; other
+        failures mark the whole chunk failed. Stops after repeated fully-failed chunks.
+        """
+        consecutive = 0
         for start in range(0, len(ids), BATCH_SIZE):
-            async for result in self._fetch_bisecting(ids[start : start + BATCH_SIZE]):
-                yield result
+            succeeded = False
+            async for details, error in self._fetch_bisecting(ids[start : start + BATCH_SIZE]):
+                if error is None:
+                    succeeded = True
+                yield details, error
+            consecutive = 0 if succeeded else consecutive + 1
+            if consecutive >= MAX_CONSECUTIVE_FAILED_CHUNKS:
+                self.failed_ids.update(ids[start + BATCH_SIZE :])
+                yield [], f"aborted after {consecutive} consecutive failed batches"
+                return
 
 
 def trim_images(listing: dict[str, Any]) -> dict[str, Any]:
@@ -187,14 +217,20 @@ def persist_listings(
     config: SignalsConfig,
     tracked: set[str] | frozenset[str] = frozenset(),
 ) -> tuple[int, int, int]:
-    discovered = refreshed = gone = 0
+    discovered = refreshed = 0
+    gone_ids: set[str] = set()
     for listing in details:
         if listing.get("listing_id") is None:
             continue
         item = _to_product(listing, None, 0)
         if item is None:
-            if str(listing["listing_id"]) in tracked:
-                gone += mark_gone(session, {str(listing["listing_id"])}, today)
+            # only a complete record that fails the US/USD/apparel filter is genuinely gone
+            if (
+                str(listing["listing_id"]) in tracked
+                and isinstance(listing.get("shop"), dict)
+                and isinstance(listing.get("price"), dict)
+            ):
+                gone_ids.add(str(listing["listing_id"]))
             continue
         product = upsert_product(session, item, today)
         signal = session.get(ListingSignal, product.id)
@@ -233,22 +269,25 @@ def persist_listings(
         else:
             refreshed += 1
     session.flush()
-    return discovered, refreshed, gone
+    return discovered, refreshed, mark_gone(session, gone_ids, today)
 
 
 def mark_gone(session: Session, external_ids: set[str], today: date) -> int:
     if not external_ids:
         return 0
-    signals = session.scalars(
-        select(ListingSignal)
-        .join(Product, ListingSignal.product_id == Product.id)
-        .where(Product.source == "etsy", Product.external_id.in_(external_ids))
-    ).all()
-    for signal in signals:
-        signal.status = "gone"
-        signal.updated_on = today
+    result = session.execute(
+        update(ListingSignal)
+        .where(
+            ListingSignal.product_id.in_(
+                select(Product.id).where(
+                    Product.source == "etsy", Product.external_id.in_(external_ids)
+                )
+            )
+        )
+        .values(status="gone", updated_on=today)
+    )
     session.flush()
-    return len(signals)
+    return result.rowcount
 
 
 def tag_signals(session: Session, config: SignalsConfig, today: date) -> NormalizedBatch:
@@ -322,7 +361,15 @@ async def run_listing_signals(
                 gone_total += chunk_gone
                 del details
             failed_ids = set(client.failed_ids)
-        missing = tracked - seen - failed_ids
+        returned = len(tracked & seen)
+        degraded = bool(tracked) and returned < len(tracked) * MIN_RETURNED_FRACTION
+        skip_absent = bool(failed_ids) or degraded
+        if skip_absent:
+            logger.warning(
+                "Listing signals: skipping absent-id gone marking (failed ids: %d, returned %d/%d tracked)",
+                len(failed_ids), returned, len(tracked),
+            )
+        missing = set() if skip_absent else tracked - seen
         with session_factory() as session:
             gone_total += mark_gone(session, missing, today)
             batch = tag_signals(session, config, today)
