@@ -81,10 +81,11 @@ def test_registry_filters_unconfigured_and_disabled():
     configured = Settings(etsy_api_key="k", _env_file=None)
     unconfigured = Settings(etsy_api_key=None, _env_file=None)
 
-    assert [c.name for c in build_connectors(configured, {})] == ["etsy", "google_suggest", "google_daily"]
-    assert [c.name for c in build_connectors(configured, {"etsy": False})] == ["google_suggest", "google_daily"]
-    assert build_connectors(configured, {}, only=["amazon"]) == []
-    assert [c.name for c in build_connectors(unconfigured, {})] == ["google_suggest", "google_daily"]
+    assert [c.name for c in build_connectors(configured, {})] == ["etsy", "google_suggest", "google_daily", "amazon"]
+    assert [c.name for c in build_connectors(configured, {"etsy": False})] == ["google_suggest", "google_daily", "amazon"]
+    assert [c.name for c in build_connectors(configured, {}, only=["amazon"])] == ["amazon"]
+    assert [c.name for c in build_connectors(configured, {"amazon": False})] == ["etsy", "google_suggest", "google_daily"]
+    assert [c.name for c in build_connectors(unconfigured, {})] == ["google_suggest", "google_daily", "amazon"]
     assert connector_status(unconfigured, {"etsy": False})[0] == {
         "name": "etsy", "kind": "product", "configured": False, "enabled": False
     }

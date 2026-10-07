@@ -2,6 +2,7 @@
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
+	cd backend && .venv/bin/python -m playwright install chromium
 	cd frontend && npm install
 
 migrate:

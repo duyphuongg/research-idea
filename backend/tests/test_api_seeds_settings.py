@@ -23,6 +23,7 @@ def test_settings_defaults(client):
             {"name": "etsy", "kind": "product", "configured": True, "enabled": True},
             {"name": "google_suggest", "kind": "trend", "configured": True, "enabled": True},
             {"name": "google_daily", "kind": "trend", "configured": True, "enabled": True},
+            {"name": "amazon", "kind": "product", "configured": True, "enabled": True},
             {"name": "etsy_signals", "kind": "signals", "configured": True, "enabled": True},
         ],
     }

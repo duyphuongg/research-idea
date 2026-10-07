@@ -21,7 +21,7 @@ from app.models import (
 )
 
 # sources whose discovered tags come from real apparel listings — treated as having a parent by the POD filter; keep in sync with app.pipeline.listing_signals.SOURCE
-TRUSTED_SOURCES = frozenset({"etsy_signals"})
+TRUSTED_SOURCES = frozenset({"etsy_signals", "amazon"})
 
 
 def persist_batch(session: Session, batch: NormalizedBatch, today: date) -> int:

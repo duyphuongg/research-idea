@@ -42,7 +42,7 @@ _EXTRACT_JS = """els => els.map(e => {
   const img = e.querySelector('img');
   const rank = e.querySelector('.zg-bdg-text');
   const rating = e.querySelector('i[class*="a-icon-star"] span, .a-icon-alt');
-  const reviews = e.querySelector('a[href*="product-reviews"] span');
+  const reviews = e.querySelector('a[href*="product-reviews"] span.a-size-small');
   return {rank: rank && rank.innerText, href: a && a.getAttribute('href'),
           title: img && img.getAttribute('alt'), img: img && img.getAttribute('src'),
           rating: rating && rating.innerText, reviews: reviews && reviews.innerText};
