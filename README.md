@@ -52,6 +52,17 @@ Sửa `pod_filter.yaml` / `scoring.yaml` rồi chạy `make rescore` để áp d
 Bấm **+ Theo dõi** ở một ngách khám phá để Etsy quét sản phẩm cho ngách đó từ lần sau.
 TikTok Creative Center và Google Trends (biểu đồ quan tâm) chưa hỗ trợ: cả hai chặn truy cập tự động.
 
+## Etsy Listing Signals
+
+Trang **Tín hiệu listing** theo dõi listing áo mới (≤ 30 ngày tuổi) của shop Mỹ trên Etsy (giá USD), cập nhật hằng ngày cho tới khi listing 45 ngày tuổi.
+Mỗi listing được xếp vào một nhóm: **Super Breakout**, **Steady Grower**, **Graduated**, **Calibrating** (chưa đủ dữ liệu) hoặc **Đã gỡ** (listing không còn trên Etsy).
+DSR = lượt lưu mới / lượt xem mới giữa hai lần quét.
+Ngưỡng phân nhóm và các truy vấn tìm listing chỉnh trong `backend/config/listing_signals.yaml`.
+Cần ít nhất 2 lần quét (2 ngày) mới có tín hiệu; lần đầu mọi listing đều là Calibrating.
+Tốn khoảng vài trăm request Etsy mỗi ngày, trên quota 5.000/ngày.
+Tag của các listing bứt phá được đưa vào Trend Radar với nguồn "Etsy bứt phá".
+Chạy riêng: `POST /api/scans` với `{"sources": ["etsy_signals"]}`.
+
 ## Lịch mùa vụ (Mỹ)
 
 Trang **Lịch mùa vụ**: các dịp bán áo POD ở Mỹ (lễ lớn, Back to School, Nurses Week, tháng nhận thức, sale TikTok Shop 11.11 / 12.12 / Black Friday / Cyber Monday) với số ngày còn lại, giai đoạn hiện tại và việc nên làm.
