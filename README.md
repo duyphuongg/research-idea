@@ -63,6 +63,15 @@ Tốn khoảng vài trăm request Etsy mỗi ngày, trên quota 5.000/ngày.
 Tag của các listing bứt phá được đưa vào Trend Radar với nguồn "Etsy bứt phá".
 Chạy riêng: `POST /api/scans` với `{"sources": ["etsy_signals"]}`.
 
+## Amazon (bản gọn)
+
+Nguồn **Amazon** (amazon.com, thị trường Mỹ) lấy Best Sellers và New Releases của 8 danh mục áo/hoodie, mỗi danh sách top 100, bằng trình duyệt Chromium tự động (`make install` đã cài Chromium qua Playwright).
+- Mỗi lần quét mất khoảng 4–5 phút.
+- Trang **Amazon** hiện thứ hạng theo danh mục/danh sách; sản phẩm có cờ **bản quyền** (tên thương hiệu/IP có thể bị khiếu nại) để bạn tránh.
+- Cụm từ phổ biến trong tiêu đề được đưa vào Trend Radar (tín hiệu `title_phrase_count`).
+- Chạy riêng: `POST /api/scans` với `{"sources": ["amazon"]}`.
+- Cảnh báo: Amazon có thể chặn truy cập tự động (captcha/chặn). Khi đó trạng thái nguồn hiện lỗi; không có cơ chế né chặn, hãy thử lại sau.
+
 ## Lịch mùa vụ (Mỹ)
 
 Trang **Lịch mùa vụ**: các dịp bán áo POD ở Mỹ (lễ lớn, Back to School, Nurses Week, tháng nhận thức, sale TikTok Shop 11.11 / 12.12 / Black Friday / Cyber Monday) với số ngày còn lại, giai đoạn hiện tại và việc nên làm.
