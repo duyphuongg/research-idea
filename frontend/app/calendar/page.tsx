@@ -3,18 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiError, api, type CalendarEvent, type CalendarPage } from "@/lib/api";
+import { Button, Card, EmptyState, Notice, PageHeader, Select, StatusBadge } from "@/components/ui";
 
 type Result = { key: string; data?: CalendarPage; error?: string };
-
-const PHASE_STYLE: Record<CalendarEvent["phase"], string> = {
-  upcoming: "bg-zinc-100 text-zinc-700",
-  design: "bg-purple-100 text-purple-800",
-  launch: "bg-blue-100 text-blue-800",
-  push: "bg-green-100 text-green-800",
-  cutoff: "bg-amber-100 text-amber-800",
-  peak: "bg-red-100 text-red-800",
-  after: "bg-zinc-100 text-zinc-500",
-};
 
 const TYPE_LABEL: Record<CalendarEvent["type"], string> = {
   holiday: "Lễ",
@@ -63,110 +54,129 @@ export default function CalendarPageView() {
   }
 
   const page = result?.data;
+  const today = page?.today ?? "";
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center gap-3">
-        <h1 className="mr-auto text-xl font-semibold">Lịch mùa vụ (Mỹ)</h1>
-        <select
-          className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm"
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-        >
-          <option value={60}>60 ngày tới</option>
-          <option value={120}>120 ngày tới</option>
-          <option value={240}>240 ngày tới</option>
-          <option value={365}>12 tháng tới</option>
-        </select>
-      </div>
-      <p className="mb-4 text-xs text-zinc-500">
-        Mốc tính lùi từ ngày sự kiện: thiết kế −8 tuần, lên sản phẩm −6 tuần, đẩy mạnh −4 tuần, hạn chót đặt hàng −
-        {(page?.fulfillment_days ?? 10) + 3} ngày (thời gian in + giao POD + đệm 3 ngày, chỉnh trong backend/config/us_calendar.yaml).
-      </p>
-      {message && <p className="mb-3 rounded-md bg-zinc-100 p-3 text-sm">{message}</p>}
-      {loading && <p className="text-sm text-zinc-500">Đang tải…</p>}
-      {result?.error && !loading && <p className="text-sm text-red-600">Không tải được lịch: {result.error}</p>}
+      <PageHeader
+        eyebrow={`Lịch mùa vụ${page ? ` · ${shortDate(page.today)}` : ""}`}
+        title="Lịch mùa vụ (Mỹ)"
+        description={
+          <>
+            Mốc tính lùi từ ngày sự kiện: thiết kế −8 tuần, lên sản phẩm −6 tuần, đẩy mạnh −4 tuần, hạn chót đặt hàng −
+            {(page?.fulfillment_days ?? 10) + 3} ngày (thời gian in + giao POD + đệm 3 ngày, chỉnh trong backend/config/us_calendar.yaml).
+          </>
+        }
+        actions={
+          <Select aria-label="Khoảng thời gian" value={days} onChange={(e) => setDays(Number(e.target.value))}>
+            <option value={60}>60 ngày tới</option>
+            <option value={120}>120 ngày tới</option>
+            <option value={240}>240 ngày tới</option>
+            <option value={365}>12 tháng tới</option>
+          </Select>
+        }
+      />
+      {message && <Notice className="mb-4">{message}</Notice>}
+      {loading && <p className="text-sm text-ink-2">Đang tải…</p>}
+      {result?.error && !loading && <Notice tone="error">Không tải được lịch: {result.error}</Notice>}
+      {page && page.events.length === 0 && !loading && (
+        <EmptyState title="Không có sự kiện nào trong khoảng này" body="Thử chọn khoảng thời gian dài hơn." />
+      )}
 
-      <div className="space-y-4">
+      <ol className="space-y-5">
         {page?.events.map((event) => {
-          const today = page.today;
           const deadline = event.phase === "peak" ? event.order_by : event.ship_by;
+          const ongoing = event.end !== event.start && event.start <= today && today <= event.end;
+          const milestones = [
+            event.design_start >= today && `Thiết kế từ ${shortDate(event.design_start)}`,
+            event.launch_by >= today && `lên sản phẩm trước ${shortDate(event.launch_by)}`,
+            event.push_from >= today && `đẩy mạnh từ ${shortDate(event.push_from)}`,
+            deadline && deadline >= today && `Hạn chót đặt hàng ${shortDate(deadline)}`,
+          ].filter(Boolean) as string[];
           return (
-          <section key={`${event.key}-${event.start}`} className="rounded-lg border border-zinc-200 bg-white p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold">{event.name}</h2>
-              <span className="text-sm text-zinc-500">
-                {shortDate(event.start)}
-                {event.end !== event.start && <> – {shortDate(event.end)}</>}
-              </span>
-              <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600">{TYPE_LABEL[event.type]}</span>
-              <span className={`rounded px-1.5 py-0.5 text-xs ${PHASE_STYLE[event.phase]}`}>{event.phase_label}</span>
-              <span className="ml-auto text-sm font-medium">
-                {event.days_until > 0 ? `còn ${event.days_until} ngày` : event.phase === "after" ? "đã qua" : "đang diễn ra"}
-              </span>
-            </div>
-            <p className="mt-2 text-sm">{event.advice}</p>
-            {event.note && <p className="mt-1 text-xs text-zinc-500">{event.note}</p>}
-            <p className="mt-2 text-xs text-zinc-500">
-              {[
-                event.design_start >= today && `Thiết kế từ ${shortDate(event.design_start)}`,
-                event.launch_by >= today && `lên sản phẩm trước ${shortDate(event.launch_by)}`,
-                event.push_from >= today && `đẩy mạnh từ ${shortDate(event.push_from)}`,
-                deadline && deadline >= today && `Hạn chót đặt hàng ${shortDate(deadline)}`,
-                event.end !== event.start && event.start <= today && today <= event.end && `đang diễn ra · kết thúc ${shortDm(event.end)}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
+            <li key={`${event.key}-${event.start}`} className="grid gap-2 md:grid-cols-[9.5rem_1fr] md:gap-6">
+              <div className="md:pt-4 md:text-right">
+                <p className="font-mono text-sm font-medium text-ink">
+                  {shortDate(event.start)}
+                  {event.end !== event.start && <span className="text-ink-2"> – {shortDm(event.end)}</span>}
+                </p>
+                <p className="mt-0.5 text-xs text-ink-2">
+                  {ongoing
+                    ? `đang diễn ra · kết thúc ${shortDm(event.end)}`
+                    : event.days_until > 0
+                      ? `còn ${event.days_until} ngày`
+                      : event.phase === "after"
+                        ? "đã qua"
+                        : "đang diễn ra"}
+                </p>
+              </div>
+              <Card className={event.phase === "after" ? "opacity-70" : ""}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <h2 className="font-display text-lg font-bold leading-6 text-ink">{event.name}</h2>
+                  <span className="eyebrow text-ink-2">{TYPE_LABEL[event.type]}</span>
+                  <StatusBadge kind="phase" status={event.phase} label={event.phase_label} className="ml-auto" />
+                </div>
+                <p className="mt-2 text-sm text-ink">{event.advice}</p>
+                {event.note && <p className="mt-1 text-xs text-ink-2">{event.note}</p>}
+                {milestones.length > 0 && (
+                  <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-rule pt-3 font-mono text-xs text-ink-2">
+                    {milestones.map((m) => (
+                      <li key={m}>{m}</li>
+                    ))}
+                  </ul>
+                )}
 
-            {event.seed_ideas.length > 0 && (
-              <div className="mt-3">
-                <p className="mb-1 text-xs font-medium uppercase text-zinc-500">Ghép với ngách của bạn</p>
-                <div className="flex flex-wrap gap-2">
-                  {event.seed_ideas.map((idea) => (
-                    <span
-                      key={idea.keyword}
-                      className="flex items-center gap-1 rounded-full border border-zinc-300 px-3 py-1 text-sm"
-                    >
-                      {idea.keyword_id ? (
-                        <Link href={`/trends/${idea.keyword_id}`} className="hover:underline">
-                          {idea.keyword}
+                {event.seed_ideas.length > 0 && (
+                  <div className="mt-3">
+                    <p className="eyebrow mb-1.5 text-ink-2">Ghép với ngách của bạn</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {event.seed_ideas.map((idea) => (
+                        <span
+                          key={idea.keyword}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-rule bg-paper py-0.5 pl-3 pr-1 text-sm text-ink"
+                        >
+                          {idea.keyword_id ? (
+                            <Link href={`/trends/${idea.keyword_id}`} className="hover:underline">
+                              {idea.keyword}
+                            </Link>
+                          ) : (
+                            idea.keyword
+                          )}
+                          {idea.score !== null && <span className="font-mono text-xs text-ink-2">{Math.round(idea.score)}</span>}
+                          {idea.is_seed ? (
+                            <span className="pr-2" />
+                          ) : (
+                            <Button variant="ghost" size="sm" className="h-6 rounded-full" onClick={() => follow(idea.keyword)}>
+                              + Theo dõi
+                            </Button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {event.radar_matches.length > 0 && (
+                  <div className="mt-3">
+                    <p className="eyebrow mb-1.5 text-ink-2">Đang có trên Trend Radar</p>
+                    <div className="flex flex-wrap gap-2">
+                      {event.radar_matches.map((m) => (
+                        <Link
+                          key={m.keyword_id}
+                          href={`/trends/${m.keyword_id}`}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-rule bg-sheet px-3 py-0.5 text-sm text-ink hover:border-ink-2"
+                        >
+                          {m.keyword} <span className="font-mono text-xs text-ink-2">{Math.round(m.score)}</span>
                         </Link>
-                      ) : (
-                        idea.keyword
-                      )}
-                      {idea.score !== null && <span className="text-xs text-zinc-400">{Math.round(idea.score)}</span>}
-                      {!idea.is_seed && (
-                        <button onClick={() => follow(idea.keyword)} className="text-xs text-orange-600 hover:underline">
-                          + Theo dõi
-                        </button>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {event.radar_matches.length > 0 && (
-              <div className="mt-3">
-                <p className="mb-1 text-xs font-medium uppercase text-zinc-500">Đang có trên Trend Radar</p>
-                <div className="flex flex-wrap gap-2">
-                  {event.radar_matches.map((m) => (
-                    <Link
-                      key={m.keyword_id}
-                      href={`/trends/${m.keyword_id}`}
-                      className="rounded-full bg-zinc-100 px-3 py-1 text-sm hover:bg-zinc-200"
-                    >
-                      {m.keyword} <span className="text-xs text-zinc-500">{Math.round(m.score)}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </div>
   );
 }
