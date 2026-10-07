@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api import calendar as calendar_api
+from app.api import signals as signals_api
 from app.api import health, products, scans, seeds, trends
 from app.api import settings as settings_api
 from app.config import Settings, get_settings
@@ -55,6 +56,6 @@ def create_app(
     def ping() -> dict[str, bool]:
         return {"ok": True}
 
-    for module in (products, seeds, settings_api, scans, health, trends, calendar_api):
+    for module in (products, seeds, settings_api, scans, health, trends, calendar_api, signals_api):
         app.include_router(module.router)
     return app

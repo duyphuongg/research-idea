@@ -185,3 +185,37 @@ class CalendarPage(BaseModel):
     today: date
     fulfillment_days: int
     events: list[CalendarEventOut]
+
+
+class SignalTag(BaseModel):
+    tag: str
+    keyword_id: int | None
+
+
+class SignalItem(BaseModel):
+    product_id: int
+    title: str
+    url: str
+    image_url: str | None
+    shop_name: str | None
+    shop_sold_count: int | None
+    price: float | None
+    currency: str | None
+    product_type: str
+    listed_at: datetime | None
+    age_days: int | None
+    views: int | None
+    saves: int | None
+    delta_views: float | None
+    delta_saves: float | None
+    dsr: float | None
+    status: str
+    discovery_query: str
+    tags: list[SignalTag]
+
+
+class SignalPage(BaseModel):
+    updated_on: date | None
+    counts: dict[str, int]
+    total: int
+    items: list[SignalItem]
