@@ -471,7 +471,7 @@ Note `dedupe` keeps insertion order of first occurrence per key (dict order); te
 - Create: `backend/app/services/hot.py`
 - Modify: `backend/app/api/products.py` (use `compute_product_metrics`)
 - Modify: `backend/app/api/signals.py` (add `keyword` query param)
-- Test: `backend/tests/test_watchlist_service.py`, extend `backend/tests/test_signals_api.py` (find the existing signals API test file with `grep -l "/api/signals" tests/`; add the test there)
+- Test: `backend/tests/test_watchlist_service.py`, extend `backend/tests/test_api_signals.py`
 
 **Interfaces — Produces:**
 ```python
