@@ -11,6 +11,7 @@ export const SOURCE_INK: Record<string, Ink> = {
   google_suggest: "yellow",
   google_daily: "yellow",
   nfl: "magenta",
+  nfl_moments: "magenta",
 };
 
 /** Single-letter plate code shown next to the ink (C/M/Y/K). */

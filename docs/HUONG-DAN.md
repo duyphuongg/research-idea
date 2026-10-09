@@ -81,6 +81,9 @@ Cầu thủ chơi nổi bật nhất trong tuần NFL, xếp theo **tiềm năng
 - **Tiềm năng 0–100** = 50% phong độ (xếp hạng điểm trong tuần) + 30% số gợi ý Google về áo cho "<tên> shirt" + 20% số listing Etsy "<tên> shirt" (nhu cầu đã có) + 10 nếu tên đang lên Google xu hướng ngày (🔥 Đang trend).
 - Mặc định hiện tuần gần nhất đã đá đủ (≥ 10 trận); chọn tuần khác ở ô **Tuần**. Sắp xếp theo Tiềm năng / Điểm thi đấu / Etsy listing.
 - Link **ESPN**, **Etsy** (tìm "<tên> shirt"), **Phân tích ngách**.
+- **Khoảnh khắc đang hot** (đầu trang): tìm kiếm NFL đang lên top Google Mỹ — tình huống tranh cãi, chấn thương, phát ngôn… App quét Google Trends **mỗi giờ (phút 30)**, nhận ra cầu thủ (kể cả tên gọi tắt như "cd lamb") hoặc đội, kèm lượt tìm, tiêu đề bài báo, số listing Etsy "<khoảnh khắc> shirt".
+- Tin 🗯️ **Khoảnh khắc NFL** (có chuông) khi một khoảnh khắc ≥ 20.000 lượt tìm; tối đa 2 tin/24 giờ, mỗi khoảnh khắc 1 lần (`nfl_moment_min_traffic`, `nfl_moment_max_per_day`). Lịch mỗi giờ: `make install-hourly` / `make uninstall-hourly`; chạy ngay: `make hourly-now`; log `backend/data/logs/hourly.log`.
+- Lịch thi đấu (giờ VN, tới 1/11; sau đó +1 giờ): Thursday Night → sáng thứ Sáu 07:15; Chủ nhật → thứ Hai 00:00–03:25; Sunday Night → thứ Hai 07:20; Monday Night → thứ Ba 07:15. Mùa chính 10/9/2026–12/1/2027, playoffs từ 13/1, Super Bowl tháng 2/2027.
 - Có tin 🏈 Telegram (có chuông) khi cầu thủ đạt tiềm năng ≥ 85 — thường sáng thứ Hai sau các trận Chủ nhật. Ngưỡng: `nfl_min_potential`, `nfl_max_per_week` trong `backend/config/alerts.yaml`.
 - ⚠️ Tên, số áo, hình cầu thủ và logo đội thuộc bản quyền NFL/NFLPA — dùng làm cảm hứng, tránh in trực tiếp.
 
@@ -145,6 +148,7 @@ Các phát hiện sau mỗi lần quét. Số trên menu = số tin chưa đọc
 | 🔥 Etsy bứt phá | listing thành Steady Grower (ngách trong Watchlist) | im lặng |
 | ⭐ Sản phẩm hot | sản phẩm của keyword Watchlist vừa có nhãn 🔥 | im lặng |
 | 🏪 Shop tăng tốc | shop đang theo dõi bán ≥ 30 đơn/7 ngày và ≥ 1,5× tuần trước | im lặng |
+| 🗯️ Khoảnh khắc NFL | tìm kiếm NFL ≥ 20.000 lượt trên Google Mỹ (quét mỗi giờ); tối đa 2 tin/24 giờ | có |
 | 🏈 Cầu thủ NFL tiềm năng | cầu thủ tuần gần nhất đã đá đủ có tiềm năng làm áo ≥ 85; tối đa 3 cầu thủ/tuần thi đấu, mỗi người 1 lần | có |
 
 **Telegram — chống spam**

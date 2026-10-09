@@ -428,3 +428,34 @@ class NflPage(BaseModel):
     week: int | None
     weeks: list[NflWeek]
     items: list[NflStandout]
+
+
+class NflMomentNews(BaseModel):
+    title: str
+    url: str | None = None
+    source: str | None = None
+
+
+class NflMomentPlayer(BaseModel):
+    athlete_id: str
+    name: str
+    team: str | None
+    position: str | None
+    headshot_url: str | None
+
+
+class NflMomentOut(BaseModel):
+    id: int
+    query: str
+    traffic: int
+    first_seen: datetime
+    last_seen: datetime
+    news: list[NflMomentNews]
+    picture_url: str | None
+    etsy_listings: int | None
+    team: str | None
+    player: NflMomentPlayer | None
+
+
+class NflMomentsPage(BaseModel):
+    items: list[NflMomentOut]

@@ -9,3 +9,5 @@ shop_min_sales_7d: 30      # 🏪 shop đang theo dõi tăng tốc: ít nhất 3
 shop_growth: 1.5           # … và gấp ≥ 1,5 lần tuần trước (khi đã có số liệu tuần trước)
 nfl_min_potential: 85      # 🏈 cầu thủ NFL: tiềm năng làm áo ≥ 85/100 (tuần gần nhất đã đá đủ), có chuông
 nfl_max_per_week: 3        # … tối đa 3 cầu thủ mỗi tuần thi đấu (mỗi cầu thủ 1 lần)
+nfl_moment_min_traffic: 20000  # 🗯️ khoảnh khắc NFL (top tìm kiếm Google Mỹ, quét mỗi giờ): ≥ 20.000 lượt tìm, có chuông
+nfl_moment_max_per_day: 2      # … tối đa 2 tin mỗi 24 giờ; mỗi khoảnh khắc báo 1 lần

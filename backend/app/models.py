@@ -303,3 +303,36 @@ class NflPlayerDemand(Base):
     date: Mapped[date] = mapped_column(Date)
     etsy_listings: Mapped[int | None] = mapped_column(Integer, nullable=True)
     merch_suggestions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class NflPlayer(Base):
+    """NFL roster entry (ESPN), refreshed weekly; used to recognise players in trending searches."""
+
+    __tablename__ = "nfl_players"
+
+    athlete_id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    first_name: Mapped[str] = mapped_column(String(60))
+    last_name: Mapped[str] = mapped_column(String(60))
+    team: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    position: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    jersey: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    headshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    updated_on: Mapped[date] = mapped_column(Date)
+
+
+class NflMoment(Base):
+    """An NFL-related US Google trending search (Khoảnh khắc NFL)."""
+
+    __tablename__ = "nfl_moments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    query: Mapped[str] = mapped_column(String(200), unique=True)
+    traffic: Mapped[int] = mapped_column(Integer)  # highest approx traffic seen
+    first_seen: Mapped[datetime] = mapped_column(DateTime)
+    last_seen: Mapped[datetime] = mapped_column(DateTime)
+    news: Mapped[Any] = mapped_column(JSON, default=list)  # [{title, url, source}]
+    picture_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    athlete_id: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
+    team: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    etsy_listings: Mapped[int | None] = mapped_column(Integer, nullable=True)

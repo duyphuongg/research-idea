@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now install-hourly uninstall-hourly hourly-now
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -77,6 +77,26 @@ uninstall-daily:
 daily-status:
 	@launchctl print gui/$$(id -u)/$(DAILY_LABEL) 2>/dev/null | grep -E "state =|last exit code|runs =" || echo "Chưa cài (make install-daily)"
 	@tail -n 25 backend/data/logs/daily-scan.log 2>/dev/null || true
+
+HOURLY_LABEL := io.podtrendradar.hourly
+HOURLY_PLIST := $(HOME)/Library/LaunchAgents/$(HOURLY_LABEL).plist
+
+# mỗi giờ (phút 30): khoảnh khắc NFL (top tìm kiếm Google Mỹ) + tin Telegram 🗯️
+install-hourly:
+	mkdir -p backend/data/logs $(HOME)/Library/LaunchAgents
+	sed -e "s#__ROOT__#$(CURDIR)#g" -e "s#__LABEL__#$(HOURLY_LABEL)#g" deploy/launchd/hourly.plist.template > $(HOURLY_PLIST)
+	plutil -lint $(HOURLY_PLIST) >/dev/null
+	-launchctl bootout gui/$$(id -u) $(HOURLY_PLIST) 2>/dev/null
+	launchctl bootstrap gui/$$(id -u) $(HOURLY_PLIST)
+	@echo "Đã cài: quét khoảnh khắc NFL mỗi giờ (phút 30). Log: backend/data/logs/hourly.log"
+
+uninstall-hourly:
+	-launchctl bootout gui/$$(id -u) $(HOURLY_PLIST)
+	rm -f $(HOURLY_PLIST)
+	@echo "Đã gỡ lịch quét mỗi giờ."
+
+hourly-now:
+	cd backend && .venv/bin/python scripts/hourly.py
 
 telegram-setup:
 	cd backend && .venv/bin/python scripts/telegram_setup.py

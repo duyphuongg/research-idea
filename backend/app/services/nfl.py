@@ -2,13 +2,14 @@
 
 import math
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.analysis.scoring import percentile_ranks
-from app.models import Keyword, NflPerformance, NflPlayerDemand, TrendSignal
+from app.db import utcnow
+from app.models import NflMoment, NflPerformance, NflPlayer, NflPlayerDemand
 
 FULL_WEEK_GAMES = 10  # default to the latest week with at least this many finished games
 TRENDING_DAYS = 3
@@ -35,13 +36,11 @@ def potential(performance: float, merch: int | None, etsy: int | None, trending:
     return round(min(100.0, score + (TRENDING_BONUS if trending else 0)), 1)
 
 
-def _trending_names(session: Session, names: set[str], today: date) -> set[str]:
-    texts = list(session.scalars(
-        select(Keyword.text).join(TrendSignal, TrendSignal.keyword_id == Keyword.id)
-        .where(TrendSignal.source == "google_daily", TrendSignal.date > today - timedelta(days=TRENDING_DAYS))
-        .distinct()
-    ))
-    return {n for n in names if any(n.lower() in t for t in texts)}
+def _trending_ids(session: Session, athlete_ids: list[str], today: date) -> set[str]:
+    """Players with an NFL trending search (Khoảnh khắc NFL) in the last TRENDING_DAYS."""
+    since = datetime.combine(today - timedelta(days=TRENDING_DAYS), time())
+    return set(session.scalars(select(NflMoment.athlete_id).where(
+        NflMoment.athlete_id.in_(athlete_ids), NflMoment.last_seen >= since)))
 
 
 def standouts(
@@ -85,16 +84,35 @@ def standouts(
         latest_demand, (NflPlayerDemand.athlete_id == latest_demand.c.athlete_id)
         & (NflPlayerDemand.date == latest_demand.c.d)))}
     perf = percentile_ranks({aid: p["points"] for aid, p in players.items()})
-    trending = _trending_names(session, {p["name"] for p in players.values()}, today)
+    trending = _trending_ids(session, list(players), today)
 
     items = []
     for aid, p in players.items():
         d = demand.get(aid)
         etsy, merch = (d.etsy_listings, d.merch_suggestions) if d else (None, None)
-        hot = p["name"] in trending
+        hot = aid in trending
         items.append({
             **p, "performance": round(perf[aid], 3), "etsy_listings": etsy, "merch_suggestions": merch,
             "trending": hot, "potential": potential(perf[aid], merch, etsy, hot),
         })
     items.sort(key=lambda i: (-i["potential"], -i["points"], i["name"]))
     return {**picked, "weeks": all_weeks, "items": items}
+
+
+def moments(session: Session, days: int = 7, now: datetime | None = None) -> list[dict]:
+    """NFL trending searches seen in the last `days`, biggest first."""
+    now = now or utcnow()
+    rows = session.scalars(select(NflMoment).where(NflMoment.last_seen >= now - timedelta(days=days)))
+    out = []
+    for m in rows:
+        player = session.get(NflPlayer, m.athlete_id) if m.athlete_id else None
+        out.append({
+            "id": m.id, "query": m.query, "traffic": m.traffic, "first_seen": m.first_seen, "last_seen": m.last_seen,
+            "news": m.news or [], "picture_url": m.picture_url, "etsy_listings": m.etsy_listings, "team": m.team,
+            "player": None if player is None else {
+                "athlete_id": player.athlete_id, "name": player.name, "team": player.team,
+                "position": player.position, "headshot_url": player.headshot_url,
+            },
+        })
+    out.sort(key=lambda m: (-m["traffic"], -m["last_seen"].timestamp()))
+    return out

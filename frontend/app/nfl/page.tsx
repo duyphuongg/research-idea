@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import NflMoments from "@/components/NflMoments";
 import { CARD_CLASS } from "@/components/SignalCard";
 import { Button, EmptyState, Notice, PageHeader, Select } from "@/components/ui";
 import { api, type NflPage, type NflStandout, type NflWeek } from "@/lib/api";
@@ -140,6 +141,8 @@ function NflView() {
       <p className="mb-4 text-xs leading-5 text-ink-2">
         Tên, số áo, hình cầu thủ và logo đội thuộc bản quyền NFL/NFLPA — dùng làm cảm hứng, tránh in trực tiếp.
       </p>
+
+      <NflMoments />
 
       {loading && !data && <p className="py-6 text-sm text-ink-2">Đang tải…</p>}
       {!loading && result?.error && (

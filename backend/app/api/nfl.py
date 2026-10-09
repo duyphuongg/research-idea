@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
-from app.api.schemas import NflPage
-from app.services.nfl import standouts
+from app.api.schemas import NflMomentsPage, NflPage
+from app.services.nfl import moments, standouts
 
 router = APIRouter(prefix="/api")
 
@@ -16,3 +16,8 @@ def nfl_standouts(
     session: Session = Depends(get_session),
 ):
     return standouts(session, season, season_type, week)
+
+
+@router.get("/nfl/moments", response_model=NflMomentsPage)
+def nfl_moments(days: int = Query(7, ge=1, le=60), session: Session = Depends(get_session)):
+    return {"items": moments(session, days)}

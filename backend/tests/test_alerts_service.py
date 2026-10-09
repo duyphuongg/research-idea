@@ -168,3 +168,26 @@ def test_nfl_alerts_ring_the_bell():
     from app.notify.telegram import _high_priority
 
     assert _high_priority(Alert(kind="nfl", level=1)) is True
+
+
+def test_nfl_moment_alerts_big_new_and_capped(session):
+    from app.models import NflMoment, NflPlayer
+    from app.services.alerts import detect_moment_alerts
+
+    session.add(NflPlayer(athlete_id="9", name="Jayden Daniels", first_name="Jayden", last_name="Daniels",
+                          team="WSH", position="QB", headshot_url="https://h/9.png", updated_on=TODAY))
+    for q, traffic, player in (("a", 50000, "9"), ("b", 30000, None), ("c", 20000, None), ("tiny", 500, None)):
+        session.add(NflMoment(query=q, traffic=traffic, first_seen=NOW, last_seen=NOW, athlete_id=player,
+                              team="WSH" if player else None,
+                              news=[{"title": f"News {q}", "url": f"https://n/{q}", "source": "X"}]))
+    session.add(NflMoment(query="old", traffic=99999, first_seen=datetime(2026, 10, 1), last_seen=NOW, news=[]))
+    session.flush()
+
+    cfg = AlertsConfig(nfl_moment_min_traffic=20000, nfl_moment_max_per_day=2)
+    first = detect_moment_alerts(session, NOW, cfg)
+    assert [a.title for a in first] == ["a", "b"]
+    assert first[0].reason == "50.000+ lượt tìm · WSH · QB Jayden Daniels · News a"
+    assert first[0].image_url == "https://h/9.png" and first[0].external_url == "https://n/a"
+    assert detect_moment_alerts(session, datetime(2026, 10, 8, 20), cfg) == []  # daily cap reached
+    nxt = detect_moment_alerts(session, datetime(2026, 10, 9, 14), cfg)
+    assert [a.title for a in nxt] == ["c"]  # each moment once

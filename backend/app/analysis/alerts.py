@@ -22,6 +22,8 @@ class AlertsConfig:
     shop_growth: float = 1.5  # … and at least this multiple of the previous week (when known)
     nfl_min_potential: float = 85  # 🏈 NFL player: shirt potential (0–100) of the latest full week
     nfl_max_per_week: int = 3  # at most this many players per game week
+    nfl_moment_min_traffic: int = 20000  # 🗯️ NFL trending search: approx Google searches …
+    nfl_moment_max_per_day: int = 2  # … at most this many per day
 
 
 def load_alerts_config() -> AlertsConfig:
@@ -41,7 +43,7 @@ def load_alerts_config() -> AlertsConfig:
 LISTING_LABEL = {"super_breakout": "Super Breakout", "steady_grower": "Steady Grower"}
 METRIC_LABEL = {"reviews": "reviews", "favorites": "lượt lưu", "views": "lượt xem"}
 # Telegram order: super breakout, niche, steady grower, shop, hot product (unknown kinds last)
-KIND_RANK = {("listing", 2): 0, ("nfl", 1): 1, ("niche", 1): 2, ("listing", 1): 3, ("shop", 1): 4,
+KIND_RANK = {("listing", 2): 0, ("nfl_moment", 1): 1, ("nfl", 1): 1, ("niche", 1): 2, ("listing", 1): 3, ("shop", 1): 4,
              ("hot_product", 1): 5}
 
 
@@ -213,6 +215,35 @@ def nfl_candidates(rows: Iterable[NflRow], cfg: AlertsConfig) -> list[AlertCandi
             kind="nfl", subject_id=int(r.athlete_id), level=1, priority=r.potential,
             title=f"{r.name} ({tags})" if tags else r.name, reason=" · ".join(parts),
             image_url=r.headshot_url, link="/nfl", external_url=None, watch_keyword=None,
+        ))
+    return out
+
+
+@dataclass(frozen=True)
+class MomentRow:
+    moment_id: int
+    query: str
+    traffic: int
+    news_title: str | None
+    news_url: str | None
+    image_url: str | None
+    player: str | None  # "WSH · QB Jayden Daniels"
+
+
+def moment_candidates(rows: Iterable[MomentRow], cfg: AlertsConfig, left_today: int) -> list[AlertCandidate]:
+    out = []
+    for r in sorted(rows, key=lambda r: (-r.traffic, r.moment_id)):
+        if r.traffic < cfg.nfl_moment_min_traffic or len(out) >= left_today:
+            break
+        parts = [f"{r.traffic:,}+ lượt tìm".replace(",", ".")]
+        if r.player:
+            parts.append(r.player)
+        if r.news_title:
+            parts.append(r.news_title)
+        out.append(AlertCandidate(
+            kind="nfl_moment", subject_id=r.moment_id, level=1, priority=float(r.traffic), title=r.query,
+            reason=" · ".join(parts)[:300], image_url=r.image_url, link="/nfl", external_url=r.news_url,
+            watch_keyword=None,
         ))
     return out
 

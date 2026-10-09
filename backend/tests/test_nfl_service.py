@@ -1,7 +1,6 @@
 from datetime import date, datetime
 
-from app.keywords import get_or_create_keyword
-from app.models import NflPerformance, NflPlayerDemand, TrendSignal
+from app.models import NflMoment, NflPerformance, NflPlayer, NflPlayerDemand
 from app.services.nfl import potential, standouts
 
 TODAY = date(2026, 10, 9)
@@ -27,8 +26,10 @@ def test_standouts_default_week_and_ranking(session):
     _perf(session, 4, "a9", "p9", "Player 9", "rushingYards", 5, "10 YDS")  # two lines, same game
     session.add(NflPlayerDemand(athlete_id="p1", date=date(2026, 10, 7), etsy_listings=10, merch_suggestions=1))
     session.add(NflPlayerDemand(athlete_id="p1", date=TODAY, etsy_listings=9999, merch_suggestions=10))
-    kw = get_or_create_keyword(session, "player 2 touchdown", origin="discovered")
-    session.add(TrendSignal(keyword_id=kw.id, source="google_daily", metric="traffic", value=1, date=TODAY))
+    session.add(NflMoment(query="player 2 touchdown", traffic=5000, first_seen=datetime(2026, 10, 8),
+                          last_seen=datetime(2026, 10, 8), news=[], athlete_id="p2"))
+    session.add(NflMoment(query="old p3 story", traffic=5000, first_seen=datetime(2026, 9, 1),
+                          last_seen=datetime(2026, 9, 1), news=[], athlete_id="p3"))
     session.flush()
 
     page = standouts(session, today=TODAY)
@@ -54,3 +55,21 @@ def test_api(client, session):
     body = client.get("/api/nfl/standouts").json()
     assert body["week"] == 3 and body["items"][0]["name"] == "Some One"
     assert client.get("/api/nfl/standouts?week=0").status_code == 422
+
+
+def test_moments_api(client, session):
+    session.add(NflPlayer(athlete_id="9", name="Jayden Daniels", first_name="Jayden", last_name="Daniels",
+                          team="WSH", position="QB", updated_on=TODAY))
+    from app.db import utcnow
+    now = utcnow()
+    session.add_all([
+        NflMoment(query="small", traffic=1000, first_seen=now, last_seen=now, news=[]),
+        NflMoment(query="jayden daniels injury", traffic=50000, first_seen=now, last_seen=now,
+                  news=[{"title": "Knee injury", "url": "https://n/1", "source": "ESPN"}], athlete_id="9", team="WSH"),
+        NflMoment(query="ancient", traffic=90000, first_seen=datetime(2026, 1, 1), last_seen=datetime(2026, 1, 1), news=[]),
+    ])
+    session.commit()
+    items = client.get("/api/nfl/moments").json()["items"]
+    assert [i["query"] for i in items] == ["jayden daniels injury", "small"]
+    assert items[0]["player"]["name"] == "Jayden Daniels" and items[0]["news"][0]["source"] == "ESPN"
+    assert items[1]["player"] is None

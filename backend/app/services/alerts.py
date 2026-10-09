@@ -8,14 +8,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.analysis.alerts import (
-    AlertCandidate, AlertsConfig, HotRow, ListingRow, NflRow, NicheRow, PastAlert, ShopRow,
-    dedupe, hot_candidates, listing_candidates, load_alerts_config, nfl_candidates, niche_candidates,
+    AlertCandidate, AlertsConfig, HotRow, ListingRow, MomentRow, NflRow, NicheRow, PastAlert, ShopRow,
+    dedupe, hot_candidates, listing_candidates, load_alerts_config, moment_candidates, nfl_candidates, niche_candidates,
     shop_candidates,
 )
 from app.analysis.listing_signals import load_signals_config
 from app.db import utcnow
 from app.models import (
-    Alert, Keyword, KeywordScore, ListingSignal, NflPerformance, Product, ProductKeyword, Shop,
+    Alert, Keyword, KeywordScore, ListingSignal, NflMoment, NflPerformance, NflPlayer, Product, ProductKeyword, Shop,
 )
 from app.services.hot import compute_product_metrics
 from app.services.nfl import standouts
@@ -134,6 +134,51 @@ def _nfl_candidates(session: Session, now: datetime, cfg: AlertsConfig) -> list[
     return nfl_candidates(rows, replace(cfg, nfl_max_per_week=left))
 
 
+MOMENT_FRESH_DAYS = 2
+
+
+def _moment_candidates(session: Session, now: datetime, cfg: AlertsConfig) -> list[AlertCandidate]:
+    """Big NFL trending searches first seen recently; each once, at most cfg.nfl_moment_max_per_day a day."""
+    alerted = set(session.scalars(select(Alert.subject_id).where(Alert.kind == "nfl_moment")))
+    day_start = now - timedelta(hours=24)
+    sent_today = session.scalar(select(func.count()).select_from(Alert).where(
+        Alert.kind == "nfl_moment", Alert.created_at >= day_start)) or 0
+    left = max(0, cfg.nfl_moment_max_per_day - sent_today)
+    if not left:
+        return []
+    rows = []
+    for m in session.scalars(select(NflMoment).where(
+        NflMoment.first_seen >= now - timedelta(days=MOMENT_FRESH_DAYS),
+        NflMoment.traffic >= cfg.nfl_moment_min_traffic,
+    )):
+        if m.id in alerted:
+            continue
+        player = session.get(NflPlayer, m.athlete_id) if m.athlete_id else None
+        label = " · ".join(x for x in (player.team, player.position) if x) + f" {player.name}" if player else m.team
+        news = (m.news or [{}])[0] if m.news else {}
+        rows.append(MomentRow(m.id, m.query, m.traffic, news.get("title"), news.get("url"),
+                              m.picture_url or (player.headshot_url if player else None), label))
+    return moment_candidates(rows, cfg, left)
+
+
+def detect_moment_alerts(session: Session, now: datetime | None = None, cfg: AlertsConfig | None = None) -> list[Alert]:
+    """Only the 🗯️ NFL moment alerts (the hourly job); detect_alerts includes them too."""
+    cfg = cfg or load_alerts_config()
+    now = now or utcnow()
+    alerts = [_to_alert(c, now.date(), now) for c in _moment_candidates(session, now, cfg)]
+    session.add_all(alerts)
+    session.flush()
+    return alerts
+
+
+def _to_alert(c: AlertCandidate, today: date, now: datetime) -> Alert:
+    return Alert(
+        kind=c.kind, subject_id=c.subject_id, level=c.level, priority=c.priority, title=c.title[:300],
+        reason=c.reason, image_url=c.image_url, link=c.link, external_url=c.external_url,
+        watch_keyword=c.watch_keyword, scan_date=today, created_at=now,
+    )
+
+
 def detect_alerts(
     session: Session, today: date, cfg: AlertsConfig | None = None, now: datetime | None = None
 ) -> list[Alert]:
@@ -147,22 +192,16 @@ def detect_alerts(
         *shop_candidates(_shop_rows(session), cfg),
         *hot_candidates(_hot_rows(session, seeds)),
         *_nfl_candidates(session, now, cfg),
+        *_moment_candidates(session, now, cfg),
     ]
     blocked = blocked_subjects(session)  # the user marked these listed/skipped
     cands = [c for c in cands if (SUBJECT_KIND.get(c.kind), c.subject_id) not in blocked]
     past = [
         PastAlert(a.kind, a.subject_id, a.level, a.created_at)
         for a in session.scalars(select(Alert).where(
-            Alert.created_at >= now - timedelta(days=cfg.cooldown_days), Alert.kind != "nfl"))
+            Alert.created_at >= now - timedelta(days=cfg.cooldown_days), Alert.kind.not_in(("nfl", "nfl_moment"))))
     ]
-    alerts = [
-        Alert(
-            kind=c.kind, subject_id=c.subject_id, level=c.level, priority=c.priority, title=c.title[:300],
-            reason=c.reason, image_url=c.image_url, link=c.link, external_url=c.external_url,
-            watch_keyword=c.watch_keyword, scan_date=today, created_at=now,
-        )
-        for c in dedupe(cands, past, now, cfg.cooldown_days)
-    ]
+    alerts = [_to_alert(c, today, now) for c in dedupe(cands, past, now, cfg.cooldown_days)]
     session.add_all(alerts)
     session.flush()
     return alerts

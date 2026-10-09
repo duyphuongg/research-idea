@@ -227,7 +227,7 @@ export type CalendarEvent = {
 };
 export type CalendarPage = { today: string; fulfillment_days: number; events: CalendarEvent[] };
 
-export type AlertKind = "niche" | "listing" | "hot_product" | "shop" | "nfl";
+export type AlertKind = "niche" | "listing" | "hot_product" | "shop" | "nfl" | "nfl_moment";
 export type AlertItem = {
   id: number;
   /** A known AlertKind, or a kind this UI does not know (shown with a fallback icon). */
@@ -333,6 +333,27 @@ export type NflPage = {
   items: NflStandout[];
 };
 export type NflQuery = { season?: number; season_type?: number; week?: number };
+export type NflMomentNews = { title: string; url: string | null; source: string | null };
+export type NflMomentPlayer = {
+  athlete_id: string;
+  name: string;
+  team: string | null;
+  position: string | null;
+  headshot_url: string | null;
+};
+export type NflMoment = {
+  id: number;
+  query: string;
+  traffic: number;
+  first_seen: string;
+  last_seen: string;
+  news: NflMomentNews[];
+  picture_url: string | null;
+  etsy_listings: number | null;
+  team: string | null;
+  player: NflMomentPlayer | null;
+};
+export type NflMomentsPage = { items: NflMoment[] };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -397,4 +418,5 @@ export const api = {
   deleteWork: (kind: WorkKind, id: number) => request<void>(`/api/work/${kind}/${id}`, { method: "DELETE" }),
   getCalendar: (days = 120) => request<CalendarPage>(`/api/calendar${toQuery({ days })}`),
   getNflStandouts: (q: NflQuery = {}) => request<NflPage>(`/api/nfl/standouts${toQuery(q)}`),
+  getNflMoments: (days = 7) => request<NflMomentsPage>(`/api/nfl/moments${toQuery({ days })}`),
 };
