@@ -19,6 +19,8 @@ from app.api.schemas import (
 from app.models import Keyword, KeywordRelation, KeywordScore, Seed, TrendSignal
 
 router = APIRouter(prefix="/api")
+# Sources no longer scanned; their old signals stay in the DB but are not shown.
+RETIRED_SOURCES = ("amazon",)
 NEW_DAYS = 7
 
 
@@ -133,6 +135,7 @@ def trend_detail(keyword_id: int, session: Session = Depends(get_session)) -> Tr
                 TrendSignal.keyword_id == keyword_id,
                 TrendSignal.date >= since,
                 TrendSignal.date <= anchor,
+                TrendSignal.source.not_in(RETIRED_SOURCES),
             )
             .order_by(TrendSignal.source, TrendSignal.metric, TrendSignal.date)
         ):

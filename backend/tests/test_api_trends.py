@@ -52,6 +52,8 @@ def data(session):
                     value=1000.0, date=TODAY),
         TrendSignal(keyword_id=nurse.id, source="etsy", metric="views_per_day",
                     value=1.0, date=TODAY - timedelta(days=45)),
+        TrendSignal(keyword_id=nurse.id, source="amazon", metric="title_phrase_count",
+                    value=3.0, date=TODAY),  # retired source: never charted
     ])
     session.commit()
     return {"nurse": nurse.id, "gift": gift.id, "news": news.id}
@@ -89,6 +91,7 @@ def test_detail(client, data):
     # 45-day-old point excluded
     assert [p["value"] for p in series[("etsy", "views_per_day")]] == [5.0, 7.0]
     assert ("etsy", "listing_count_tshirt") in series
+    assert not any(src == "amazon" for src, _ in series)
     assert body["related"] == [{
         "keyword_id": data["gift"], "keyword": "nurse gift", "relation": "child",
         "source": "etsy_tags", "score": 60.0, "is_pod_relevant": True,
