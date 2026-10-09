@@ -101,14 +101,14 @@ hourly-now:
 EVENTS_LABEL := io.podtrendradar.events
 EVENTS_PLIST := $(HOME)/Library/LaunchAgents/$(EVENTS_LABEL).plist
 
-# mỗi 5 phút: sự kiện lớn (World Series, NBA Finals, Stanley Cup, Super Bowl…) → tin Telegram 🏆 (config/events.yaml)
+# mỗi giờ (phút 15): sự kiện lớn (World Series, NBA Finals, Stanley Cup, Super Bowl…) → tin Telegram 🏆 (config/events.yaml)
 install-events:
 	mkdir -p backend/data/logs $(HOME)/Library/LaunchAgents
 	sed -e "s#__ROOT__#$(CURDIR)#g" -e "s#__LABEL__#$(EVENTS_LABEL)#g" deploy/launchd/events.plist.template > $(EVENTS_PLIST)
 	plutil -lint $(EVENTS_PLIST) >/dev/null
 	-launchctl bootout gui/$$(id -u) $(EVENTS_PLIST) 2>/dev/null
 	launchctl bootstrap gui/$$(id -u) $(EVENTS_PLIST)
-	@echo "Đã cài: kiểm tra sự kiện lớn mỗi 5 phút. Log: backend/data/logs/events.log"
+	@echo "Đã cài: kiểm tra sự kiện lớn mỗi giờ (phút 15). Log: backend/data/logs/events.log"
 
 uninstall-events:
 	-launchctl bootout gui/$$(id -u) $(EVENTS_PLIST)

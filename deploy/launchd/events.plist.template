@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- POD Trend Radar: mỗi 5 phút: sự kiện thể thao lớn (World Series, NBA Finals…) → tin Telegram 🏆. Cài bằng `make install-events`. -->
+<!-- POD Trend Radar: mỗi giờ (phút 15): sự kiện thể thao lớn (World Series, NBA Finals…) → tin Telegram 🏆. Cài bằng `make install-events`. -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
@@ -12,8 +12,8 @@
   </array>
   <key>WorkingDirectory</key>
   <string>__ROOT__/backend</string>
-  <key>StartInterval</key>
-  <integer>300</integer>
+  <key>StartCalendarInterval</key>
+  <dict><key>Minute</key><integer>15</integer></dict>
   <key>StandardOutPath</key>
   <string>__ROOT__/backend/data/logs/events.log</string>
   <key>StandardErrorPath</key>

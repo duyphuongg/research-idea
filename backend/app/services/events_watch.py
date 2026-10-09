@@ -1,4 +1,4 @@
-"""Every 5 minutes (launchd): big sports events (World Series, NBA Finals, …) → 🏆 alerts sent right away."""
+"""Hourly at minute 15 (launchd): big sports events (World Series, NBA Finals, …) → 🏆 alerts sent right away."""
 
 import asyncio
 import logging

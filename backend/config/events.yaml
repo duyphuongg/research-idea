@@ -1,4 +1,4 @@
-# Sự kiện thể thao lớn — báo Telegram ngay (trừ giờ yên lặng: giữ lại tới 7:00), kiểm tra mỗi 5 phút (make install-events).
+# Sự kiện thể thao lớn — báo Telegram ngay (trừ giờ yên lặng: giữ lại tới 7:15), kiểm tra mỗi giờ (phút 15) (make install-events).
 # match: chữ trong tên vòng của ESPN (vd "World Series - Game 4"); games: true = báo từng trận, false = chỉ báo khi xong.
 # title: tên hiển thị; champion: câu khi có đội thắng loạt/trận cuối ({team}, {year}).
 leagues:

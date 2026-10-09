@@ -1,4 +1,4 @@
-"""Every 5 minutes: big sports events (World Series, NBA Finals, …) → 🏆 Telegram. Run by launchd (`make install-events`)."""
+"""Hourly (minute 15): big sports events (World Series, NBA Finals, …) → 🏆 Telegram. Run by launchd (`make install-events`)."""
 
 import asyncio
 import logging
@@ -14,7 +14,7 @@ def main() -> int:
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     settings = get_settings()
     new = asyncio.run(run_events(make_session_factory(make_engine(settings.database_url)), settings))
-    for alert in new or []:  # quiet when nothing happened: this runs 288 times a day
+    for alert in new or []:  # quiet when nothing happened: this runs every hour
         state = "sent" if alert["sent"] else "held"
         print(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] 🏆 {alert['title']} — {alert['reason']} ({state})", flush=True)
     return 0
