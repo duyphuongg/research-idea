@@ -192,3 +192,13 @@ def test_shop_info_from_payload_rejects_non_us_or_missing_id():
     assert shop_info_from_payload({"shop_id": 5, "shop_name": "X"}) is None
     info = shop_info_from_payload({"shop_id": 5, "shop_name": "X", "is_shop_us_based": True})
     assert (info.shop_id, info.name, info.sold_count) == (5, "X", None)
+
+
+def test_shop_info_review_average_is_none_without_reviews():
+    from app.connectors.etsy import shop_info_from_payload
+
+    base = {"shop_id": 5, "shop_name": "X", "is_shop_us_based": True}
+    info = shop_info_from_payload({**base, "review_average": 0, "review_count": 0})
+    assert (info.review_average, info.review_count) == (None, 0)
+    info = shop_info_from_payload({**base, "review_average": 4.7, "review_count": 3})
+    assert (info.review_average, info.review_count) == (4.7, 3)

@@ -155,7 +155,8 @@ def shop_info_from_payload(shop: dict[str, Any]) -> ShopInfo | None:
         sold_count=shop.get("transaction_sold_count"),
         favorers=shop.get("num_favorers"),
         listing_count=shop.get("listing_active_count"),
-        review_average=shop.get("review_average"),
+        # Etsy sends review_average 0 for shops without reviews: that is "no rating", not 0 stars
+        review_average=shop.get("review_average") if shop.get("review_count") != 0 else None,
         review_count=shop.get("review_count"),
     )
 
