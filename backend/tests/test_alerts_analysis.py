@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 
 from app.analysis.alerts import (
-    AlertsConfig, HotRow, ListingRow, NicheRow, PastAlert,
-    dedupe, hot_candidates, listing_candidates, niche_candidates, telegram_order,
+    AlertsConfig, HotRow, ListingRow, NicheRow, PastAlert, ShopRow,
+    dedupe, hot_candidates, listing_candidates, niche_candidates, shop_candidates, telegram_order,
 )
 
 CFG = AlertsConfig()
@@ -76,8 +76,38 @@ def test_dedupe_same_subject_twice_in_one_run():
 def test_telegram_order():
     keys = sorted([
         ("hot_product", 1, 9.0), ("listing", 1, 5.0), ("amazon", 1, -3.0),
-        ("niche", 1, 70.0), ("listing", 2, 1.0),
+        ("niche", 1, 70.0), ("listing", 2, 1.0), ("shop", 1, 40.0),
     ], key=lambda k: telegram_order(*k))
     # an unknown kind (e.g. a leftover "amazon" row) sorts last
-    assert [k[0] for k in keys] == ["listing", "niche", "listing", "hot_product", "amazon"]
+    assert [k[0] for k in keys] == ["listing", "niche", "listing", "shop", "hot_product", "amazon"]
     assert keys[0][1] == 2
+
+
+def _shop(sid, sales, days=7, prev=None):
+    return ShopRow(sid, f"Shop{sid}", f"https://www.etsy.com/shop/S{sid}", f"https://img/s{sid}.jpg",
+                   sales, days, prev)
+
+
+def test_shop_needs_full_week_minimum_and_growth():
+    rows = [
+        _shop(1, 30),               # no previous week: minimum is enough
+        _shop(2, 29),               # below minimum
+        _shop(3, 60, days=6),       # less than a full week of history
+        _shop(4, 45, prev=30),      # exactly 1.5x
+        _shop(5, 44, prev=30),      # below 1.5x
+        _shop(6, 30, prev=0),       # previous week 0 counts as 1
+    ]
+    out = {c.subject_id: c for c in shop_candidates(rows, CFG)}
+    assert set(out) == {1, 4, 6}
+    c = out[4]
+    assert (c.kind, c.level, c.priority, c.title) == ("shop", 1, 45, "Shop4")
+    assert c.reason == "+45 đơn/7 ngày (tuần trước +30)"
+    assert out[1].reason == "+30 đơn/7 ngày"
+    assert (c.image_url, c.link, c.external_url, c.watch_keyword) == (
+        "https://img/s4.jpg", "/shops/4", "https://www.etsy.com/shop/S4", None)
+
+
+def test_shop_thresholds_from_config():
+    cfg = AlertsConfig(shop_min_sales_7d=10, shop_growth=2.0)
+    out = shop_candidates([_shop(1, 10), _shop(2, 19, prev=10), _shop(3, 20, prev=10)], cfg)
+    assert [c.subject_id for c in out] == [1, 3]

@@ -77,3 +77,32 @@ async def test_run_scan_survives_alert_failure(session_factory, monkeypatch):
     monkeypatch.setattr(scan_mod, "detect_alerts", boom)
     run_ids = await scan_mod.run_scan(session_factory, [FakeConnector()])
     assert len(run_ids) == 1
+
+
+def _watched_shop(session, sid, snaps, watched=True):
+    from datetime import timedelta
+
+    from app.models import Shop, ShopSnapshot
+
+    session.add(Shop(id=sid, name=f"Shop{sid}", url=f"https://www.etsy.com/shop/S{sid}",
+                     icon_url=f"https://img/s{sid}.jpg", first_seen=TODAY, last_seen=TODAY,
+                     watched_at=NOW if watched else None))
+    for ago, sold in snaps:
+        session.add(ShopSnapshot(shop_id=sid, date=TODAY - timedelta(days=ago), sold_count=sold))
+    session.flush()
+
+
+def test_shop_alerts_only_for_watched_shops(session):
+    _watched_shop(session, 1, [(14, 0), (7, 20), (0, 60)])         # +40 vs +20 last week -> alert
+    _watched_shop(session, 2, [(14, 0), (7, 30), (0, 70)])         # +40 vs +30: not 1.5x
+    _watched_shop(session, 3, [(7, 0), (0, 35)])                   # no previous week: minimum only
+    _watched_shop(session, 4, [(3, 0), (0, 100)])                  # < 7 days of history
+    _watched_shop(session, 5, [(7, 0), (0, 100)], watched=False)   # not watched
+    _watched_shop(session, 6, [])                                  # no snapshots
+    alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
+    assert sorted(a.subject_id for a in alerts if a.kind == "shop") == [1, 3]
+    one = next(a for a in alerts if a.subject_id == 1)
+    assert (one.title, one.reason, one.link, one.image_url, one.external_url, one.watch_keyword, one.priority) == (
+        "Shop1", "+40 đơn/7 ngày (tuần trước +20)", "/shops/1", "https://img/s1.jpg",
+        "https://www.etsy.com/shop/S1", None, 40)
+    assert detect_alerts(session, TODAY, AlertsConfig(), NOW) == []  # cooldown

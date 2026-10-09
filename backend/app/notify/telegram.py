@@ -31,6 +31,7 @@ KEYWORD_LIMIT = 40
 KIND_STYLE = {
     "niche": ("🚀", "Ngách bứt phá"),
     "listing": ("🔥", "Etsy bứt phá"),
+    "shop": ("🏪", "Shop tăng tốc"),
     "hot_product": ("⭐", "Sản phẩm hot"),
 }
 

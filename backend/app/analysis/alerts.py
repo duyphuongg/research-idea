@@ -18,6 +18,8 @@ class AlertsConfig:
     telegram_max_items: int = 5
     quiet_start: int = 22  # local hour; no Telegram from quiet_start until quiet_end (equal = off)
     quiet_end: int = 7
+    shop_min_sales_7d: int = 30  # 🏪 watched shop: orders in the last 7 days …
+    shop_growth: float = 1.5  # … and at least this multiple of the previous week (when known)
 
 
 def load_alerts_config() -> AlertsConfig:
@@ -36,8 +38,8 @@ def load_alerts_config() -> AlertsConfig:
 
 LISTING_LABEL = {"super_breakout": "Super Breakout", "steady_grower": "Steady Grower"}
 METRIC_LABEL = {"reviews": "reviews", "favorites": "lượt lưu", "views": "lượt xem"}
-# Telegram order: super breakout, niche, steady grower, hot product (unknown kinds last)
-KIND_RANK = {("listing", 2): 0, ("niche", 1): 1, ("listing", 1): 2, ("hot_product", 1): 3}
+# Telegram order: super breakout, niche, steady grower, shop, hot product (unknown kinds last)
+KIND_RANK = {("listing", 2): 0, ("niche", 1): 1, ("listing", 1): 2, ("shop", 1): 3, ("hot_product", 1): 4}
 
 
 @dataclass(frozen=True)
@@ -86,6 +88,17 @@ class HotRow:
     metric: str | None
     watch_keyword: str
     link: str
+
+
+@dataclass(frozen=True)
+class ShopRow:
+    shop_id: int
+    name: str
+    url: str | None
+    icon_url: str | None
+    sales_7d: int
+    days_7d: int  # actual span the 7-day sales cover
+    prev_sales_7d: int | None
 
 
 @dataclass(frozen=True)
@@ -140,6 +153,24 @@ def hot_candidates(rows: Iterable[HotRow]) -> list[AlertCandidate]:
             kind="hot_product", subject_id=r.product_id, level=1, priority=r.velocity or 0.0,
             title=r.title, reason=reason, image_url=r.image_url, link=r.link,
             external_url=r.url, watch_keyword=r.watch_keyword,
+        ))
+    return out
+
+
+def shop_candidates(rows: Iterable[ShopRow], cfg: AlertsConfig) -> list[AlertCandidate]:
+    out = []
+    for r in rows:
+        if r.days_7d < 7 or r.sales_7d < cfg.shop_min_sales_7d:
+            continue
+        if r.prev_sales_7d is not None and r.sales_7d < cfg.shop_growth * max(r.prev_sales_7d, 1):
+            continue
+        reason = f"+{r.sales_7d} đơn/7 ngày"
+        if r.prev_sales_7d is not None:
+            reason += f" (tuần trước +{r.prev_sales_7d})"
+        out.append(AlertCandidate(
+            kind="shop", subject_id=r.shop_id, level=1, priority=float(r.sales_7d), title=r.name,
+            reason=reason, image_url=r.icon_url, link=f"/shops/{r.shop_id}", external_url=r.url,
+            watch_keyword=None,
         ))
     return out
 

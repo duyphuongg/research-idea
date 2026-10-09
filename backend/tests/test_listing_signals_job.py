@@ -375,3 +375,50 @@ async def test_job_records_us_shops_and_daily_snapshots(session_factory):
         assert [(sn.date, sn.sold_count) for sn in snaps] == [(DAY1, 50), (DAY2, 50)]
         products = s.scalars(select(Product)).all()
         assert products and {p.shop_id for p in products} == {1}
+
+
+SHOP_URL = "https://openapi.etsy.com/v3/application/shops"
+
+
+def shop_payload(shop_id, sold, us=True, name=None):
+    return {"shop_id": shop_id, "shop_name": name or f"Shop{shop_id}", "is_shop_us_based": us,
+            "url": f"https://www.etsy.com/shop/S{shop_id}", "icon_url_fullxfull": f"https://img/s{shop_id}.jpg",
+            "transaction_sold_count": sold, "num_favorers": 9, "listing_active_count": 20,
+            "review_average": 4.9, "review_count": 33}
+
+
+async def test_watched_shops_refreshed_after_tracking(session_factory, caplog):
+    from datetime import datetime as dt
+
+    from app.models import Shop, ShopSnapshot
+
+    with session_factory() as s:
+        for sid, watched in ((7, True), (8, True), (9, True), (10, False)):
+            s.add(Shop(id=sid, name=f"Old{sid}", first_seen=DAY1, last_seen=DAY1,
+                       watched_at=dt(2026, 10, 1) if watched else None))
+        s.commit()
+    search, batch = day(100, 10, 50, 2)
+    with respx.mock(assert_all_called=False) as mock:
+        mock.get(url__startswith=SEARCH_URL).mock(return_value=httpx.Response(200, json=search))
+        mock.get(url__startswith=BATCH_URL).mock(return_value=httpx.Response(200, json=batch))
+        ok = mock.get(f"{SHOP_URL}/7").mock(return_value=httpx.Response(200, json=shop_payload(7, 1234)))
+        bad = mock.get(f"{SHOP_URL}/8").mock(return_value=httpx.Response(404, json={"error": "gone"}))
+        foreign = mock.get(f"{SHOP_URL}/9").mock(return_value=httpx.Response(200, json=shop_payload(9, 5, us=False)))
+        unwatched = mock.get(f"{SHOP_URL}/10").mock(return_value=httpx.Response(200, json=shop_payload(10, 5)))
+        with caplog.at_level("WARNING"):
+            run_id = await run_listing_signals(
+                session_factory, "k", [], DAY2, config=CONFIG, client_factory=client_factory
+            )
+    assert ok.call_count == 1 and bad.call_count == 1 and foreign.call_count == 1
+    assert unwatched.call_count == 0
+    assert ok.calls[0].request.headers["x-api-key"] == "k"
+    assert "shop 8" in caplog.text
+    with session_factory() as s:
+        assert s.get(ScanRun, run_id).status == "ok"
+        seven = s.get(Shop, 7)
+        assert (seven.name, seven.icon_url, seven.last_seen) == ("Shop7", "https://img/s7.jpg", DAY2)
+        snap = s.scalars(select(ShopSnapshot).where(ShopSnapshot.shop_id == 7)).one()
+        assert (snap.date, snap.sold_count, snap.listing_count) == (DAY2, 1234, 20)
+        for sid in (8, 9):
+            assert s.get(Shop, sid).name == f"Old{sid}"
+            assert s.scalars(select(ShopSnapshot).where(ShopSnapshot.shop_id == sid)).all() == []

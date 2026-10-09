@@ -6,8 +6,15 @@ from app.config import Settings
 def test_defaults_match_yaml():
     assert load_alerts_config() == AlertsConfig(
         niche_min_score=60, niche_min_growth=0.20, cooldown_days=7, telegram_max_items=5,
-        quiet_start=22, quiet_end=7,
+        quiet_start=22, quiet_end=7, shop_min_sales_7d=30, shop_growth=1.5,
     )
+
+
+def test_shop_thresholds_types(monkeypatch):
+    monkeypatch.setattr(alerts_mod, "load_yaml", lambda name: {"shop_min_sales_7d": "40", "shop_growth": "2"})
+    cfg = load_alerts_config()
+    assert cfg.shop_min_sales_7d == 40 and isinstance(cfg.shop_min_sales_7d, int)
+    assert cfg.shop_growth == 2.0 and isinstance(cfg.shop_growth, float)
 
 
 def test_missing_file_gives_defaults(monkeypatch):

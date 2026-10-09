@@ -25,6 +25,7 @@ from app.connectors.http import RateLimiter, Sleep, request_with_retry
 from app.keywords import canonical_keyword
 from app.models import ListingSignal, Product, ProductKeyword, ProductSnapshot
 from app.pipeline.scan import MAX_ERROR_LEN, finish_run, start_run
+from app.pipeline.shops import refresh_watched_shops
 from app.pipeline.store import persist_batch, upsert_product
 
 logger = logging.getLogger(__name__)
@@ -88,6 +89,10 @@ class EtsySignalsClient:
             if len(batch) < PAGE_SIZE:
                 break
         return results
+
+    async def get_shop(self, shop_id: int) -> dict[str, Any]:
+        """One shop object (same keys as the `shop` embedded in listing payloads)."""
+        return await self._get_json(f"/shops/{shop_id}", {})
 
     async def _fetch_chunk(self, chunk: list[str]) -> list[dict[str, Any]]:
         data = await self._get_json(
@@ -388,6 +393,7 @@ async def run_listing_signals(
                 gone_total += chunk_gone
                 del details
             failed_ids = set(client.failed_ids)
+            await refresh_watched_shops(session_factory, client, today)
         returned = len(tracked & seen)
         degraded = bool(tracked) and returned < len(tracked) * MIN_RETURNED_FRACTION
         skip_absent = bool(failed_ids) or degraded

@@ -1,4 +1,4 @@
-"""Weekly Telegram digest: top rising niches, watchlist, upcoming US events and last week's alerts."""
+"""Weekly Telegram digest: top rising niches, watchlist, top shops, upcoming US events and last week's alerts."""
 
 import html
 import logging
@@ -15,6 +15,7 @@ from app.config import Settings
 from app.db import utcnow
 from app.models import Alert, Keyword, KeywordScore, ListingSignal, Product
 from app.notify.telegram import KIND_STYLE, TelegramError, in_quiet_hours, send_text, telegram_configured
+from app.services.shops import shop_metrics, shops_matching
 from app.services.watchlist import listing_keyword_filter, seed_keyword_ids, watch_keywords
 from app.settings_store import get_setting, set_setting
 
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 TEXT_LIMIT = 4096  # Telegram sendMessage limit
 TOP_N = 5
+TOP_SHOPS = 3
 MAX_EVENTS = 4
 EVENT_HORIZON_DAYS = 60
 BREAKOUT = ("super_breakout", "steady_grower")
@@ -103,6 +105,23 @@ def _watchlist(session: Session, since: datetime) -> list[str]:
     return lines
 
 
+def _top_shops(session: Session, app_url: str | None) -> list[str]:
+    """Shops selling the most over a full 7 days, among shops matching any watch keyword."""
+    ids: set[int] = set()
+    for seed in watch_keywords(session):
+        ids |= shops_matching(session, seed.keyword)
+    if not ids:
+        return []
+    rows = [m for m in shop_metrics(session, ids) if m.sales_7d is not None and m.sales_7d.days >= 7]
+    if not rows:
+        return []
+    rows.sort(key=lambda m: (-m.sales_7d.value, m.shop.name, m.shop.id))
+    return ["🏪 <b>Shop ra đơn nhiều nhất 7 ngày</b>"] + [
+        f"• {_link(m.shop.name, f'{app_url}/shops/{m.shop.id}' if app_url else None)} — +{m.sales_7d.value} đơn"
+        for m in rows[:TOP_SHOPS]
+    ]
+
+
 def _upcoming(today: date) -> list[str]:
     cfg = load_calendar()
     occs = [o for o in occurrences(cfg.events, today, EVENT_HORIZON_DAYS) if o.start >= today]
@@ -143,7 +162,7 @@ def build_digest(session: Session, today: date, app_url: str | None, *, now: dat
     since = (now or utcnow()) - timedelta(days=7)
     start, end = today - timedelta(days=7), today - timedelta(days=1)
     header = [f"📊 <b>Tổng kết 7 ngày qua ({start:%d/%m} – {end:%d/%m})</b>"]
-    body = [_rising(session, app_url), _watchlist(session, since), _upcoming(today)]
+    body = [_rising(session, app_url), _watchlist(session, since), _top_shops(session, app_url), _upcoming(today)]
     footer = _alert_summary(session, since, app_url)
     while len(text := _join([header, *body, footer])) > TEXT_LIMIT:
         longest = max((s for s in body if len(s) > 1), key=lambda s: len("\n".join(s)), default=None)

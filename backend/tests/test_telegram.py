@@ -123,6 +123,7 @@ async def test_no_app_url_plain_title_and_no_view_all_link(session):
     ([("hot_product", 1), ("listing", 1)], True),
     ([("hot_product", 1), ("niche", 1)], False),
     ([("hot_product", 1), ("listing", 2)], False),
+    ([("shop", 1), ("hot_product", 1)], True),
 ])
 async def test_silent_unless_high_priority(session, kinds, silent):
     for i, (kind, level) in enumerate(kinds):
@@ -302,3 +303,16 @@ async def test_app_url_is_escaped(session):
                            now=NOW, local_now=LOCAL)
     text = _body(msg.calls[0])["text"]
     assert "a=1&amp;b=&lt;2&gt;/alerts" in text
+
+
+async def test_shop_alert_style(session):
+    a = _alert(session, 1, kind="shop", image=False, reason="+45 đơn/7 ngày")
+    a.link, a.watch_keyword, a.title = "/shops/1", None, "CoolShop"
+    session.flush()
+    with respx.mock(assert_all_called=False) as mock:
+        _, _, msg = _routes(mock)
+        await send_pending(session, _settings(), now=NOW, local_now=LOCAL)
+    body = _body(msg.calls[0])
+    assert "1. 🏪 <b>Shop tăng tốc</b>\n" in body["text"]
+    assert '<a href="http://mac.ts.net:3737/shops/1">CoolShop</a> — +45 đơn/7 ngày' in body["text"]
+    assert body["disable_notification"] is True

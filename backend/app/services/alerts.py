@@ -1,4 +1,4 @@
-"""Detect alerts (niches, listings, hot products) after a scan."""
+"""Detect alerts (niches, listings, watched shops, hot products) after a scan."""
 
 from datetime import date, datetime, timedelta
 from urllib.parse import urlencode
@@ -7,15 +7,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.analysis.alerts import (
-    AlertCandidate, AlertsConfig, HotRow, ListingRow, NicheRow, PastAlert,
-    dedupe, hot_candidates, listing_candidates, load_alerts_config, niche_candidates,
+    AlertCandidate, AlertsConfig, HotRow, ListingRow, NicheRow, PastAlert, ShopRow,
+    dedupe, hot_candidates, listing_candidates, load_alerts_config, niche_candidates, shop_candidates,
 )
 from app.analysis.listing_signals import load_signals_config
 from app.db import utcnow
 from app.models import (
-    Alert, Keyword, KeywordScore, ListingSignal, Product, ProductKeyword,
+    Alert, Keyword, KeywordScore, ListingSignal, Product, ProductKeyword, Shop,
 )
 from app.services.hot import compute_product_metrics
+from app.services.shops import shop_metrics
 from app.services.watchlist import child_keyword_ids, listing_matches, seed_keyword_ids, watch_keywords
 
 
@@ -84,6 +85,19 @@ def _hot_rows(session: Session, seeds: list[str]) -> list[HotRow]:
     return out
 
 
+def _shop_rows(session: Session) -> list[ShopRow]:
+    """Watched shops with a known 7-day sales delta."""
+    watched = list(session.scalars(select(Shop.id).where(Shop.watched_at.is_not(None))))
+    if not watched:
+        return []
+    return [
+        ShopRow(m.shop.id, m.shop.name, m.shop.url, m.shop.icon_url, m.sales_7d.value, m.sales_7d.days,
+                m.prev_sales_7d.value if m.prev_sales_7d else None)
+        for m in shop_metrics(session, watched)
+        if m.sales_7d is not None
+    ]
+
+
 def detect_alerts(
     session: Session, today: date, cfg: AlertsConfig | None = None, now: datetime | None = None
 ) -> list[Alert]:
@@ -94,6 +108,7 @@ def detect_alerts(
     cands: list[AlertCandidate] = [
         *niche_candidates(_niche_rows(session, seeds), cfg),
         *listing_candidates(_listing_rows(session, seeds)),
+        *shop_candidates(_shop_rows(session), cfg),
         *hot_candidates(_hot_rows(session, seeds)),
     ]
     past = [

@@ -218,3 +218,54 @@ async def test_run_scan_without_telegram_sends_nothing(session_factory):
     assert not mock.calls
     with session_factory() as s:
         assert get_setting(s, "digest_last_week") is None
+
+
+def _shop(session, sid, name, sold_7d_ago, sold_now, title, *, days=7):
+    from app.models import Shop, ShopSnapshot
+
+    session.add(Shop(id=sid, name=name, first_seen=L - timedelta(days=days), last_seen=L))
+    session.add(ShopSnapshot(shop_id=sid, date=L - timedelta(days=days), sold_count=sold_7d_ago))
+    session.add(ShopSnapshot(shop_id=sid, date=L, sold_count=sold_now))
+    session.add(Product(source="etsy", external_id=f"s{sid}", title=title, url="u", product_type="tshirt",
+                        shop_id=sid))
+    session.flush()
+
+
+def test_top_shops_section(session):
+    session.add(Seed(keyword="football mom"))
+    session.add(Seed(keyword="ghost"))
+    _shop(session, 1, "Alpha", 100, 140, "Football Mom Tee")         # +40
+    _shop(session, 2, "Beta & Co", 10, 90, "Spooky Ghost Shirt")     # +80
+    _shop(session, 3, "Gamma", 0, 20, "Football Mom Hoodie")         # +20
+    _shop(session, 4, "Delta", 0, 10, "Ghost Tee")                   # +10, 4th
+    _shop(session, 5, "Short", 0, 999, "Ghost Tee", days=3)          # under 7 days of history
+    _shop(session, 6, "Other", 0, 500, "Cat Tee")                    # no watch keyword
+    text = build_digest(session, TODAY, APP, now=NOW)
+    section = text.split("🏪 <b>Shop ra đơn nhiều nhất 7 ngày</b>\n")[1].split("\n\n")[0]
+    assert section.split("\n") == [
+        f'• <a href="{APP}/shops/2">Beta &amp; Co</a> — +80 đơn',
+        f'• <a href="{APP}/shops/1">Alpha</a> — +40 đơn',
+        f'• <a href="{APP}/shops/3">Gamma</a> — +20 đơn',
+    ]
+    # right after the Watchlist section, before the calendar
+    assert text.index("👀 <b>Watchlist</b>") < text.index("🏪") < text.index("📅")
+
+
+def test_top_shops_without_app_url_is_plain(session):
+    session.add(Seed(keyword="ghost"))
+    _shop(session, 1, "Alpha", 0, 12, "Ghost Tee")
+    text = build_digest(session, TODAY, None, now=NOW)
+    assert "• Alpha — +12 đơn" in text
+
+
+def test_top_shops_omitted_without_rows(session):
+    session.add(Seed(keyword="ghost"))
+    _shop(session, 1, "Alpha", 0, 12, "Cat Tee")
+    assert "🏪" not in build_digest(session, TODAY, APP, now=NOW)
+
+
+def test_alert_summary_counts_shop_alerts(session):
+    _alert(session, 1, kind="listing")
+    _alert(session, 2, kind="shop")
+    _alert(session, 3, kind="hot_product")
+    assert "🔔 <b>Tuần qua:</b> 3 tin (1 🔥 · 1 🏪 · 1 ⭐)" in build_digest(session, TODAY, None, now=NOW)
