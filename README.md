@@ -108,6 +108,17 @@ Mốc tính lùi: thiết kế −8 tuần, lên sản phẩm −6 tuần, đẩ
 Mỗi sự kiện gợi ý ghép với seed của bạn (vd "halloween nurse"); các sự kiện sale ghép dạng "<seed> gift" / "<seed> christmas gift". Đồng thời liệt kê keyword liên quan đang có trên Trend Radar.
 Chỉnh sự kiện / thời gian giao hàng trong `backend/config/us_calendar.yaml`.
 
+## Shop Explorer (`/shops`)
+
+Shop Etsy ở Mỹ mà app thấy qua các lần quét (shop của mọi listing Etsy và Etsy bứt phá). Mỗi lần quét, app chụp **tổng số đơn đã bán** của shop (Etsy công khai số này), số listing, rating, lượt yêu thích — 1 bản/ngày. Từ đó:
+
+- **+Đơn 7 ngày / 30 ngày** = tổng đơn hôm nay − tổng đơn 7/30 ngày trước. Chưa đủ lịch sử thì hiện số tính được kèm "(n ngày)"; chưa có 2 lần chụp thì hiện "—" (không phải 0).
+- **Đơn/listing** = tổng đơn ÷ số listing đang bán (shop ít listing mà bán nhiều = mẫu mạnh).
+- Tìm theo ngách (vd `game day` — shop có sản phẩm khớp nguyên từ), lọc theo tổng đơn, số listing, đơn/listing, năm mở shop, rating; lọc nhanh "Đang lên 7 ngày", "Shop mới 2025–2026", "Ít listing bán nhiều", "Shop lớn".
+- Bấm ☆ để **theo dõi shop**: shop hiện ở trang Watchlist ("Shop đang theo dõi") và được cập nhật trực tiếp mỗi lần quét (1 request Etsy/shop).
+- Tin 🏪 **Shop tăng tốc** (Tin mới + Telegram, im lặng): shop đang theo dõi bán ≥ 30 đơn/7 ngày và ≥ 1,5× tuần trước (`shop_min_sales_7d`, `shop_growth` trong `backend/config/alerts.yaml`).
+- Tin tổng kết thứ Hai có mục 🏪 top 3 shop ra nhiều đơn nhất 7 ngày trong các ngách của Watchlist.
+
 ## Watchlist & Tin mới
 
 **Watchlist** (`/watchlist`): các keyword bạn theo dõi. Mỗi keyword là một thẻ: điểm, ngách con tìm được (từ tag Etsy và gợi ý Google), số mẫu Etsy đang Super Breakout / Steady Grower kèm ảnh, nút xem chi tiết và xem listing (trang Etsy bứt phá lọc sẵn theo keyword). Etsy, Google gợi ý và Etsy bứt phá dùng Watchlist để tìm; Google xu hướng ngày thì không.
