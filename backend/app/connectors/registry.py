@@ -48,4 +48,5 @@ def connector_status(settings: Settings, enabled_overrides: dict[str, bool]) -> 
         }
         for name, kind in (("etsy_signals", "signals"), ("etsy_counts", "counts"))
     )
+    statuses.append({"name": "nfl", "kind": "sports", "configured": True, "enabled": enabled_overrides.get("nfl", True)})
     return statuses

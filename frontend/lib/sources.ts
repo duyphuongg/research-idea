@@ -10,6 +10,7 @@ export const SOURCE_INK: Record<string, Ink> = {
   etsy_counts: "cyan",
   google_suggest: "yellow",
   google_daily: "yellow",
+  nfl: "magenta",
 };
 
 /** Single-letter plate code shown next to the ink (C/M/Y/K). */

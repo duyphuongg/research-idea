@@ -306,6 +306,34 @@ export type ShopQuery = {
   offset?: number;
 };
 
+export type NflWeek = { season: number; season_type: number; week: number; games: number };
+export type NflLine = { category: string; stat_line: string };
+export type NflStandout = {
+  athlete_id: string;
+  name: string;
+  position: string | null;
+  jersey: string | null;
+  team: string | null;
+  headshot_url: string | null;
+  player_url: string | null;
+  games: string[];
+  lines: NflLine[];
+  points: number;
+  performance: number;
+  etsy_listings: number | null;
+  merch_suggestions: number | null;
+  trending: boolean;
+  potential: number;
+};
+export type NflPage = {
+  season: number | null;
+  season_type: number | null;
+  week: number | null;
+  weeks: NflWeek[];
+  items: NflStandout[];
+};
+export type NflQuery = { season?: number; season_type?: number; week?: number };
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -368,4 +396,5 @@ export const api = {
     request<WorkItem>(`/api/work/${kind}/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteWork: (kind: WorkKind, id: number) => request<void>(`/api/work/${kind}/${id}`, { method: "DELETE" }),
   getCalendar: (days = 120) => request<CalendarPage>(`/api/calendar${toQuery({ days })}`),
+  getNflStandouts: (q: NflQuery = {}) => request<NflPage>(`/api/nfl/standouts${toQuery(q)}`),
 };

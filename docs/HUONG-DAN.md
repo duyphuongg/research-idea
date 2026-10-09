@@ -73,6 +73,16 @@ Nhập một keyword (hoặc bấm chip Watchlist) để xem trong một trang:
 - **Cụm từ cho tiêu đề**: các cụm nhiều từ nên có trong tiêu đề sản phẩm.
 - "Hàng bứt phá" ở đây gồm Super Breakout, Steady Grower và Graduated.
 
+### NFL tuần này (`/nfl`)
+
+Cầu thủ chơi nổi bật nhất trong tuần NFL, xếp theo **tiềm năng làm áo**. Dữ liệu từ ESPN, lấy ở mỗi lần quét (tuần hiện tại + tuần trước, chỉ trận đã kết thúc).
+
+- Mỗi trận lấy 3 cầu thủ dẫn đầu: **Chuyền** (QB), **Chạy**, **Bắt bóng**. **Điểm** kiểu fantasy: chuyền yard/25 + 4/TD − 2/INT; chạy yard/10 + 6/TD; bắt bóng yard/10 + 6/TD + 0,5/lần bắt.
+- **Tiềm năng 0–100** = 50% phong độ (xếp hạng điểm trong tuần) + 30% số gợi ý Google về áo cho "<tên> shirt" + 20% số listing Etsy "<tên> shirt" (nhu cầu đã có) + 10 nếu tên đang lên Google xu hướng ngày (🔥 Đang trend).
+- Mặc định hiện tuần gần nhất đã đá đủ (≥ 10 trận); chọn tuần khác ở ô **Tuần**. Sắp xếp theo Tiềm năng / Điểm thi đấu / Etsy listing.
+- Link **ESPN**, **Etsy** (tìm "<tên> shirt"), **Phân tích ngách**.
+- ⚠️ Tên, số áo, hình cầu thủ và logo đội thuộc bản quyền NFL/NFLPA — dùng làm cảm hứng, tránh in trực tiếp.
+
 ### Việc của tôi (`/work`)
 
 Đánh dấu ngách hoặc listing bằng nút trạng thái (có ở Trend Radar, Watchlist, Etsy bứt phá, Bán chạy, Phân tích ngách): **💡 Ý tưởng → 🎨 Đang thiết kế → ✅ Đã đăng**, hoặc **⏸ Bỏ qua**, kèm ghi chú. Trang này gom tất cả theo trạng thái.
@@ -155,7 +165,7 @@ Các dịp bán hàng ở Mỹ (Halloween, Black Friday–Cyber Monday, 11.11, 1
 ### Cài đặt (`/settings`)
 
 - **Watchlist keyword**: danh sách hiện tại, bấm để mở trang chi tiết, xóa keyword (thêm keyword ở trang Watchlist).
-- **Nguồn dữ liệu**: bật/tắt từng nguồn (Etsy, Google gợi ý, Google xu hướng ngày, Etsy bứt phá, Etsy đếm cạnh tranh), trạng thái lần quét gần nhất. Nút **Quét ngay**.
+- **Nguồn dữ liệu**: bật/tắt từng nguồn (Etsy, Google gợi ý, Google xu hướng ngày, Etsy bứt phá, Etsy đếm cạnh tranh, NFL (ESPN)), trạng thái lần quét gần nhất. Nút **Quét ngay**.
 - **Lịch sử quét**: từng lần quét, nguồn, số bản ghi, lỗi (nếu có).
 
 Khối **"Bản in hôm nay"** cuối thanh menu trái cho biết từng nguồn quét lần cuối khi nào và có lỗi không.

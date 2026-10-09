@@ -262,3 +262,44 @@ class WorkItem(Base):
     note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class NflPerformance(Base):
+    """A game leader (passing/rushing/receiving) from a finished NFL game (ESPN scoreboard)."""
+
+    __tablename__ = "nfl_performances"
+    __table_args__ = (
+        UniqueConstraint("season", "season_type", "week", "event_id", "athlete_id", "category"),
+        Index("ix_nfl_performances_week", "season", "season_type", "week"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    season: Mapped[int] = mapped_column(Integer)
+    season_type: Mapped[int] = mapped_column(Integer)  # 1 pre, 2 regular, 3 post
+    week: Mapped[int] = mapped_column(Integer)
+    event_id: Mapped[str] = mapped_column(String(20))
+    game: Mapped[str] = mapped_column(String(200))
+    game_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    athlete_id: Mapped[str] = mapped_column(String(20))
+    name: Mapped[str] = mapped_column(String(100))
+    position: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    jersey: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    team: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    category: Mapped[str] = mapped_column(String(30))  # passingYards | rushingYards | receivingYards
+    stat_line: Mapped[str] = mapped_column(String(100))
+    points: Mapped[float] = mapped_column(Float)
+    headshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    player_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class NflPlayerDemand(Base):
+    """Shirt demand for a player on a day: Etsy listings and Google apparel suggestions."""
+
+    __tablename__ = "nfl_player_demand"
+    __table_args__ = (UniqueConstraint("athlete_id", "date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    athlete_id: Mapped[str] = mapped_column(String(20))
+    date: Mapped[date] = mapped_column(Date)
+    etsy_listings: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    merch_suggestions: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -29,7 +29,7 @@ week and have high shirt-selling potential. The user handles design/IP; the page
   games}], items: [...]}`. Default week = latest stored week with ≥ 10 final games, else the latest stored week.
   Item: `athlete_id, name, position, jersey, team, headshot_url, player_url, games: [str], lines: [{category, stat_line}],
   points, performance (0–1 percentile in the week), etsy_listings, merch_suggestions, trending, potential (0–100)`.
-  `potential = 100 · (0.5·performance + 0.3·min(merch_suggestions/6, 1) + 0.2·min(log10(etsy_listings+1)/4, 1))
+  `potential = 100 · (0.5·performance + 0.3·min(merch_suggestions/10, 1) + 0.2·min(log10(etsy_listings+1)/4, 1))
   + 10 if trending`, capped at 100; unknown demand counts as 0. Sorted by potential desc.
 
 ## Frontend

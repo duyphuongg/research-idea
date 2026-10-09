@@ -1,0 +1,271 @@
+{
+ "season": {
+  "year": 2026,
+  "type": 2
+ },
+ "week": {
+  "number": 5
+ },
+ "events": [
+  {
+   "id": "401872980",
+   "name": "Tampa Bay Buccaneers at Dallas Cowboys",
+   "shortName": "TB @ DAL",
+   "date": "2026-10-09T00:15Z",
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": false,
+       "score": "16",
+       "team": {
+        "id": "6",
+        "abbreviation": "DAL"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": true,
+       "score": "24",
+       "team": {
+        "id": "27",
+        "abbreviation": "TB"
+       }
+      }
+     ],
+     "leaders": [
+      {
+       "name": "passingYards",
+       "leaders": [
+        {
+         "displayValue": "24/42, 316 YDS, 1 TD, 2 INT",
+         "value": 316.0,
+         "athlete": {
+          "id": "2577417",
+          "displayName": "Dak Prescott",
+          "headshot": "https://a.espncdn.com/i/headshots/nfl/players/full/2577417.png",
+          "jersey": "4",
+          "position": {
+           "abbreviation": "QB"
+          },
+          "team": {
+           "id": "6"
+          },
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/nfl/player/_/id/2577417/dak-prescott"
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "name": "rushingYards",
+       "leaders": [
+        {
+         "displayValue": "21 CAR, 165 YDS, 1 TD",
+         "value": 165.0,
+         "athlete": {
+          "id": "4596448",
+          "displayName": "Bucky Irving",
+          "headshot": "https://a.espncdn.com/i/headshots/nfl/players/full/4596448.png",
+          "jersey": "7",
+          "position": {
+           "abbreviation": "RB"
+          },
+          "team": {
+           "id": "27"
+          },
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/nfl/player/_/id/4596448/bucky-irving"
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "name": "receivingYards",
+       "leaders": [
+        {
+         "displayValue": "9 REC, 130 YDS, 1 TD",
+         "value": 130.0,
+         "athlete": {
+          "id": "4426354",
+          "displayName": "George Pickens",
+          "headshot": "https://a.espncdn.com/i/headshots/nfl/players/full/4426354.png",
+          "jersey": "3",
+          "position": {
+           "abbreviation": "WR"
+          },
+          "team": {
+           "id": "6"
+          },
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/nfl/player/_/id/4426354/george-pickens"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872981",
+   "name": "Philadelphia Eagles at Jacksonville Jaguars",
+   "shortName": "PHI VS JAX",
+   "date": "2026-10-11T13:30Z",
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_SCHEDULED"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": null,
+       "score": "0",
+       "team": {
+        "id": "30",
+        "abbreviation": "JAX"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": null,
+       "score": "0",
+       "team": {
+        "id": "21",
+        "abbreviation": "PHI"
+       }
+      }
+     ],
+     "leaders": [
+      {
+       "name": "passingYards",
+       "leaders": [
+        {
+         "displayValue": "843 YDS, 8 TD, 2 INT",
+         "value": 843.0,
+         "athlete": {
+          "id": "4360310",
+          "displayName": "Trevor Lawrence",
+          "headshot": "https://a.espncdn.com/i/headshots/nfl/players/full/4360310.png",
+          "jersey": "16",
+          "position": {
+           "abbreviation": "QB"
+          },
+          "team": {
+           "id": "30"
+          },
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/nfl/player/_/id/4360310/trevor-lawrence"
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "name": "rushingYards",
+       "leaders": [
+        {
+         "displayValue": "60 CAR, 277 YDS, 2 TD",
+         "value": 277.0,
+         "athlete": {
+          "id": "4882093",
+          "displayName": "Bhayshul Tuten",
+          "headshot": "https://a.espncdn.com/i/headshots/nfl/players/full/4882093.png",
+          "jersey": "33",
+          "position": {
+           "abbreviation": "RB"
+          },
+          "team": {
+           "id": "30"
+          },
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/nfl/player/_/id/4882093/bhayshul-tuten"
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "name": "receivingYards",
+       "leaders": [
+        {
+         "displayValue": "19 REC, 235 YDS, 1 TD",
+         "value": 235.0,
+         "athlete": {
+          "id": "4241478",
+          "displayName": "DeVonta Smith",
+          "headshot": "https://a.espncdn.com/i/headshots/nfl/players/full/4241478.png",
+          "jersey": "6",
+          "position": {
+           "abbreviation": "WR"
+          },
+          "team": {
+           "id": "21"
+          },
+          "links": [
+           {
+            "rel": [
+             "playercard",
+             "desktop",
+             "athlete"
+            ],
+            "href": "https://www.espn.com/nfl/player/_/id/4241478/devonta-smith"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

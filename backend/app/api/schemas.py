@@ -390,3 +390,41 @@ class NicheReport(BaseModel):
     prices: list[NichePrice]
     tags: list[NicheTag]
     generated: NicheGenerated
+
+
+class NflWeek(BaseModel):
+    season: int
+    season_type: int
+    week: int
+    games: int
+
+
+class NflLine(BaseModel):
+    category: str
+    stat_line: str
+
+
+class NflStandout(BaseModel):
+    athlete_id: str
+    name: str
+    position: str | None
+    jersey: str | None
+    team: str | None
+    headshot_url: str | None
+    player_url: str | None
+    games: list[str]
+    lines: list[NflLine]
+    points: float
+    performance: float
+    etsy_listings: int | None
+    merch_suggestions: int | None
+    trending: bool
+    potential: float
+
+
+class NflPage(BaseModel):
+    season: int | None
+    season_type: int | None
+    week: int | None
+    weeks: list[NflWeek]
+    items: list[NflStandout]

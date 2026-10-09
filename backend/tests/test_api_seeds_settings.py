@@ -25,6 +25,7 @@ def test_settings_defaults(client):
             {"name": "google_daily", "kind": "trend", "configured": True, "enabled": True},
             {"name": "etsy_signals", "kind": "signals", "configured": True, "enabled": True},
             {"name": "etsy_counts", "kind": "counts", "configured": True, "enabled": True},
+            {"name": "nfl", "kind": "sports", "configured": True, "enabled": True},
         ],
     }
 
