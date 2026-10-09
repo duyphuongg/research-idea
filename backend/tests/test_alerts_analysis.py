@@ -116,3 +116,22 @@ def test_shop_thresholds_from_config():
 def test_shop_needs_a_7_to_9_day_span():
     rows = [_shop(1, 60, days=7), _shop(2, 60, days=9), _shop(3, 60, days=10), _shop(4, 60, days=45)]
     assert [c.subject_id for c in shop_candidates(rows, CFG)] == [1, 2]
+
+
+def _shop_pd(sid, sales, prev, prev_days):
+    return ShopRow(sid, f"Shop{sid}", None, None, sales, 7, prev, prev_days)
+
+
+def test_shop_prev_over_under_3_days_is_unknown():
+    # prev 20 over 2 days: unknown, growth check skipped (35 would fail 1.5x of the raw-scaled 70)
+    out = shop_candidates([_shop_pd(1, 35, 20, 2)], CFG)
+    assert [c.subject_id for c in out] == [1]
+    assert out[0].reason == "+35 đơn/7 ngày"
+
+
+def test_shop_prev_is_normalised_to_7_days():
+    # prev 20 over 4 days -> 35 per 7 days
+    rows = [_shop_pd(1, 52, 20, 4), _shop_pd(2, 53, 20, 4)]  # 1.5 * 35 = 52.5
+    out = {c.subject_id: c for c in shop_candidates(rows, CFG)}
+    assert set(out) == {2}
+    assert out[2].reason == "+53 đơn/7 ngày (tuần trước +35)"

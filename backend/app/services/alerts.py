@@ -92,7 +92,8 @@ def _shop_rows(session: Session) -> list[ShopRow]:
         return []
     return [
         ShopRow(m.shop.id, m.shop.name, m.shop.url, m.shop.icon_url, m.sales_7d.value, m.sales_7d.days,
-                m.prev_sales_7d.value if m.prev_sales_7d else None)
+                m.prev_sales_7d.value if m.prev_sales_7d else None,
+                m.prev_sales_7d.days if m.prev_sales_7d else 7)
         for m in shop_metrics(session, watched)
         if m.sales_7d is not None
     ]

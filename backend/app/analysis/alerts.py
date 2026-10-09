@@ -99,6 +99,7 @@ class ShopRow:
     sales_7d: int
     days_7d: int  # actual span the 7-day sales cover
     prev_sales_7d: int | None
+    prev_days_7d: int = 7  # actual span the previous-week value covers
 
 
 @dataclass(frozen=True)
@@ -162,11 +163,14 @@ def shop_candidates(rows: Iterable[ShopRow], cfg: AlertsConfig) -> list[AlertCan
     for r in rows:
         if not 7 <= r.days_7d <= 9 or r.sales_7d < cfg.shop_min_sales_7d:
             continue
-        if r.prev_sales_7d is not None and r.sales_7d < cfg.shop_growth * max(r.prev_sales_7d, 1):
+        prev = None
+        if r.prev_sales_7d is not None and r.prev_days_7d >= 3:  # shorter spans are too noisy to scale
+            prev = round(r.prev_sales_7d * 7 / r.prev_days_7d)
+        if prev is not None and r.sales_7d < cfg.shop_growth * max(prev, 1):
             continue
         reason = f"+{r.sales_7d} đơn/7 ngày"
-        if r.prev_sales_7d is not None:
-            reason += f" (tuần trước +{r.prev_sales_7d})"
+        if prev is not None:
+            reason += f" (tuần trước +{prev})"
         out.append(AlertCandidate(
             kind="shop", subject_id=r.shop_id, level=1, priority=float(r.sales_7d), title=r.name,
             reason=reason, image_url=r.icon_url, link=f"/shops/{r.shop_id}", external_url=r.url,
