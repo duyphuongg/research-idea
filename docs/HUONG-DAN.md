@@ -71,6 +71,9 @@ Nhập một keyword (hoặc bấm chip Watchlist) để xem trong một trang:
 - **Top Tags**: tag các listing trong ngách dùng nhiều nhất, số listing bứt phá dùng tag, nhãn **🔥 nổi** khi tag xuất hiện ở hàng bứt phá nhiều hơn bình thường. Lọc theo loại áo.
 - **Bộ 13 tag**: 13 tag tốt nhất (≤ 20 ký tự, bỏ trùng số ít/số nhiều, ưu tiên tag của hàng bứt phá). Nút **Copy tag** (`a, b, c`) và **Copy #hashtag** (cho TikTok).
 - **Cụm từ cho tiêu đề**: các cụm nhiều từ nên có trong tiêu đề sản phẩm.
+- **Kiểm tra thương hiệu**: mỗi tag có nhãn 🔴 Thương hiệu (đừng dùng) hoặc 🟡 Cần kiểm tra. Bộ 13 tag và cụm từ tiêu đề **tự loại tag 🔴** (hiện danh sách đã loại). Ô **Kiểm tra câu chữ**: dán câu định in (mỗi dòng 1 câu) → app báo rủi ro.
+  - App so với danh sách trong máy: tên giải/sự kiện (NFL, Super Bowl, World Series…), tên đội NFL/MLB/NBA/NHL (tự cập nhật hằng tuần từ ESPN; tên đầy đủ "Dallas Cowboys" = 🔴, tên đội đặc trưng đứng một mình "Yankees" = 🟡, tên là từ thông dụng "cowboys" = không báo), tên cầu thủ NFL (kể cả gọi tắt "cd lamb"), thương hiệu/nhân vật/người nổi tiếng/khẩu hiệu phổ biến.
+  - USPTO không có API tra cứu miễn phí nên đây **không thay thế** tra cứu chính thức — dùng link **Tra thêm trên USPTO** cho câu quan trọng. Thêm/bớt từ trong `backend/config/ip_terms.yaml`.
 - "Hàng bứt phá" ở đây gồm Super Breakout, Steady Grower và Graduated.
 
 ### NFL tuần này (`/nfl`)
@@ -160,6 +163,8 @@ Các phát hiện sau mỗi lần quét. Số trên menu = số tin chưa đọc
 | 🗯️ Khoảnh khắc NFL | tìm kiếm NFL ≥ 20.000 lượt trên Google Mỹ (quét mỗi giờ); tối đa 2 tin/24 giờ | có |
 | 🏈 Cầu thủ NFL tiềm năng | cầu thủ tuần gần nhất đã đá đủ có tiềm năng làm áo ≥ 85; tối đa 3 cầu thủ/tuần thi đấu, mỗi người 1 lần | có |
 
+**☀️ Hôm nay làm gì** — 1 tin mỗi sáng (lần quét 8:00): dịp lễ sắp tới cần làm/sắp hạn đặt hàng, 3 ngách nên làm (cơ hội cao, chưa đánh dấu Đã đăng/Bỏ qua, không dính thương hiệu), cầu thủ NFL nổi bật + khoảnh khắc hot 24 giờ, việc đang thiết kế ≥ 5 ngày / ý tưởng ≥ 7 ngày chưa cập nhật, số tin chưa đọc. Xem trước: `make brief-now` (gửi luôn: `make brief-now SEND=1`).
+
 **Telegram — chống spam**
 
 - Mỗi lần quét **1 thông báo** (album tối đa 5 ảnh, danh sách trong chú thích, "… và N tin khác").
@@ -192,6 +197,7 @@ Khối **"Bản in hôm nay"** cuối thanh menu trái cho biết từng nguồn
 | File | Chỉnh gì |
 | --- | --- |
 | `backend/.env` | Etsy API key, Telegram token/chat, địa chỉ app, thư mục sao lưu (không chia sẻ file này) |
+| `backend/config/ip_terms.yaml` | Danh sách thương hiệu/tên riêng cho kiểm tra rủi ro |
 | `backend/config/events.yaml` | Các giải/vòng chung kết được báo 🏆 |
 | `backend/config/alerts.yaml` | Ngưỡng tin, số tin mỗi thông báo, giờ yên lặng |
 | `backend/config/listing_signals.yaml` | Truy vấn Etsy bứt phá, ngưỡng Super Breakout / Steady Grower |

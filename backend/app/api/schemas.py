@@ -373,11 +373,14 @@ class NicheTag(BaseModel):
     share: float
     lift: float
     rising: bool
+    ip_level: Literal["red", "yellow", "green"] = "green"
 
 
 class NicheGenerated(BaseModel):
     tags: list[str]
     title_phrases: list[str]
+    removed: list["NicheRemovedTag"] = []
+    ip: dict[str, Literal["red", "yellow", "green"]] = {}
 
 
 class NicheReport(BaseModel):
@@ -455,7 +458,37 @@ class NflMomentOut(BaseModel):
     etsy_listings: int | None
     team: str | None
     player: NflMomentPlayer | None
+    ip_level: Literal["red", "yellow", "green"] = "green"
 
 
 class NflMomentsPage(BaseModel):
     items: list[NflMomentOut]
+
+
+IpLevel = Literal["red", "yellow", "green"]
+
+
+class IpHit(BaseModel):
+    term: str
+    category: str
+    level: IpLevel
+
+
+class IpCheckIn(BaseModel):
+    texts: list[str] = Field(max_length=50)
+
+
+class IpCheckResult(BaseModel):
+    text: str
+    level: IpLevel
+    hits: list[IpHit]
+
+
+class IpCheckOut(BaseModel):
+    uspto_url: str
+    results: list[IpCheckResult]
+
+
+class NicheRemovedTag(BaseModel):
+    tag: str
+    term: str

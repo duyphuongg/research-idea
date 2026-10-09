@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now install-hourly uninstall-hourly hourly-now install-events uninstall-events events-now
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now install-hourly uninstall-hourly hourly-now install-events uninstall-events events-now brief-now
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -117,6 +117,10 @@ uninstall-events:
 
 events-now:
 	cd backend && .venv/bin/python scripts/events.py
+
+# xem trước tin buổi sáng "Hôm nay làm gì"; SEND=1 để gửi luôn
+brief-now:
+	cd backend && .venv/bin/python scripts/brief_now.py $(if $(SEND),--send,)
 
 telegram-setup:
 	cd backend && .venv/bin/python scripts/telegram_setup.py

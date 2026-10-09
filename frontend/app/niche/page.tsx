@@ -4,10 +4,19 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import CompetitionBadge from "@/components/CompetitionBadge";
+import IpBadge, { formatIpHits } from "@/components/IpBadge";
 import { TAG_CHIP } from "@/components/SignalCard";
 import WorkStatus from "@/components/WorkStatus";
 import { Button, ButtonLink, Card, EmptyState, Notice, PageHeader, Section, Tabs } from "@/components/ui";
-import { ApiError, api, type NicheReport, type ProductType, type WatchItem } from "@/lib/api";
+import {
+  ApiError,
+  api,
+  type IpCheckResponse,
+  type IpLevel,
+  type NicheReport,
+  type ProductType,
+  type WatchItem,
+} from "@/lib/api";
 import { formatInt, formatNumber, formatPrice } from "@/lib/format";
 
 const TYPE_LABEL: Record<ProductType | "all", string> = {
@@ -269,8 +278,9 @@ function NicheView() {
               onType={(t) => go({ keyword, type: t === "all" ? undefined : t }, true)}
             />
             <div className="space-y-6">
-              <TagSet tags={data.generated.tags} />
+              <TagSet tags={data.generated.tags} ip={data.generated.ip} removed={data.generated.removed} />
               <TitlePhrases phrases={data.generated.title_phrases} />
+              <IpCheck />
             </div>
           </div>
         </>
@@ -393,6 +403,7 @@ function TopTags({
                       >
                         {t.tag}
                       </Link>
+                      <IpBadge level={t.ip_level} />
                       {t.rising && (
                         <span
                           className="whitespace-nowrap rounded-full border border-magenta/40 bg-magenta/10 px-1.5 text-[11px] font-medium leading-4 text-ink"
@@ -418,7 +429,15 @@ function TopTags({
   );
 }
 
-function TagSet({ tags }: { tags: string[] }) {
+function TagSet({
+  tags,
+  ip,
+  removed,
+}: {
+  tags: string[];
+  ip?: Record<string, IpLevel>;
+  removed?: { tag: string; term: string }[];
+}) {
   return (
     <Section title="Bộ 13 tag" aside={<span className="font-mono">{tags.length}/13</span>}>
       {tags.length === 0 ? (
@@ -432,6 +451,7 @@ function TagSet({ tags }: { tags: string[] }) {
                 className="inline-flex items-center gap-1.5 rounded-full border border-rule bg-sheet px-2.5 py-0.5 text-[13px] leading-5 text-ink"
               >
                 {t}
+                {ip?.[t] === "yellow" && <IpBadge level="yellow" />}
                 <span className={`font-mono text-[11px] ${t.length > 20 ? "text-stop" : "text-ink-2"}`}>{t.length}</span>
               </li>
             ))}
@@ -441,6 +461,11 @@ function TagSet({ tags }: { tags: string[] }) {
             <CopyButton text={tags.map(hashtag).join(" ")} label="Copy #hashtag" />
           </div>
           <p className="text-xs leading-5 text-ink-2">Mỗi tag ≤ 20 ký tự (giới hạn Etsy). Số bên cạnh = số ký tự.</p>
+          {removed && removed.length > 0 && (
+            <p className="text-xs leading-5 text-ink-2">
+              Đã loại {removed.length} tag có thương hiệu: {removed.map((r) => `${r.tag} (${r.term})`).join(", ")}
+            </p>
+          )}
         </Card>
       )}
     </Section>
@@ -462,6 +487,94 @@ function TitlePhrases({ phrases }: { phrases: string[] }) {
           ))}
         </Card>
       )}
+    </Section>
+  );
+}
+
+const IP_MAX_TEXTS = 50;
+
+function IpCheck() {
+  const [draft, setDraft] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [res, setRes] = useState<IpCheckResponse | null>(null);
+  const lines = draft
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const tooMany = lines.length > IP_MAX_TEXTS;
+
+  async function check(e: FormEvent) {
+    e.preventDefault();
+    if (lines.length === 0 || tooMany) return;
+    setChecking(true);
+    setError(null);
+    try {
+      setRes(await api.checkIp(lines));
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <Section title="Kiểm tra câu chữ" aside={<span className="font-mono">{lines.length}/{IP_MAX_TEXTS}</span>}>
+      <Card className="space-y-3">
+        <form onSubmit={check} className="space-y-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={4}
+            placeholder={"Mỗi dòng một cụm từ, vd:\nbills mafia\nhockey mom"}
+            aria-label="Cụm từ cần kiểm tra thương hiệu, mỗi dòng một cụm"
+            className="block w-full resize-y rounded-md border border-rule bg-sheet px-3 py-2 text-sm text-ink placeholder:text-ink-2/70 hover:border-ink-2"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" size="sm" variant="primary" disabled={checking || lines.length === 0 || tooMany}>
+              {checking ? "Đang kiểm tra…" : "Kiểm tra"}
+            </Button>
+            {tooMany && <span className="text-xs text-stop">Tối đa {IP_MAX_TEXTS} dòng mỗi lần.</span>}
+          </div>
+        </form>
+
+        {error && (
+          <Notice tone="error" title="Không kiểm tra được">
+            <span className="break-all font-mono text-xs">{error}</span>
+          </Notice>
+        )}
+
+        {res && (
+          <div className="space-y-2 border-t border-rule pt-3">
+            {res.results.length > 0 && (
+              <ul className="divide-y divide-rule">
+                {res.results.map((r, i) => (
+                  <li key={`${r.text}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5">
+                    <IpBadge level={r.level} hits={r.hits} showGreen />
+                    <span className="min-w-0 break-words text-sm text-ink">{r.text}</span>
+                    {r.hits.length > 0 && <span className="text-xs text-ink-2">— {formatIpHits(r.hits)}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {res.uspto_url && (
+              <a
+                href={res.uspto_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-xs font-medium text-ink underline-offset-2 hover:underline"
+              >
+                Tra thêm trên USPTO ↗
+              </a>
+            )}
+          </div>
+        )}
+
+        <p className="text-xs leading-5 text-ink-2">
+          Kiểm tra theo danh sách trong máy (giải đấu, đội, cầu thủ NFL, thương hiệu phổ biến) — không thay thế tra cứu
+          USPTO.
+        </p>
+      </Card>
     </Section>
   );
 }

@@ -7,8 +7,8 @@ from sqlalchemy import select
 
 from app.connectors.etsy import BASE_URL as ETSY_URL
 from app.connectors.google_daily import RSS_URL
-from app.models import NflMoment, NflPlayer, ScanRun
-from app.pipeline.nfl_moments import ESPN_TEAMS_URL, parse_rss, run_nfl_moments
+from app.models import NflMoment, NflPlayer, ScanRun, SportsTeam
+from app.pipeline.nfl_moments import ESPN_TEAMS_URL, TEAM_LEAGUES, TEAMS_URL, parse_rss, run_nfl_moments
 
 NOW = datetime(2026, 10, 9, 10, 30)
 RSS = (Path(__file__).parent / "fixtures/google_trends/nfl_rss.xml").read_text()
@@ -34,9 +34,21 @@ def test_parse_rss():
     assert trends[1].traffic == 10000
 
 
+LEAGUE_TEAMS = {"sports": [{"leagues": [{"teams": [
+    {"team": {"id": "1", "abbreviation": "NYY", "displayName": "New York Yankees", "name": "Yankees"}}]}]}]}
+
+
+def _mock_league_teams():
+    for sport, league in TEAM_LEAGUES[1:]:
+        respx.get(TEAMS_URL.format(sport=sport, league=league)).mock(
+            return_value=httpx.Response(200, json=LEAGUE_TEAMS))
+
+
 @respx.mock
 async def test_run_refreshes_rosters_and_stores_nfl_trends_only(session_factory):
-    respx.get(ESPN_TEAMS_URL).mock(return_value=httpx.Response(200, json=TEAMS))
+    respx.get(ESPN_TEAMS_URL).mock(return_value=httpx.Response(200, json={"sports": [{"leagues": [{"teams": [
+        {"team": {"id": "28", "abbreviation": "WSH", "displayName": "Washington Commanders", "name": "Commanders"}}]}]}]}))
+    _mock_league_teams()
     roster = respx.get(f"{ESPN_TEAMS_URL}/28/roster").mock(return_value=httpx.Response(200, json=ROSTER))
     respx.get(RSS_URL).mock(return_value=httpx.Response(200, text=RSS))
     etsy = respx.get(f"{ETSY_URL}/listings/active").mock(return_value=httpx.Response(200, json={"count": 42}))
@@ -47,6 +59,8 @@ async def test_run_refreshes_rosters_and_stores_nfl_trends_only(session_factory)
 
     with session_factory() as s:
         assert s.get(NflPlayer, "4426348").team == "WSH" and s.get(NflPlayer, "x") is None
+        teams = {(t.league, t.full_name, t.nickname) for t in s.scalars(select(SportsTeam))}
+        assert ("nfl", "Washington Commanders", "Commanders") in teams and ("mlb", "New York Yankees", "Yankees") in teams
         moments = {m.query: m for m in s.scalars(select(NflMoment))}
         assert set(moments) == {"jayden daniels injury", "cowboys"}
         jd = moments["jayden daniels injury"]
@@ -72,6 +86,7 @@ async def test_roster_failure_still_reads_trends(session_factory):
 
 @respx.mock
 async def test_rss_down(session_factory):
+    _mock_league_teams()
     respx.get(ESPN_TEAMS_URL).mock(return_value=httpx.Response(200, json={"sports": [{"leagues": [{"teams": []}]}]}))
     respx.get(RSS_URL).mock(return_value=httpx.Response(404))
     run_id = await run_nfl_moments(session_factory, None, now=NOW, min_interval=0, sleep=_no_sleep)

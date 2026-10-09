@@ -18,7 +18,7 @@ from app.connectors.google_daily import HT_NS, RSS_URL, parse_traffic
 from app.connectors.google_suggest import USER_AGENT
 from app.connectors.http import RateLimiter, Sleep, request_with_retry
 from app.db import utcnow
-from app.models import NflMoment, NflPlayer
+from app.models import NflMoment, NflPlayer, SportsTeam
 from app.pipeline.scan import MAX_ERROR_LEN, finish_run, start_run
 
 logger = logging.getLogger(__name__)
@@ -95,6 +95,37 @@ async def refresh_rosters(client: httpx.AsyncClient, session: Session, today: da
     return count
 
 
+TEAM_LEAGUES = (("football", "nfl"), ("baseball", "mlb"), ("basketball", "nba"), ("hockey", "nhl"))
+TEAMS_URL = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/teams"
+
+
+async def refresh_teams(client: httpx.AsyncClient, session: Session, today: date, limiter: RateLimiter,
+                        sleep: Sleep) -> int:
+    """Team names of the four big US leagues (for the IP-risk check), weekly."""
+    newest = session.scalar(select(func.max(SportsTeam.updated_on)))
+    if newest is not None and newest > today - timedelta(days=ROSTER_REFRESH_DAYS):
+        return 0
+    count = 0
+    for sport, league in TEAM_LEAGUES:
+        resp = await request_with_retry(client, "GET", TEAMS_URL.format(sport=sport, league=league),
+                                        limiter=limiter, sleep=sleep)
+        for item in resp.json()["sports"][0]["leagues"][0]["teams"]:
+            t = item["team"]
+            if not t.get("abbreviation") or not t.get("displayName"):
+                continue
+            row = session.scalar(select(SportsTeam).where(
+                SportsTeam.league == league, SportsTeam.abbreviation == t["abbreviation"]))
+            if row is None:
+                row = SportsTeam(league=league, abbreviation=t["abbreviation"])
+                session.add(row)
+            row.full_name = t["displayName"]
+            row.nickname = t.get("name") or t.get("shortDisplayName") or t["displayName"]
+            row.updated_on = today
+            count += 1
+    session.commit()
+    return count
+
+
 def player_index(session: Session) -> PlayerIndex:
     return PlayerIndex(
         PlayerRef(p.athlete_id, p.first_name, p.last_name, p.team) for p in session.scalars(select(NflPlayer))
@@ -147,9 +178,14 @@ async def run_nfl_moments(
             with session_factory() as session:
                 try:
                     await refresh_rosters(client, session, now.date(), limiter, sleep)
-                except (ConnectorError, ValueError, KeyError, IndexError, TypeError) as exc:
+                except Exception as exc:  # optional: trends still work with the rosters we have
                     session.rollback()
                     errors.append(f"rosters: {type(exc).__name__}: {exc}")
+                try:
+                    await refresh_teams(client, session, now.date(), limiter, sleep)
+                except Exception as exc:  # optional: only feeds the IP-risk check
+                    session.rollback()
+                    errors.append(f"teams: {type(exc).__name__}: {exc}")
                 resp = await request_with_retry(client, "GET", RSS_URL, params={"geo": "US"},
                                                 limiter=limiter, sleep=sleep)
                 trends = parse_rss(resp.text)

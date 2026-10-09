@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.analysis.scoring import percentile_ranks
 from app.db import utcnow
+from app.services.ip import ip_index
 from app.models import NflMoment, NflPerformance, NflPlayer, NflPlayerDemand
 
 FULL_WEEK_GAMES = 10  # default to the latest week with at least this many finished games
@@ -103,12 +104,14 @@ def moments(session: Session, days: int = 7, now: datetime | None = None) -> lis
     """NFL trending searches seen in the last `days`, biggest first."""
     now = now or utcnow()
     rows = session.scalars(select(NflMoment).where(NflMoment.last_seen >= now - timedelta(days=days)))
+    index = ip_index(session)
     out = []
     for m in rows:
         player = session.get(NflPlayer, m.athlete_id) if m.athlete_id else None
         out.append({
             "id": m.id, "query": m.query, "traffic": m.traffic, "first_seen": m.first_seen, "last_seen": m.last_seen,
             "news": m.news or [], "picture_url": m.picture_url, "etsy_listings": m.etsy_listings, "team": m.team,
+            "ip_level": index.check(m.query)["level"],
             "player": None if player is None else {
                 "athlete_id": player.athlete_id, "name": player.name, "team": player.team,
                 "position": player.position, "headshot_url": player.headshot_url,

@@ -336,3 +336,17 @@ class NflMoment(Base):
     athlete_id: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
     team: Mapped[str | None] = mapped_column(String(10), nullable=True)
     etsy_listings: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class SportsTeam(Base):
+    """NFL/MLB/NBA/NHL team names (ESPN), refreshed weekly; used by the IP-risk check."""
+
+    __tablename__ = "sports_teams"
+    __table_args__ = (UniqueConstraint("league", "abbreviation"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    league: Mapped[str] = mapped_column(String(10))
+    abbreviation: Mapped[str] = mapped_column(String(10))
+    full_name: Mapped[str] = mapped_column(String(100))
+    nickname: Mapped[str] = mapped_column(String(60))
+    updated_on: Mapped[date] = mapped_column(Date)

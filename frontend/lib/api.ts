@@ -149,7 +149,21 @@ export type NichePrice = {
   p75: number | null;
   breakout_median: number | null;
 };
-export type NicheTag = { tag: string; listings: number; breakouts: number; share: number; lift: number; rising: boolean };
+export type IpLevel = "red" | "yellow" | "green";
+export type IpHit = { term: string; category: string; level: IpLevel };
+export type IpCheckResult = { text: string; level: IpLevel; hits: IpHit[] };
+export type IpCheckResponse = { uspto_url: string; results: IpCheckResult[] };
+
+export type NicheTag = {
+  tag: string;
+  listings: number;
+  breakouts: number;
+  share: number;
+  lift: number;
+  rising: boolean;
+  /** Absent on an older backend. */
+  ip_level?: IpLevel;
+};
 export type NicheReport = {
   keyword: string;
   keyword_id: number | null;
@@ -163,7 +177,14 @@ export type NicheReport = {
   };
   prices: NichePrice[];
   tags: NicheTag[];
-  generated: { tags: string[]; title_phrases: string[] };
+  generated: {
+    tags: string[];
+    title_phrases: string[];
+    /** Generated items dropped for a red IP hit (absent on an older backend). */
+    removed?: { tag: string; term: string }[];
+    /** IP level of each kept generated tag (absent on an older backend). */
+    ip?: Record<string, IpLevel>;
+  };
 };
 
 export type WorkKind = "keyword" | "product";
@@ -352,6 +373,8 @@ export type NflMoment = {
   etsy_listings: number | null;
   team: string | null;
   player: NflMomentPlayer | null;
+  /** Absent on an older backend. */
+  ip_level?: IpLevel;
 };
 export type NflMomentsPage = { items: NflMoment[] };
 
@@ -418,5 +441,7 @@ export const api = {
   deleteWork: (kind: WorkKind, id: number) => request<void>(`/api/work/${kind}/${id}`, { method: "DELETE" }),
   getCalendar: (days = 120) => request<CalendarPage>(`/api/calendar${toQuery({ days })}`),
   getNflStandouts: (q: NflQuery = {}) => request<NflPage>(`/api/nfl/standouts${toQuery(q)}`),
+  checkIp: (texts: string[]) =>
+    request<IpCheckResponse>("/api/ip/check", { method: "POST", body: JSON.stringify({ texts }) }),
   getNflMoments: (days = 7) => request<NflMomentsPage>(`/api/nfl/moments${toQuery({ days })}`),
 };

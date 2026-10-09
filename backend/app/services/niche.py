@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.analysis.listing_signals import BREAKOUT_STATUSES
 from app.keywords import canonical_keyword, normalize_keyword
-from app.models import ListingSignal, Product, ProductKeyword, ProductSnapshot, TrendSignal
+from app.models import KeywordScore, ListingSignal, Product, ProductKeyword, ProductSnapshot, TrendSignal
+from app.services.ip import ip_index
 from app.services.watchlist import keyword_regex, seed_keyword_ids
 
 PRODUCT_TYPES = ("tshirt", "sweatshirt", "hoodie")
@@ -28,6 +29,14 @@ def competition_level(tshirt_count: float | None) -> str | None:
     if tshirt_count < LOW_COMPETITION:
         return "low"
     return "medium" if tshirt_count < HIGH_COMPETITION else "high"
+
+
+def opportunity(score: KeywordScore) -> float | None:
+    """Hot and uncrowded: mean(demand, momentum) scaled by how little competition there is."""
+    if score.competition is None:
+        return None
+    heat = ((score.demand or 0.0) + (0.5 if score.momentum is None else score.momentum)) / 2
+    return round(100 * heat * (1 - score.competition), 1)
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -148,7 +157,17 @@ def niche_report(session: Session, keyword: str, product_type: str | None = None
             "breakout_share": breakouts / b if b else 0.0,
         })
     tags.sort(key=lambda t: (-t["listings"], -t["breakouts"], t["tag"]))
-    generated, phrases = generate_tags(keyword, tags) if tags else ([], [])
+    index = ip_index(session)
+    checks = {t["tag"]: index.check(t["tag"]) for t in tags}
+    for t in tags:
+        t["ip_level"] = checks[t["tag"]]["level"]
+    safe = [t for t in tags if t["ip_level"] != "red"]
+    generated, phrases = generate_tags(keyword, safe) if safe else ([], [])
+    if index.check(keyword)["level"] == "red":  # the keyword itself (added first) can be a trademark
+        generated = [g for g in generated if index.check(g)["level"] != "red"]
+    would_pick = generate_tags(keyword, tags)[0] if tags else []  # what the set would be without the check
+    removed = [{"tag": g, "term": checks[g]["hits"][0]["term"]}
+               for g in would_pick if g in checks and checks[g]["level"] == "red"]
 
     prices = []
     for t in (product_type,) if product_type else PRODUCT_TYPES:
@@ -164,5 +183,8 @@ def niche_report(session: Session, keyword: str, product_type: str | None = None
         "competition": competition(session, keyword_ids),
         "prices": prices,
         "tags": [{k: v for k, v in t.items() if k != "breakout_share"} for t in tags[:MAX_TAGS]],
-        "generated": {"tags": generated, "title_phrases": phrases},
+        "generated": {
+            "tags": generated, "title_phrases": phrases, "removed": removed,
+            "ip": {g: index.check(g)["level"] for g in generated},
+        },
     }

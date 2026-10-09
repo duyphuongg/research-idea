@@ -67,3 +67,13 @@ def _no_real_telegram(monkeypatch):
     import app.pipeline.scan as scan_mod
 
     monkeypatch.setattr(scan_mod, "get_settings", lambda: Settings(_env_file=None, scheduler_enabled=False))
+
+
+@pytest.fixture(autouse=True)
+def _fresh_ip_index():
+    """The IP index is cached per database URL; every test's in-memory DB starts fresh."""
+    from app.services.ip import clear_cache
+
+    clear_cache()
+    yield
+    clear_cache()

@@ -1,0 +1,46 @@
+# Danh sách kiểm tra rủi ro sở hữu trí tuệ (khớp nguyên cụm từ, không phân biệt hoa thường, số ít/số nhiều).
+# Đỏ = thương hiệu/tên riêng đã đăng ký → đừng in. Vàng = có thể đã đăng ký → tra USPTO trước khi dùng.
+# Tự động thêm: tên đội NFL/MLB/NBA/NHL (ESPN) và tên cầu thủ NFL.
+red:
+  league: [nfl, nba, mlb, nhl, ncaa, wnba, mls, super bowl, world series, stanley cup, nba finals, march madness,
+           final four, sweet sixteen, elite eight, pro bowl, monday night football, sunday night football,
+           thursday night football, nfl draft, olympics, olympic, fifa, world cup, ufc, wwe, nascar, pga tour,
+           pga, ryder cup, daytona 500, indy 500, kentucky derby, wimbledon, us open, heisman]
+  brand: [nike, adidas, under armour, jordan brand, air jordan, reebok, new balance,
+          gildan, comfort colors, bella canvas, carhartt, patagonia, the north face, yeti, stanley cup tumbler,
+          coca cola, coke, pepsi, starbucks, dunkin, mcdonalds, budweiser, bud light, coors, jack daniels,
+          jeep, harley davidson, ford, chevy, chevrolet, john deere, caterpillar, tesla, google,
+          walmart, costco, disney, disneyland, disney world, pixar, marvel, dc comics, star wars, nintendo,
+          pokemon, playstation, xbox, minecraft, fortnite, roblox, hello kitty, sanrio, barbie, hot wheels, lego,
+          nerf, care bears, sesame street, peanuts, looney tunes, spongebob, paw patrol, bluey, peppa pig, cocomelon,
+          harry potter, hogwarts, lord of the rings, game of thrones, friends tv show, the office, stranger things,
+          yellowstone, friday night lights, ted lasso, top gun, rocky balboa, grinch, dr seuss, crocs, lululemon, gucci, louis vuitton, chanel, prada, versace,
+          playboy, nasa, hooters, buc ees, waffle house, cracker barrel, taco bell]
+  character: [mickey mouse, minnie mouse, donald duck, goofy, winnie the pooh, eeyore, stitch, lilo and stitch,
+              elsa, olaf, moana, spiderman, spider man, batman, superman, wonder woman, iron man, hulk, deadpool,
+              groot, baby yoda, grogu, darth vader, mandalorian, pikachu, mario, luigi, sonic, snoopy, charlie brown,
+              garfield, scooby doo, bugs bunny, tweety, shrek, minion, minions, grinch, jack skellington,
+              nightmare before christmas, hocus pocus, sanderson sisters, michael myers, freddy krueger, jason voorhees,
+              chucky, ghostface, pennywise, beetlejuice, wednesday addams, addams family, care bear, smurf]
+  celebrity: [taylor swift, swiftie, travis kelce, tom brady, patrick mahomes, lebron james, michael jordan,
+              kobe bryant, shohei ohtani, caitlin clark, beyonce, dolly parton, elvis, elvis presley, marilyn monroe,
+              kanye, drake, bad bunny, morgan wallen, luke combs, zach bryan, post malone, elon musk, donald trump,
+              trump, joe biden, kamala harris, bob ross, mr rogers, betty white, golden girls]
+yellow:
+  slogan: [who dey, bills mafia, chiefs kingdom, fly eagles fly, go pack go, skol, raider nation, dawg pound,
+           steeler nation, here we go steelers, how bout them cowboys, 12th man, legion of boom, bleed green,
+           lets go mets, go cubs go, fly the w, bring it in, dilly dilly, just do it, built ford tough,
+           keep calm and carry on, life is good, salt life, hang loose, yeehaw, git r done, boy mom, dog mom,
+           girl dad, mama bear, nacho average, eat sleep repeat, cool aunt, its giving, hot girl summer,
+           the eras tour, eras tour, rizz, kelce bowl, tush push, philly special, hail mary, griddy]
+# Tên đội là từ tiếng Anh thông dụng (cowboys, eagles, patriots…): không báo khi đứng một mình,
+# vẫn báo đỏ khi đi kèm thành phố ("dallas cowboys"). Tên đội đặc trưng (yankees, lakers…) đứng một mình → vàng.
+generic_nicknames: [heat, magic, thunder, lightning, wild, stars, kings, jazz, suns, sun, sky, spurs, nets, bulls,
+                    bears, lions, giants, jets, rams, saints, chiefs, cardinals, rangers, royals, angels, pirates,
+                    twins, reds, athletics, mariners, padres, brewers, tigers, rays, guardians, blues, sharks, flames,
+                    ducks, predators, panthers, jaguars, eagles, falcons, ravens, bills, dolphins, texans, colts,
+                    titans, browns, vikings, commanders, chargers, broncos, raiders, cowboys, patriots, buccaneers,
+                    hurricanes, islanders, capitals, penguins, flyers, avalanche, kraken, senators, sabres, hornets,
+                    pistons, pacers, bucks, cavaliers, hawks, wizards, grizzlies, pelicans, rockets, mavericks,
+                    warriors, clippers, nuggets, orioles, blue jays, marlins, nationals, cubs, braves, diamondbacks,
+                    mammoth, wings, fever, mercury, mystics, dream, lynx, storm, aces, liberty, sparks, valkyries]

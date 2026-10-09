@@ -16,7 +16,7 @@ from app.api.schemas import (
     TrendOut,
     TrendPage,
 )
-from app.services.niche import COMPETITION_DAYS, competition_level
+from app.services.niche import COMPETITION_DAYS, competition_level, opportunity
 from app.models import Keyword, KeywordRelation, KeywordScore, Seed, TrendSignal
 
 router = APIRouter(prefix="/api")
@@ -66,14 +66,6 @@ def _listing_counts(session: Session, keyword_ids: list[int], latest: date) -> d
     ):
         out[keyword_id] = int(value)
     return out
-
-
-def opportunity(score: KeywordScore) -> float | None:
-    """Hot and uncrowded: mean(demand, momentum) scaled by how little competition there is."""
-    if score.competition is None:
-        return None
-    heat = ((score.demand or 0.0) + (0.5 if score.momentum is None else score.momentum)) / 2
-    return round(100 * heat * (1 - score.competition), 1)
 
 
 def _trend_out(

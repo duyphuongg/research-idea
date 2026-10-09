@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
+import IpBadge from "@/components/IpBadge";
 import { Button, EmptyState, Notice, Section } from "@/components/ui";
 import { api, type NflMoment, type NflMomentsPage } from "@/lib/api";
 import { formatInt, formatNumber, timeAgo } from "@/lib/format";
@@ -146,6 +147,7 @@ function MomentRow({ moment }: { moment: NflMoment }) {
           <h3 className="min-w-0 break-words font-display text-[15px] font-extrabold leading-5 text-ink">
             {moment.query}
           </h3>
+          <IpBadge level={moment.ip_level} />
           {p ? (
             <Chip>{playerPrefix ? `${playerPrefix} ${p.name}` : p.name}</Chip>
           ) : (

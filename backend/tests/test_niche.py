@@ -101,3 +101,29 @@ def test_graduated_listings_count_as_breakouts(session):
                               status="normal", updated_on=TODAY))
     session.flush()
     assert niche_report(session, "pickleball")["breakouts"] == 1
+
+
+def test_trademark_tags_are_flagged_and_left_out_of_the_set(session):
+    _p(session, "1", "Football Mom Shirt", ["football mom", "nfl football mom", "comfort colors tee", "who dey"], 25)
+    _p(session, "2", "Football Mom Tee", ["football mom", "nfl football mom", "comfort colors tee", "who dey"], 25)
+    session.flush()
+    r = niche_report(session, "football mom")
+    levels = {t["tag"]: t["ip_level"] for t in r["tags"]}
+    assert levels["nfl football mom"] == "red" and levels["who dey"] == "yellow" and levels["football mom"] == "green"
+    assert "nfl football mom" not in r["generated"]["tags"] and "comfort colors tee" not in r["generated"]["tags"]
+    assert {x["tag"]: x["term"] for x in r["generated"]["removed"]} == {
+        "nfl football mom": "nfl", "comfort colors tee": "comfort colors"}
+    assert r["generated"]["ip"]["who dey"] == "yellow"
+
+
+def test_ip_check_api(client, session):
+    from app.models import SportsTeam
+
+    session.add(SportsTeam(league="mlb", abbreviation="NYY", full_name="New York Yankees", nickname="Yankees",
+                           updated_on=TODAY))
+    session.commit()
+    body = client.post("/api/ip/check", json={"texts": ["Yankees mom", " ", "game day vibes", "NFL Sunday"]}).json()
+    assert body["uspto_url"].startswith("https://tmsearch.uspto.gov")
+    assert [(r["text"], r["level"]) for r in body["results"]] == [
+        ("Yankees mom", "yellow"), ("game day vibes", "green"), ("NFL Sunday", "red")]
+    assert client.post("/api/ip/check", json={"texts": ["x"] * 51}).status_code == 422
