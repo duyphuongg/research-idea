@@ -105,7 +105,7 @@ class Product(Base):
     shop_sold_count: Mapped[int | None] = mapped_column(Integer)
     tags: Mapped[Any] = mapped_column(JSON, nullable=True)
     licensed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    shop_id: Mapped[int | None] = mapped_column(ForeignKey("shops.id"), nullable=True)
+    shop_id: Mapped[int | None] = mapped_column(ForeignKey("shops.id"), nullable=True, index=True)
 
     snapshots: Mapped[list["ProductSnapshot"]] = relationship(
         order_by="ProductSnapshot.date", back_populates="product"

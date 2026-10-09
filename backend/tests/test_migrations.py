@@ -43,3 +43,16 @@ def test_drop_amazon_alerts_migration_deletes_only_amazon_rows(tmp_path):
     with engine.connect() as conn:
         kinds = sorted(conn.execute(text("SELECT kind FROM alerts")).scalars())
     assert kinds == ["listing", "niche"]
+
+
+def test_products_shop_id_is_indexed(tmp_path):
+    url = f"sqlite:///{tmp_path / 'i.db'}"
+    cfg = Config(str(BACKEND_DIR / "alembic.ini"))
+    cfg.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    cfg.set_main_option("sqlalchemy.url", url)
+    cfg.attributes["configure_logger"] = False
+    command.upgrade(cfg, "head")
+
+    indexed = [i["column_names"] for i in inspect(create_engine(url)).get_indexes("products")]
+    assert ["shop_id"] in indexed
+    assert Base.metadata.tables["products"].c.shop_id.index is True
