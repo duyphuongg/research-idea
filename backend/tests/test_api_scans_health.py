@@ -128,3 +128,8 @@ def test_start_scan_selects_connectors_and_jobs_by_source(make_client):
     resp = client.post("/api/scans", json={"sources": ["etsy_signals"]})
     assert resp.status_code == 202
     assert resp.json() == {"sources": ["etsy_signals"]}
+
+
+def test_source_health_has_no_amazon(client):
+    names = [s["name"] for s in client.get("/api/health/sources").json()]
+    assert names == ["etsy", "google_suggest", "google_daily", "etsy_signals"]

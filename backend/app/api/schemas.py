@@ -222,35 +222,6 @@ class SignalPage(BaseModel):
     items: list[SignalItem]
 
 
-class AmazonCategoryOut(BaseModel):
-    key: str
-    product_type: str
-
-
-class AmazonItem(BaseModel):
-    product_id: int
-    asin: str
-    rank: int
-    prev_rank: int | None
-    rank_change: int | None
-    is_new_entry: bool
-    title: str
-    url: str
-    image_url: str | None
-    rating: float | None
-    reviews: int | None
-    product_type: str
-    licensed: bool | None
-
-
-class AmazonPage(BaseModel):
-    date: date | None
-    category: str
-    list: str
-    categories: list[AmazonCategoryOut]
-    items: list[AmazonItem]
-
-
 class AlertOut(BaseModel):
     id: int
     kind: str

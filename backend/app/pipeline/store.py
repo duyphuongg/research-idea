@@ -7,12 +7,10 @@ from app.analysis.pod_filter import adds_only_product_words
 from app.connectors.base import (
     NormalizedBatch,
     NormalizedProduct,
-    NormalizedRank,
     NormalizedSignal,
 )
 from app.keywords import get_or_create_keyword, normalize_keyword
 from app.models import (
-    AmazonRank,
     KeywordRelation,
     Product,
     ProductKeyword,
@@ -21,7 +19,7 @@ from app.models import (
 )
 
 # sources whose discovered tags come from real apparel listings — treated as having a parent by the POD filter; keep in sync with app.pipeline.listing_signals.SOURCE
-TRUSTED_SOURCES = frozenset({"etsy_signals", "amazon"})
+TRUSTED_SOURCES = frozenset({"etsy_signals"})
 
 
 def persist_batch(session: Session, batch: NormalizedBatch, today: date) -> int:
@@ -30,40 +28,8 @@ def persist_batch(session: Session, batch: NormalizedBatch, today: date) -> int:
         _upsert_signal(session, signal)
     for item in batch.products:
         upsert_product(session, item, today)
-    ranks_written = sum(_upsert_rank(session, rank) for rank in batch.ranks)
     session.flush()
-    return len(batch.signals) + len(batch.products) + ranks_written
-
-
-def _upsert_rank(session: Session, rank: NormalizedRank) -> int:
-    """Upsert one Amazon rank; returns 1 if written, 0 if the ASIN is not a known product."""
-    product = session.scalar(
-        select(Product).where(Product.source == "amazon", Product.external_id == rank.external_id)
-    )
-    if product is None:
-        return 0
-    row = session.scalar(
-        select(AmazonRank).where(
-            AmazonRank.product_id == product.id,
-            AmazonRank.date == rank.date,
-            AmazonRank.category_key == rank.category_key,
-            AmazonRank.list_name == rank.list_name,
-        )
-    )
-    if row is None:
-        session.add(
-            AmazonRank(
-                product_id=product.id,
-                date=rank.date,
-                category_key=rank.category_key,
-                list_name=rank.list_name,
-                rank=rank.rank,
-            )
-        )
-    else:
-        row.rank = rank.rank
-    session.flush()
-    return 1
+    return len(batch.signals) + len(batch.products)
 
 
 def _upsert_signal(session: Session, signal: NormalizedSignal) -> None:

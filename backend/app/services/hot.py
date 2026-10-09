@@ -21,10 +21,12 @@ class ProductMetrics:
 def compute_product_metrics(session: Session) -> tuple[list[Product], dict[int, ProductMetrics]]:
     """Best Sellers population: products not only tracked by Listing Signals, or linked to a keyword.
 
-    Etsy design files/transfers stored before the digital filter existed are left out.
+    Etsy design files/transfers stored before the digital filter existed are left out, and so are
+    Amazon products kept in the DB from when Amazon was still scanned.
     """
     products = [p for p in session.scalars(
         select(Product)
+        .where(Product.source != "amazon")
         .where(
             ~exists().where(ListingSignal.product_id == Product.id)
             | exists().where(ProductKeyword.product_id == Product.id)

@@ -2,7 +2,6 @@ from collections.abc import Callable
 
 from app.config import Settings
 from app.connectors.base import Connector
-from app.connectors.amazon import AmazonConnector
 from app.connectors.etsy import EtsyConnector
 from app.connectors.google_daily import GoogleDailyTrendsConnector
 from app.connectors.google_suggest import GoogleSuggestConnector
@@ -15,7 +14,6 @@ def make_all_connectors(settings: Settings) -> list[Connector]:
         EtsyConnector(api_key=settings.etsy_api_key),
         GoogleSuggestConnector(),
         GoogleDailyTrendsConnector(),
-        AmazonConnector(),
     ]
 
 

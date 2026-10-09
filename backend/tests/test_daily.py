@@ -9,7 +9,7 @@ from tests.fakes import FakeConnector
 async def test_runs_enabled_connectors_and_jobs(session_factory, settings):
     with session_factory() as s:
         s.add(Seed(keyword="nurse"))
-        set_setting(s, "connectors_enabled", {"amazon": False})
+        set_setting(s, "connectors_enabled", {"google_daily": False})
         s.commit()
     seen = {}
     job_calls = []
@@ -33,7 +33,7 @@ async def test_runs_enabled_connectors_and_jobs(session_factory, settings):
         job_factory=lambda cfg, overrides, only: [ScanJob("job", job)],
     )
 
-    assert seen == {"overrides": {"amazon": False}, "only": None}
+    assert seen == {"overrides": {"google_daily": False}, "only": None}
     assert job_calls == [["nurse"]]
     with session_factory() as s:
         assert sorted(s.get(ScanRun, i).source for i in run_ids) == ["fake", "job"]

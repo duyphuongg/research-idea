@@ -2,8 +2,8 @@ from datetime import date
 
 from sqlalchemy import func, select
 
-from app.connectors.base import NormalizedBatch, NormalizedRank, NormalizedSignal
-from app.models import AmazonRank, Keyword, Product, ProductKeyword, ProductSnapshot, TrendSignal
+from app.connectors.base import NormalizedBatch, NormalizedSignal
+from app.models import Keyword, Product, ProductKeyword, ProductSnapshot, TrendSignal
 from app.pipeline.store import persist_batch
 from tests.fakes import make_product
 
@@ -157,40 +157,17 @@ def test_trusted_source_signal_without_parent_is_relevant(session):
     assert session.scalar(select(Keyword).where(Keyword.text == "other sasquatch")).is_pod_relevant is False
 
 
-def test_persists_amazon_ranks_and_licensed_flag(session):
-    product = make_product(source="amazon", external_id="B001", licensed=True)
-    rank = NormalizedRank("B001", "tshirt", "bestsellers", 7, D1)
-    written = persist_batch(session, NormalizedBatch(products=[product], ranks=[rank]), D1)
-    session.commit()
-
-    assert written == 2
-    assert session.scalar(select(Product)).licensed is True
-    row = session.scalar(select(AmazonRank))
-    assert (row.category_key, row.list_name, row.rank, row.date) == ("tshirt", "bestsellers", 7, D1)
-
-
-def test_same_day_amazon_rank_is_updated(session):
-    product = make_product(source="amazon", external_id="B001")
-    persist_batch(session, NormalizedBatch(products=[product], ranks=[NormalizedRank("B001", "tshirt", "bestsellers", 7, D1)]), D1)
-    persist_batch(session, NormalizedBatch(ranks=[NormalizedRank("B001", "tshirt", "bestsellers", 3, D1)]), D1)
-    session.commit()
-
-    assert count(session, AmazonRank) == 1
-    assert session.scalar(select(AmazonRank)).rank == 3
-
-
-def test_amazon_rank_for_unknown_asin_is_skipped(session):
-    written = persist_batch(
-        session, NormalizedBatch(ranks=[NormalizedRank("NOPE", "tshirt", "bestsellers", 1, D1)]), D1
-    )
-    session.commit()
-
-    assert written == 0
-    assert count(session, AmazonRank) == 0
-
-
 def test_licensed_unset_keeps_existing_value(session):
     persist_batch(session, NormalizedBatch(products=[make_product(licensed=True)]), D1)
     persist_batch(session, NormalizedBatch(products=[make_product()]), D2)
     session.commit()
     assert session.scalar(select(Product)).licensed is True
+
+
+def test_amazon_signal_is_not_trusted(session):
+    signal = NormalizedSignal(
+        keyword="vintage bigfoot", source="amazon", metric="title_phrase_count", value=3.0, date=D1, origin="discovered"
+    )
+    persist_batch(session, NormalizedBatch(signals=[signal]), D1)
+    session.commit()
+    assert session.scalar(select(Keyword).where(Keyword.text == "vintage bigfoot")).is_pod_relevant is False

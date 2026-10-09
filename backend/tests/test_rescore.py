@@ -194,3 +194,15 @@ def test_refilter_keeps_trusted_source_keyword_relevant(session):
     refilter(session, rules=PodFilterRules(blocklist=(), allow=frozenset()))
 
     assert kw.is_pod_relevant is True
+
+
+def test_refilter_no_longer_trusts_amazon_signals(session):
+    kw = Keyword(text="vintage sasquatch", origin="discovered", is_pod_relevant=True)
+    session.add(kw)
+    session.flush()
+    session.add(TrendSignal(keyword_id=kw.id, source="amazon", metric="title_phrase_count", value=2.0, date=TODAY))
+    session.commit()
+
+    refilter(session, rules=PodFilterRules(blocklist=(), allow=frozenset()))
+
+    assert kw.is_pod_relevant is False

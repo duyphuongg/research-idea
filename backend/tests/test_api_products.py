@@ -164,3 +164,19 @@ def test_digital_etsy_listings_are_hidden(client, session, catalog):
     session.commit()
     assert catalog["A"] in ids(client.get("/api/products"))
     assert d.id not in ids(client.get("/api/products"))
+
+
+def test_amazon_products_are_excluded_from_best_sellers(client, session, catalog):
+    old = Product(
+        source="amazon", external_id="B0OLD", title="Old Amazon Tee", url="https://amazon.com/dp/B0OLD",
+        product_type="tshirt", price=19.0, currency="USD",
+    )
+    session.add(old)
+    session.flush()
+    session.add(ProductSnapshot(product_id=old.id, date=date(2026, 9, 27), reviews=500))
+    session.commit()
+
+    resp = client.get("/api/products")
+    assert resp.json()["total"] == 3
+    assert old.id not in ids(resp)
+    assert ids(client.get("/api/products?source=amazon")) == []

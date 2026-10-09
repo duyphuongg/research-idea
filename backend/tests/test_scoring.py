@@ -120,3 +120,16 @@ def test_etsy_signals_breakout_tag_count_is_scored():
     results = score_keywords(signals, TODAY, Weights(1.0, 1.0, 1.0))
     assert [r.sources for r in results] == [("etsy_signals",)]
     assert results[0].score > 0
+
+
+def test_amazon_signals_are_ignored():
+    signals = {
+        1: {("amazon", "title_phrase_count"): [(days_ago(14), 1.0), (days_ago(1), 9.0)]},
+        2: {
+            ("etsy", "views_per_day"): [(days_ago(1), 10.0)],
+            ("amazon", "title_phrase_count"): [(days_ago(1), 9.0)],
+        },
+    }
+    results = {r.keyword_id: r for r in score_keywords(signals, TODAY)}
+    assert set(results) == {2}
+    assert results[2].sources == ("etsy",)
