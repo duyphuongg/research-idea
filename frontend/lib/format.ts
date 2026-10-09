@@ -35,6 +35,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   google_suggest: "Google gợi ý",
   google_daily: "Google xu hướng ngày",
   etsy_signals: "Etsy bứt phá",
+  etsy_counts: "Etsy đếm cạnh tranh",
 };
 
 export const METRIC_LABEL: Record<string, string> = {

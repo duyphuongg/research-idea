@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import CompetitionBadge from "@/components/CompetitionBadge";
 import Sparkline from "@/components/Sparkline";
 import SourceHealthBanner from "@/components/SourceHealthBanner";
 import UpcomingEvents from "@/components/UpcomingEvents";
+import WorkStatus from "@/components/WorkStatus";
 import {
   Button,
   ButtonLink,
@@ -18,8 +20,8 @@ import {
   Select,
   SourceChip,
 } from "@/components/ui";
-import { ApiError, api, type TrendPage, type TrendQuery } from "@/lib/api";
-import { SOURCE_LABEL } from "@/lib/format";
+import { ApiError, api, type TrendPage, type TrendQuery, type TrendSort } from "@/lib/api";
+import { SOURCE_LABEL, formatInt, formatNumber } from "@/lib/format";
 
 type Result = { key: string; data?: TrendPage; error?: string };
 
@@ -99,6 +101,16 @@ export default function TrendRadarPage() {
           <option value="seed">Chỉ seed</option>
           <option value="discovered">Chỉ ngách khám phá</option>
         </Select>
+        <Select
+          label="Sắp xếp"
+          value={query.sort ?? "score"}
+          onChange={(e) =>
+            setQuery((q) => ({ ...q, sort: e.target.value === "score" ? undefined : (e.target.value as TrendSort) }))
+          }
+        >
+          <option value="score">Điểm</option>
+          <option value="opportunity">Cơ hội (nhu cầu cao, ít cạnh tranh)</option>
+        </Select>
         <Checkbox
           label="Chỉ POD"
           className="sm:h-9"
@@ -140,12 +152,13 @@ export default function TrendRadarPage() {
 
       {items.length > 0 && (
         <Card padded={false} className="relative overflow-x-auto">
-          <table className="w-full min-w-[880px] text-sm">
+          <table className="w-full min-w-[960px] text-sm">
             <thead>
               <tr className="border-b border-rule">
                 <th className={`${TH} w-12`}>#</th>
                 <th className={TH}>Keyword</th>
                 <th className={TH}>Điểm</th>
+                <th className={TH}>Cạnh tranh</th>
                 <th className={TH}>Tăng trưởng</th>
                 <th className={TH}>Nguồn</th>
                 <th className={TH}>30 ngày</th>
@@ -173,10 +186,37 @@ export default function TrendRadarPage() {
                         </span>
                       )}
                       <span>{item.is_seed ? "seed" : "khám phá"}</span>
+                      <span aria-hidden="true">·</span>
+                      <Link
+                        href={`/niche?keyword=${encodeURIComponent(item.keyword)}`}
+                        className="whitespace-nowrap text-ink underline-offset-2 hover:underline"
+                      >
+                        Phân tích ngách
+                      </Link>
                     </span>
                   </td>
                   <td className={TD}>
                     <HalftoneMeter value={item.score / 100} size="sm" label={String(Math.round(item.score))} />
+                    {item.opportunity !== undefined && item.opportunity !== null && (
+                      <span className="mt-0.5 block font-mono text-xs text-ink-2" title="Cơ hội = nhu cầu + đà tăng, trừ cạnh tranh">
+                        Cơ hội {Math.round(item.opportunity)}
+                      </span>
+                    )}
+                  </td>
+                  <td className={TD}>
+                    {item.listing_count !== undefined && item.listing_count !== null ? (
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                        <span
+                          className="font-mono text-xs text-ink"
+                          title={`${formatInt(item.listing_count)} listing Etsy cho “${item.keyword} shirt”`}
+                        >
+                          {formatNumber(item.listing_count)}
+                        </span>
+                        {item.competition_level && <CompetitionBadge level={item.competition_level} />}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-xs text-ink-2">—</span>
+                    )}
                   </td>
                   <td className={`${TD} text-sm`}>
                     <Delta value={item.growth} />
@@ -197,11 +237,14 @@ export default function TrendRadarPage() {
                     <Sparkline values={item.sparkline} />
                   </td>
                   <td className={`${TD} text-right`}>
-                    {!item.is_seed && (
-                      <Button size="sm" variant="secondary" onClick={() => follow(item.keyword)}>
-                        + Theo dõi
-                      </Button>
-                    )}
+                    <div className="flex flex-col items-end gap-1.5">
+                      <WorkStatus kind="keyword" id={item.keyword_id} title={item.keyword} />
+                      {!item.is_seed && (
+                        <Button size="sm" variant="secondary" onClick={() => follow(item.keyword)}>
+                          + Theo dõi
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TAG_CHIP } from "@/components/SignalCard";
+import WorkStatus from "@/components/WorkStatus";
 import { Button, ButtonLink, Card, Delta, HalftoneMeter, ImageZoom, StatusBadge } from "@/components/ui";
 import type { WatchItem } from "@/lib/api";
 
@@ -25,6 +26,9 @@ export default function WatchCard({ item, onRemove }: { item: WatchItem; onRemov
           <span className="font-mono text-sm font-medium text-ink">{item.score === null ? "—" : Math.round(item.score)}</span>
           <Delta value={item.growth} className="text-xs" />
         </div>
+        {item.keyword_id !== null && (
+          <WorkStatus kind="keyword" id={item.keyword_id} title={item.keyword} withNote className="w-full" />
+        )}
       </div>
 
       <Row label={`Ngách con (${item.children_total})`}>
@@ -75,6 +79,9 @@ export default function WatchCard({ item, onRemove }: { item: WatchItem; onRemov
       </Row>
 
       <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-rule pt-3">
+        <ButtonLink size="sm" variant="primary" href={`/niche?keyword=${encodeURIComponent(item.keyword)}`}>
+          Phân tích ngách
+        </ButtonLink>
         {item.keyword_id !== null && (
           <ButtonLink size="sm" href={`/trends/${item.keyword_id}`}>
             Xem chi tiết

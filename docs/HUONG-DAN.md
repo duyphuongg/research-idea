@@ -57,8 +57,27 @@ Danh sách ngách xếp theo **điểm 0–100** cho thị trường Mỹ.
 - **Nguồn**: chấm màu cho biết ngách có từ đâu (cyan = Etsy, vàng = Google).
 - Khối **Sắp tới**: các dịp lễ gần nhất từ Lịch mùa vụ.
 - Bộ lọc: **Nguồn**, **Loại keyword** (Seed + khám phá / Chỉ seed / Chỉ ngách khám phá), **Chỉ POD** (ẩn cụm không phải nhu cầu mua áo).
+- **Cạnh tranh**: tổng số listing Etsy cho "<ngách> shirt" — Thấp (< 10.000), Vừa (< 50.000), Cao. Có cho keyword Watchlist và khoảng 30 ngách con điểm cao nhất (cập nhật mỗi 3 ngày).
+- Sắp xếp **Cơ hội** = độ hot (nhu cầu + đà tăng) × độ ít cạnh tranh — ngách đang lên mà ít đối thủ lên đầu.
 - Bấm tên ngách → **trang chi tiết**: 5 chỉ số, biểu đồ theo nguồn, keyword liên quan (ngách con/cha), sản phẩm Etsy.
-- Nút **Theo dõi** → đưa ngách vào Watchlist.
+- Nút **Theo dõi** → đưa ngách vào Watchlist. Link **Phân tích** → trang Phân tích ngách.
+
+### Phân tích ngách (`/niche`)
+
+Nhập một keyword (hoặc bấm chip Watchlist) để xem trong một trang:
+
+- **Cạnh tranh**: tổng listing Etsy theo áo thun / sweatshirt / hoodie và mức Thấp/Vừa/Cao.
+- **Giá tham khảo**: giá thấp (p25) / trung vị / cao (p75) theo loại áo của listing shop Mỹ trong ngách, và giá trung vị của hàng bứt phá — dùng để đặt giá TikTok Shop.
+- **Top Tags**: tag các listing trong ngách dùng nhiều nhất, số listing bứt phá dùng tag, nhãn **🔥 nổi** khi tag xuất hiện ở hàng bứt phá nhiều hơn bình thường. Lọc theo loại áo.
+- **Bộ 13 tag**: 13 tag tốt nhất (≤ 20 ký tự, bỏ trùng số ít/số nhiều, ưu tiên tag của hàng bứt phá). Nút **Copy tag** (`a, b, c`) và **Copy #hashtag** (cho TikTok).
+- **Cụm từ cho tiêu đề**: các cụm nhiều từ nên có trong tiêu đề sản phẩm.
+- "Hàng bứt phá" ở đây gồm Super Breakout, Steady Grower và Graduated.
+
+### Việc của tôi (`/work`)
+
+Đánh dấu ngách hoặc listing bằng nút trạng thái (có ở Trend Radar, Watchlist, Etsy bứt phá, Bán chạy, Phân tích ngách): **💡 Ý tưởng → 🎨 Đang thiết kế → ✅ Đã đăng**, hoặc **⏸ Bỏ qua**, kèm ghi chú. Trang này gom tất cả theo trạng thái.
+
+- Ngách/listing **Đã đăng** hoặc **Bỏ qua** sẽ **không có tin mới / Telegram** nữa.
 
 ### Watchlist — "Ngách đang theo dõi" (`/watchlist`)
 
@@ -136,7 +155,7 @@ Các dịp bán hàng ở Mỹ (Halloween, Black Friday–Cyber Monday, 11.11, 1
 ### Cài đặt (`/settings`)
 
 - **Watchlist keyword**: danh sách hiện tại, bấm để mở trang chi tiết, xóa keyword (thêm keyword ở trang Watchlist).
-- **Nguồn dữ liệu**: bật/tắt từng nguồn (Etsy, Google gợi ý, Google xu hướng ngày, Etsy bứt phá), trạng thái lần quét gần nhất. Nút **Quét ngay**.
+- **Nguồn dữ liệu**: bật/tắt từng nguồn (Etsy, Google gợi ý, Google xu hướng ngày, Etsy bứt phá, Etsy đếm cạnh tranh), trạng thái lần quét gần nhất. Nút **Quét ngay**.
 - **Lịch sử quét**: từng lần quét, nguồn, số bản ghi, lỗi (nếu có).
 
 Khối **"Bản in hôm nay"** cuối thanh menu trái cho biết từng nguồn quét lần cuối khi nào và có lỗi không.

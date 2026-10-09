@@ -1,3 +1,4 @@
+import WorkStatus from "@/components/WorkStatus";
 import { SourceChip } from "@/components/ui";
 import type { Product } from "@/lib/api";
 import { PRODUCT_TYPE_LABEL, formatNumber, formatPrice, timeAgo } from "@/lib/format";
@@ -51,6 +52,7 @@ export default function ProductCard({ product }: { product: Product }) {
           )}
         </p>
         <p className="-mt-1.5 text-xs text-ink-2">Đăng {timeAgo(product.listed_at)}</p>
+        <WorkStatus kind="product" id={product.id} title={product.title} />
         <div className="grid grid-cols-2 gap-2 border-t border-rule pt-2">
           <SpecCell
             label={METRIC_LABEL[metric]}

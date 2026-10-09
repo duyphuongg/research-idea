@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import WorkStatus from "@/components/WorkStatus";
 import { HalftoneMeter, ImageZoom, StatusBadge } from "@/components/ui";
 import type { SignalItem, SignalStatus } from "@/lib/api";
 import { formatNumber, formatPrice } from "@/lib/format";
@@ -126,6 +127,7 @@ export default function SignalCard({ item }: { item: SignalItem }) {
             </>
           )}
         </p>
+        <WorkStatus kind="product" id={item.product_id} title={item.title} />
         <div className="grid grid-cols-3 gap-2 border-t border-rule pt-2">
           <SpecCell label="Views" value={formatNumber(item.views)} sub={<PerDay delta={item.delta_views} />} />
           <SpecCell label="Lưu" value={formatNumber(item.saves)} sub={<PerDay delta={item.delta_saves} />} />

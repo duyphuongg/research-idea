@@ -194,6 +194,14 @@ function AlertRow({ alert: a, unread }: { alert: AlertItem; unread: boolean }) {
           {a.title}
         </Link>
         <p className="mt-0.5 font-mono text-xs text-ink-2">{a.reason}</p>
+        {a.kind === "niche" && (
+          <Link
+            href={`/niche?keyword=${encodeURIComponent(a.title)}`}
+            className="mt-1 inline-block text-xs font-medium text-ink underline underline-offset-2"
+          >
+            Phân tích ngách →
+          </Link>
+        )}
       </div>
       {a.external_url && (
         <a

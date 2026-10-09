@@ -120,15 +120,64 @@ export type TrendItem = {
   sources: string[];
   sources_rising: number;
   sparkline: number[];
+  /** Latest Etsy total listing count for "<keyword> shirt" (null when unknown). */
+  listing_count?: number | null;
+  competition_level?: CompetitionLevel | null;
+  /** 0–100: demand + momentum discounted by competition (null without competition data). */
+  opportunity?: number | null;
 };
 
 export type TrendPage = { date: string | null; items: TrendItem[] };
 
+export type TrendSort = "score" | "opportunity";
 export type TrendQuery = {
   source?: string;
   origin?: "seed" | "discovered";
   pod_only?: boolean;
+  sort?: TrendSort;
   limit?: number;
+};
+
+export type CompetitionLevel = "low" | "medium" | "high";
+
+export type NichePrice = {
+  /** A product type, or "all" for the row over every type. */
+  product_type: ProductType | "all";
+  count: number;
+  p25: number | null;
+  median: number | null;
+  p75: number | null;
+  breakout_median: number | null;
+};
+export type NicheTag = { tag: string; listings: number; breakouts: number; share: number; lift: number; rising: boolean };
+export type NicheReport = {
+  keyword: string;
+  keyword_id: number | null;
+  product_type: ProductType | null;
+  listings: number;
+  breakouts: number;
+  competition: {
+    date: string | null;
+    counts: Partial<Record<ProductType, number | null>>;
+    level: CompetitionLevel | null;
+  };
+  prices: NichePrice[];
+  tags: NicheTag[];
+  generated: { tags: string[]; title_phrases: string[] };
+};
+
+export type WorkKind = "keyword" | "product";
+export type WorkStatusValue = "idea" | "designing" | "listed" | "skipped";
+export type WorkItem = {
+  subject_kind: WorkKind;
+  subject_id: number;
+  status: WorkStatusValue;
+  note: string | null;
+  updated_at: string;
+  title: string;
+  image_url: string | null;
+  link: string | null;
+  external_url: string | null;
 };
 
 export type SignalSeries = { source: string; metric: string; points: { date: string; value: number }[] };
@@ -312,5 +361,11 @@ export const api = {
   getShop: (id: number) => request<ShopDetail>(`/api/shops/${id}`),
   watchShop: (id: number) => request<Shop>(`/api/shops/${id}/watch`, { method: "POST" }),
   unwatchShop: (id: number) => request<Shop>(`/api/shops/${id}/watch`, { method: "DELETE" }),
+  getNiche: (keyword: string, productType?: ProductType) =>
+    request<NicheReport>(`/api/niche${toQuery({ keyword, product_type: productType })}`),
+  listWork: (status?: WorkStatusValue) => request<WorkItem[]>(`/api/work${toQuery({ status })}`),
+  setWork: (kind: WorkKind, id: number, body: { status: WorkStatusValue; note: string | null }) =>
+    request<WorkItem>(`/api/work/${kind}/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteWork: (kind: WorkKind, id: number) => request<void>(`/api/work/${kind}/${id}`, { method: "DELETE" }),
   getCalendar: (days = 120) => request<CalendarPage>(`/api/calendar${toQuery({ days })}`),
 };
