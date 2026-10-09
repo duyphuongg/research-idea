@@ -7,3 +7,5 @@ quiet_start: 22            # giờ yên lặng (giờ máy): không gửi Telegr
 quiet_end: 7               # … đến 7:00; tin được giữ lại và gửi ở lần quét kế tiếp. Đặt bằng nhau để tắt.
 shop_min_sales_7d: 30      # 🏪 shop đang theo dõi tăng tốc: ít nhất 30 đơn trong 7 ngày …
 shop_growth: 1.5           # … và gấp ≥ 1,5 lần tuần trước (khi đã có số liệu tuần trước)
+nfl_min_potential: 85      # 🏈 cầu thủ NFL: tiềm năng làm áo ≥ 85/100 (tuần gần nhất đã đá đủ), có chuông
+nfl_max_per_week: 3        # … tối đa 3 cầu thủ mỗi tuần thi đấu (mỗi cầu thủ 1 lần)

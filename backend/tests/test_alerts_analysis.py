@@ -135,3 +135,23 @@ def test_shop_prev_is_normalised_to_7_days():
     out = {c.subject_id: c for c in shop_candidates(rows, CFG)}
     assert set(out) == {2}
     assert out[2].reason == "+53 đơn/7 ngày (tuần trước +35)"
+
+
+def test_nfl_candidates_threshold_cap_and_text():
+    from app.analysis.alerts import NflRow, nfl_candidates
+
+    rows = [
+        NflRow("4241389", "CeeDee Lamb", "DAL", "WR", 90.4, ["17 REC, 189 YDS, 1 TD"], 507, False, "https://h/1.png", 4),
+        NflRow("2", "Second", "CAR", "WR", 87, ["14 REC, 192 YDS, 2 TD"], None, True, None, 4),
+        NflRow("3", "Third", "ATL", "RB", 86, ["x"], 1, False, None, 4),
+        NflRow("4", "Fourth", "CHI", "RB", 85.5, ["y"], 1, False, None, 4),
+        NflRow("5", "Low", "NE", "QB", 84.9, ["z"], 1, False, None, 4),
+    ]
+    cands = nfl_candidates(rows, AlertsConfig(nfl_min_potential=85, nfl_max_per_week=3))
+    assert [c.subject_id for c in cands] == [4241389, 2, 3]
+    lamb = cands[0]
+    assert lamb.kind == "nfl" and lamb.title == "CeeDee Lamb (DAL · WR)"
+    assert lamb.reason == "Tuần 4 · 17 REC, 189 YDS, 1 TD · tiềm năng 90 · Etsy 507 listing"
+    assert lamb.link == "/nfl" and lamb.image_url == "https://h/1.png"
+    assert "🔥 đang trend" in cands[1].reason and "Etsy" not in cands[1].reason
+    assert nfl_candidates([NflRow("x", "Bad Id", None, None, 99, [], None, False, None, 4)], CFG) == []

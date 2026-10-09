@@ -227,7 +227,7 @@ export type CalendarEvent = {
 };
 export type CalendarPage = { today: string; fulfillment_days: number; events: CalendarEvent[] };
 
-export type AlertKind = "niche" | "listing" | "hot_product" | "shop";
+export type AlertKind = "niche" | "listing" | "hot_product" | "shop" | "nfl";
 export type AlertItem = {
   id: number;
   /** A known AlertKind, or a kind this UI does not know (shown with a fallback icon). */

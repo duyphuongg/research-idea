@@ -20,6 +20,8 @@ class AlertsConfig:
     quiet_end: int = 7
     shop_min_sales_7d: int = 30  # 🏪 watched shop: orders in the last 7 days …
     shop_growth: float = 1.5  # … and at least this multiple of the previous week (when known)
+    nfl_min_potential: float = 85  # 🏈 NFL player: shirt potential (0–100) of the latest full week
+    nfl_max_per_week: int = 3  # at most this many players per game week
 
 
 def load_alerts_config() -> AlertsConfig:
@@ -39,7 +41,8 @@ def load_alerts_config() -> AlertsConfig:
 LISTING_LABEL = {"super_breakout": "Super Breakout", "steady_grower": "Steady Grower"}
 METRIC_LABEL = {"reviews": "reviews", "favorites": "lượt lưu", "views": "lượt xem"}
 # Telegram order: super breakout, niche, steady grower, shop, hot product (unknown kinds last)
-KIND_RANK = {("listing", 2): 0, ("niche", 1): 1, ("listing", 1): 2, ("shop", 1): 3, ("hot_product", 1): 4}
+KIND_RANK = {("listing", 2): 0, ("nfl", 1): 1, ("niche", 1): 2, ("listing", 1): 3, ("shop", 1): 4,
+             ("hot_product", 1): 5}
 
 
 @dataclass(frozen=True)
@@ -100,6 +103,20 @@ class ShopRow:
     days_7d: int  # actual span the 7-day sales cover
     prev_sales_7d: int | None
     prev_days_7d: int = 7  # actual span the previous-week value covers
+
+
+@dataclass(frozen=True)
+class NflRow:
+    athlete_id: str
+    name: str
+    team: str | None
+    position: str | None
+    potential: float
+    stat_lines: list[str]
+    etsy_listings: int | None
+    trending: bool
+    headshot_url: str | None
+    week: int
 
 
 @dataclass(frozen=True)
@@ -175,6 +192,27 @@ def shop_candidates(rows: Iterable[ShopRow], cfg: AlertsConfig) -> list[AlertCan
             kind="shop", subject_id=r.shop_id, level=1, priority=float(r.sales_7d), title=r.name,
             reason=reason, image_url=r.icon_url, link=f"/shops/{r.shop_id}", external_url=r.url,
             watch_keyword=None,
+        ))
+    return out
+
+
+def nfl_candidates(rows: Iterable[NflRow], cfg: AlertsConfig) -> list[AlertCandidate]:
+    out = []
+    for r in sorted(rows, key=lambda r: -r.potential):
+        if r.potential < cfg.nfl_min_potential or len(out) >= cfg.nfl_max_per_week:
+            break
+        if not r.athlete_id.isdigit():
+            continue
+        tags = " · ".join(t for t in (r.team, r.position) if t)
+        parts = [f"Tuần {r.week}", *r.stat_lines, f"tiềm năng {r.potential:.0f}"]
+        if r.etsy_listings is not None:
+            parts.append(f"Etsy {r.etsy_listings} listing")
+        if r.trending:
+            parts.append("🔥 đang trend")
+        out.append(AlertCandidate(
+            kind="nfl", subject_id=int(r.athlete_id), level=1, priority=r.potential,
+            title=f"{r.name} ({tags})" if tags else r.name, reason=" · ".join(parts),
+            image_url=r.headshot_url, link="/nfl", external_url=None, watch_keyword=None,
         ))
     return out
 

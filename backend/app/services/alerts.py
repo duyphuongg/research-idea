@@ -1,5 +1,6 @@
 """Detect alerts (niches, listings, watched shops, hot products) after a scan."""
 
+from dataclasses import replace
 from datetime import date, datetime, timedelta
 from urllib.parse import urlencode
 
@@ -7,15 +8,17 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.analysis.alerts import (
-    AlertCandidate, AlertsConfig, HotRow, ListingRow, NicheRow, PastAlert, ShopRow,
-    dedupe, hot_candidates, listing_candidates, load_alerts_config, niche_candidates, shop_candidates,
+    AlertCandidate, AlertsConfig, HotRow, ListingRow, NflRow, NicheRow, PastAlert, ShopRow,
+    dedupe, hot_candidates, listing_candidates, load_alerts_config, nfl_candidates, niche_candidates,
+    shop_candidates,
 )
 from app.analysis.listing_signals import load_signals_config
 from app.db import utcnow
 from app.models import (
-    Alert, Keyword, KeywordScore, ListingSignal, Product, ProductKeyword, Shop,
+    Alert, Keyword, KeywordScore, ListingSignal, NflPerformance, Product, ProductKeyword, Shop,
 )
 from app.services.hot import compute_product_metrics
+from app.services.nfl import standouts
 from app.services.shops import shop_metrics
 from app.services.work import blocked_subjects
 from app.services.watchlist import child_keyword_ids, listing_matches, seed_keyword_ids, watch_keywords
@@ -103,6 +106,34 @@ def _shop_rows(session: Session) -> list[ShopRow]:
     ]
 
 
+NFL_FRESH_DAYS = 8  # only alert on a week whose last game is this recent
+
+
+def _nfl_candidates(session: Session, now: datetime, cfg: AlertsConfig) -> list[AlertCandidate]:
+    """Top players of the latest full week; at most cfg.nfl_max_per_week alerts per game week."""
+    page = standouts(session, today=now.date())
+    if page["week"] is None or not page["items"]:
+        return []
+    last_game = session.scalar(select(func.max(NflPerformance.game_date)).where(
+        NflPerformance.season == page["season"], NflPerformance.season_type == page["season_type"],
+        NflPerformance.week == page["week"]))
+    if last_game is None or last_game < now - timedelta(days=NFL_FRESH_DAYS):
+        return []
+    # one alert per player per week (games are 7 days apart, so the usual cooldown would misfire)
+    prefix = f"Tuần {page['week']} ·"
+    done = set(session.scalars(select(Alert.subject_id).where(
+        Alert.kind == "nfl", Alert.reason.startswith(prefix), Alert.created_at >= now - timedelta(days=60))))
+    rows = [
+        NflRow(i["athlete_id"], i["name"], i["team"], i["position"], i["potential"],
+               [line["stat_line"] for line in i["lines"]], i["etsy_listings"], i["trending"],
+               i["headshot_url"], page["week"])
+        for i in page["items"]
+        if not (i["athlete_id"].isdigit() and int(i["athlete_id"]) in done)
+    ]
+    left = max(0, cfg.nfl_max_per_week - len(done))
+    return nfl_candidates(rows, replace(cfg, nfl_max_per_week=left))
+
+
 def detect_alerts(
     session: Session, today: date, cfg: AlertsConfig | None = None, now: datetime | None = None
 ) -> list[Alert]:
@@ -115,12 +146,14 @@ def detect_alerts(
         *listing_candidates(_listing_rows(session, seeds)),
         *shop_candidates(_shop_rows(session), cfg),
         *hot_candidates(_hot_rows(session, seeds)),
+        *_nfl_candidates(session, now, cfg),
     ]
     blocked = blocked_subjects(session)  # the user marked these listed/skipped
     cands = [c for c in cands if (SUBJECT_KIND.get(c.kind), c.subject_id) not in blocked]
     past = [
         PastAlert(a.kind, a.subject_id, a.level, a.created_at)
-        for a in session.scalars(select(Alert).where(Alert.created_at >= now - timedelta(days=cfg.cooldown_days)))
+        for a in session.scalars(select(Alert).where(
+            Alert.created_at >= now - timedelta(days=cfg.cooldown_days), Alert.kind != "nfl"))
     ]
     alerts = [
         Alert(

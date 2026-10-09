@@ -33,6 +33,7 @@ KIND_STYLE = {
     "listing": ("🔥", "Etsy bứt phá"),
     "shop": ("🏪", "Shop tăng tốc"),
     "hot_product": ("⭐", "Sản phẩm hot"),
+    "nfl": ("🏈", "Cầu thủ NFL tiềm năng"),
 }
 
 
@@ -138,7 +139,7 @@ async def _deliver(client: httpx.AsyncClient, settings: Settings, caption: str, 
 
 
 def _high_priority(alert: Alert) -> bool:
-    return alert.kind == "niche" or (alert.kind == "listing" and alert.level == 2)
+    return alert.kind in ("niche", "nfl") or (alert.kind == "listing" and alert.level == 2)
 
 
 async def send_pending(session: Session, settings: Settings, cfg: AlertsConfig | None = None,

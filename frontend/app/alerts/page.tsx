@@ -10,6 +10,7 @@ const KIND: Record<AlertKind, { icon: string; label: string }> = {
   listing: { icon: "🔥", label: "Etsy bứt phá" },
   hot_product: { icon: "⭐", label: "Sản phẩm hot" },
   shop: { icon: "🏪", label: "Shop tăng tốc" },
+  nfl: { icon: "🏈", label: "Cầu thủ NFL tiềm năng" },
 };
 
 /** Style for an alert kind; unknown kinds (e.g. from an older backend) get 🔔 and the raw kind. */

@@ -130,3 +130,41 @@ def test_listed_or_skipped_subjects_are_not_alerted(session):
 
     alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
     assert [(a.kind, a.subject_id) for a in alerts] == [("listing", idea.id)]
+
+
+def _nfl_week(session, week, game_date, players):
+    from app.models import NflPerformance, NflPlayerDemand
+
+    for aid, points in players:
+        session.add(NflPerformance(season=2026, season_type=2, week=week, event_id=f"{week}-{aid}", game="A at B",
+                                   game_date=game_date, athlete_id=aid, name=f"P{aid}", position="WR", team="DAL",
+                                   category="receivingYards", stat_line=f"{points:.0f} YDS", points=points))
+        session.add(NflPlayerDemand(athlete_id=aid, date=game_date.date(), etsy_listings=9999, merch_suggestions=10))
+    session.flush()
+
+
+def test_nfl_alert_once_per_week_and_only_for_recent_weeks(session):
+    cfg = AlertsConfig(nfl_min_potential=85, nfl_max_per_week=3)
+    players = [(str(i), float(i)) for i in range(1, 13)]  # 12 games: a full week
+    _nfl_week(session, 4, datetime(2026, 10, 6, 1), players)
+
+    first = detect_alerts(session, TODAY, cfg, NOW)
+    nfl = [a for a in first if a.kind == "nfl"]
+    assert [a.subject_id for a in nfl] == [12, 11, 10]
+    assert nfl[0].reason.startswith("Tuần 4 · 12 YDS · tiềm năng 100"), nfl[0].reason
+    assert nfl[0].link == "/nfl"
+    later = datetime(2026, 10, 9, 13)
+    assert [a for a in detect_alerts(session, TODAY, cfg, later) if a.kind == "nfl"] == []  # same week
+
+    _nfl_week(session, 5, datetime(2026, 10, 13, 1), players)  # next week: same players again
+    week5 = [a for a in detect_alerts(session, TODAY, cfg, datetime(2026, 10, 13, 13)) if a.kind == "nfl"]
+    assert [a.subject_id for a in week5] == [12, 11, 10]
+
+    stale = datetime(2026, 10, 30)
+    assert [a for a in detect_alerts(session, TODAY, cfg, stale) if a.kind == "nfl"] == []
+
+
+def test_nfl_alerts_ring_the_bell():
+    from app.notify.telegram import _high_priority
+
+    assert _high_priority(Alert(kind="nfl", level=1)) is True

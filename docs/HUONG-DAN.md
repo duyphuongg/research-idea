@@ -81,6 +81,7 @@ Cầu thủ chơi nổi bật nhất trong tuần NFL, xếp theo **tiềm năng
 - **Tiềm năng 0–100** = 50% phong độ (xếp hạng điểm trong tuần) + 30% số gợi ý Google về áo cho "<tên> shirt" + 20% số listing Etsy "<tên> shirt" (nhu cầu đã có) + 10 nếu tên đang lên Google xu hướng ngày (🔥 Đang trend).
 - Mặc định hiện tuần gần nhất đã đá đủ (≥ 10 trận); chọn tuần khác ở ô **Tuần**. Sắp xếp theo Tiềm năng / Điểm thi đấu / Etsy listing.
 - Link **ESPN**, **Etsy** (tìm "<tên> shirt"), **Phân tích ngách**.
+- Có tin 🏈 Telegram (có chuông) khi cầu thủ đạt tiềm năng ≥ 85 — thường sáng thứ Hai sau các trận Chủ nhật. Ngưỡng: `nfl_min_potential`, `nfl_max_per_week` trong `backend/config/alerts.yaml`.
 - ⚠️ Tên, số áo, hình cầu thủ và logo đội thuộc bản quyền NFL/NFLPA — dùng làm cảm hứng, tránh in trực tiếp.
 
 ### Việc của tôi (`/work`)
@@ -144,6 +145,7 @@ Các phát hiện sau mỗi lần quét. Số trên menu = số tin chưa đọc
 | 🔥 Etsy bứt phá | listing thành Steady Grower (ngách trong Watchlist) | im lặng |
 | ⭐ Sản phẩm hot | sản phẩm của keyword Watchlist vừa có nhãn 🔥 | im lặng |
 | 🏪 Shop tăng tốc | shop đang theo dõi bán ≥ 30 đơn/7 ngày và ≥ 1,5× tuần trước | im lặng |
+| 🏈 Cầu thủ NFL tiềm năng | cầu thủ tuần gần nhất đã đá đủ có tiềm năng làm áo ≥ 85; tối đa 3 cầu thủ/tuần thi đấu, mỗi người 1 lần | có |
 
 **Telegram — chống spam**
 
