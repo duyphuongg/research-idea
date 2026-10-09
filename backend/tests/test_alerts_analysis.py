@@ -111,3 +111,8 @@ def test_shop_thresholds_from_config():
     cfg = AlertsConfig(shop_min_sales_7d=10, shop_growth=2.0)
     out = shop_candidates([_shop(1, 10), _shop(2, 19, prev=10), _shop(3, 20, prev=10)], cfg)
     assert [c.subject_id for c in out] == [1, 3]
+
+
+def test_shop_needs_a_7_to_9_day_span():
+    rows = [_shop(1, 60, days=7), _shop(2, 60, days=9), _shop(3, 60, days=10), _shop(4, 60, days=45)]
+    assert [c.subject_id for c in shop_candidates(rows, CFG)] == [1, 2]

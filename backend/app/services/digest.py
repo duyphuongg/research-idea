@@ -15,7 +15,7 @@ from app.config import Settings
 from app.db import utcnow
 from app.models import Alert, Keyword, KeywordScore, ListingSignal, Product
 from app.notify.telegram import KIND_STYLE, TelegramError, in_quiet_hours, send_text, telegram_configured
-from app.services.shops import shop_metrics, shops_matching
+from app.services.shops import is_full_window, shop_metrics, shops_matching
 from app.services.watchlist import listing_keyword_filter, seed_keyword_ids, watch_keywords
 from app.settings_store import get_setting, set_setting
 
@@ -112,7 +112,7 @@ def _top_shops(session: Session, app_url: str | None) -> list[str]:
         ids |= shops_matching(session, seed.keyword)
     if not ids:
         return []
-    rows = [m for m in shop_metrics(session, ids) if m.sales_7d is not None and m.sales_7d.days >= 7 and m.sales_7d.value >= 1]
+    rows = [m for m in shop_metrics(session, ids) if is_full_window(m.sales_7d, 7) and m.sales_7d.value >= 1]
     if not rows:
         return []
     rows.sort(key=lambda m: (-m.sales_7d.value, m.shop.name, m.shop.id))

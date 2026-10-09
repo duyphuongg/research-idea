@@ -160,7 +160,7 @@ def hot_candidates(rows: Iterable[HotRow]) -> list[AlertCandidate]:
 def shop_candidates(rows: Iterable[ShopRow], cfg: AlertsConfig) -> list[AlertCandidate]:
     out = []
     for r in rows:
-        if r.days_7d < 7 or r.sales_7d < cfg.shop_min_sales_7d:
+        if not 7 <= r.days_7d <= 9 or r.sales_7d < cfg.shop_min_sales_7d:
             continue
         if r.prev_sales_7d is not None and r.sales_7d < cfg.shop_growth * max(r.prev_sales_7d, 1):
             continue

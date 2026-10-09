@@ -16,6 +16,8 @@ from app.services.watchlist import keyword_regex
 HISTORY_DAYS = 45
 # A shop whose latest snapshot is older than this (vs. the newest snapshot of any shop) is stale.
 STALE_DAYS = 3
+# A window's base snapshot may be up to this many days older than the window (missed daily scans).
+WINDOW_SLACK_DAYS = 2
 
 
 @dataclass(frozen=True)
@@ -41,8 +43,10 @@ class ShopMetrics:
 def window_delta(points: list[tuple[date, int | None]], latest: date, days: int) -> Delta | None:
     """Latest value minus the value at the newest snapshot at least `days` before `latest`.
 
-    Points dated after `latest` and points with a None value are ignored. Without a snapshot that
-    old, the oldest one is used and `days` is the actual span. None with < 2 points or a 0-day span.
+    That base is used only when it is at most `days + WINDOW_SLACK_DAYS` before `latest`; otherwise
+    (gaps in the history, or history younger than the window) the oldest snapshot inside the window
+    is used and `days` is the actual, shorter span. Points dated after `latest` and points with a None
+    value are ignored. None with < 2 usable points, no base, or a 0-day span.
     """
     usable = sorted((d, v) for d, v in points if v is not None and d <= latest)
     if len(usable) < 2:
@@ -50,11 +54,22 @@ def window_delta(points: list[tuple[date, int | None]], latest: date, days: int)
     end_date, end_value = usable[-1]
     cutoff = latest - timedelta(days=days)
     older = [p for p in usable if p[0] <= cutoff]
-    base_date, base_value = older[-1] if older else usable[0]
+    if older and (latest - older[-1][0]).days <= days + WINDOW_SLACK_DAYS:
+        base_date, base_value = older[-1]
+    else:
+        inside = [p for p in usable[:-1] if p[0] > cutoff]
+        if not inside:
+            return None
+        base_date, base_value = inside[0]
     span = (end_date - base_date).days
     if span <= 0:
         return None
     return Delta(value=end_value - base_value, days=span)
+
+
+def is_full_window(delta: Delta | None, days: int) -> bool:
+    """True when `delta` covers the whole `days` window (allowing the gap slack)."""
+    return delta is not None and days <= delta.days <= days + WINDOW_SLACK_DAYS
 
 
 def _prev_week(points: list[tuple[date, int | None]], latest: date) -> Delta | None:

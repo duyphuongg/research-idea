@@ -51,6 +51,44 @@ def test_window_delta_ignores_points_after_latest():
     assert window_delta(points, d(7), 7) == Delta(value=20, days=7)
 
 
+def test_window_delta_only_latest_point_inside_window_after_big_gap_is_none():
+    # points on day 0 and day 40: the base would be 40 days old -> no 7d (or 30d) value at all
+    points = [(d(40), 100), (L, 400)]
+    assert window_delta(points, L, 7) is None
+    assert window_delta(points, L, 30) is None
+
+
+def test_window_delta_big_gap_falls_back_to_oldest_point_inside_window():
+    # days 0, 30, 39, 40 (latest = day 40): the 7d base would be day 30 (10 days) -> use day 39
+    points = [(d(40), 100), (d(10), 200), (d(1), 390), (L, 400)]
+    assert window_delta(points, L, 7) == Delta(value=10, days=1)
+    assert window_delta(points, L, 30) == Delta(value=200, days=10)
+
+
+def test_window_delta_normal_daily_history_is_exact():
+    points = [(d(i), 1000 - 10 * i) for i in range(0, 41)]
+    assert window_delta(points, L, 7) == Delta(value=70, days=7)
+    assert window_delta(points, L, 30) == Delta(value=300, days=30)
+
+
+def test_window_delta_gap_slack_of_two_days():
+    assert window_delta([(d(8), 20), (d(3), 60), (L, 100)], L, 7) == Delta(value=80, days=8)
+    # base 10 days old is beyond the slack: fall back to the oldest point inside the window
+    assert window_delta([(d(10), 20), (d(3), 60), (L, 100)], L, 7) == Delta(value=40, days=3)
+    assert window_delta([(d(32), 0), (L, 100)], L, 30) == Delta(value=100, days=32)
+    assert window_delta([(d(33), 0), (L, 100)], L, 30) is None
+
+
+def test_prev_week_uses_same_slack_rule():
+    from app.services.shops import _prev_week
+
+    # previous week window ends at d(7); its base d(20) is 13 days before d(7) -> fall back to d(10)
+    points = [(d(20), 0), (d(10), 50), (d(7), 80), (L, 100)]
+    assert _prev_week(points, L) == Delta(value=30, days=3)
+    points = [(d(14), 0), (d(7), 80), (L, 100)]
+    assert _prev_week(points, L) == Delta(value=80, days=7)
+
+
 # --- shop_metrics ---------------------------------------------------------------------------
 
 def add_shop(session, shop_id, snaps, name=None, opened=None, watched=False):
@@ -101,14 +139,14 @@ def test_shop_metrics_short_history_and_no_prev(session):
 def test_shop_metrics_old_history_window_and_stale_shop_has_no_deltas(session):
     # shop 1 was last seen 60 days ago: stale, so no deltas (but its latest totals remain)
     add_shop(session, 1, [(67, 100, 0, 1), (60, 130, 0, 1)])
-    # shop 2 has a snapshot 45 days ago and today: 30d window falls back to the 45-day-old one
+    # shop 2 has a snapshot 45 days ago and today: too old for either window, and nothing inside them
     add_shop(session, 2, [(45, 100, 0, 1), (0, 400, 0, 1)])
     session.commit()
 
     by_id = {m.shop.id: m for m in shop_metrics(session)}
     assert by_id[1].sales_7d is None and by_id[1].sold_count == 130
-    assert by_id[2].sales_30d == Delta(300, 45)
-    assert by_id[2].sales_7d == Delta(300, 45)
+    assert by_id[2].sales_30d is None
+    assert by_id[2].sales_7d is None and by_id[2].sold_count == 400
 
 
 def test_shop_metrics_restricted_to_ids(session):
@@ -146,7 +184,7 @@ def test_shops_matching_whole_word(session):
 
 def _snap_shop(session, sid, last_ago):
     session.add(Shop(id=sid, name=f"S{sid}", first_seen=d(20), last_seen=d(last_ago)))
-    for ago, sold in ((last_ago + 10, 100), (last_ago, 150)):
+    for ago, sold in ((last_ago + 7, 100), (last_ago, 150)):
         session.add(ShopSnapshot(shop_id=sid, date=d(ago), sold_count=sold, favorers=sold))
     session.commit()
 

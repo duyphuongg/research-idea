@@ -27,8 +27,8 @@ export function ShopIcon({ shop, size = 28 }: { shop: Pick<Shop, "name" | "icon_
 }
 
 /**
- * Orders added over a window, mono: "+12", plus a small "(3 ngày)" when the history is shorter than the
- * window. Missing history is "—", never 0.
+ * Orders added over a window, mono: "+12", plus a small "(3 ngày)" whenever the actual span differs from
+ * the window (shorter history, or a base snapshot a day or two older). Missing history is "—", never 0.
  */
 export function SalesDelta({
   delta,
@@ -47,7 +47,7 @@ export function SalesDelta({
         {sign}
         {formatInt(Math.abs(delta.value))}
       </span>
-      {delta.days < window && <span className="ml-1 text-[11px] text-ink-2">({delta.days} ngày)</span>}
+      {delta.days !== window && <span className="ml-1 text-[11px] text-ink-2">({delta.days} ngày)</span>}
     </span>
   );
 }

@@ -277,3 +277,11 @@ def test_top_shops_skips_zero_sales(session):
     _shop(session, 2, "Alpha", 0, 12, "Ghost Tee")
     text = build_digest(session, TODAY, APP, now=NOW)
     assert "Flat" not in text and "Alpha" in text
+
+
+def test_top_shops_need_a_7_to_9_day_span(session):
+    session.add(Seed(keyword="ghost"))
+    _shop(session, 1, "Nine", 0, 30, "Ghost Tee", days=9)
+    _shop(session, 2, "Gappy", 0, 999, "Ghost Tee", days=12)    # 12-day gap: not a 7-day value
+    text = build_digest(session, TODAY, APP, now=NOW)
+    assert "Nine" in text and "Gappy" not in text
