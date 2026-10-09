@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 
 from app.analysis.alerts import (
-    AlertsConfig, AmazonRow, HotRow, ListingRow, NicheRow, PastAlert,
-    amazon_candidates, dedupe, hot_candidates, listing_candidates, niche_candidates, telegram_order,
+    AlertsConfig, HotRow, ListingRow, NicheRow, PastAlert,
+    dedupe, hot_candidates, listing_candidates, niche_candidates, telegram_order,
 )
 
 CFG = AlertsConfig()
@@ -51,19 +51,6 @@ def test_hot_reason():
     assert out[0].link == "/products?keyword_id=9"
 
 
-def test_amazon_new_into_top():
-    rows = [
-        AmazonRow(7, "t", "u", "i", "women_tshirts", 7, was_in_top=False),
-        AmazonRow(8, "t", "u", "i", "women_tshirts", 3, was_in_top=True),
-        AmazonRow(9, "t", "u", "i", "men_hoodies", 21, was_in_top=False),
-    ]
-    out = amazon_candidates(rows, CFG)
-    assert [c.subject_id for c in out] == [7]
-    assert out[0].reason == "Hạng 7 · Áo thun nữ · Best Sellers"
-    assert out[0].link == "/amazon?category=women_tshirts"
-    assert out[0].priority == -7
-
-
 def _cand(sid=1, level=1):
     status = "super_breakout" if level == 2 else "steady_grower"
     row = ListingRow(sid, "t", "u", None, status, 1, 0.1, "k", "/s")
@@ -91,5 +78,6 @@ def test_telegram_order():
         ("hot_product", 1, 9.0), ("listing", 1, 5.0), ("amazon", 1, -3.0),
         ("niche", 1, 70.0), ("listing", 2, 1.0),
     ], key=lambda k: telegram_order(*k))
-    assert [k[0] for k in keys] == ["listing", "niche", "amazon", "listing", "hot_product"]
+    # an unknown kind (e.g. a leftover "amazon" row) sorts last
+    assert [k[0] for k in keys] == ["listing", "niche", "listing", "hot_product", "amazon"]
     assert keys[0][1] == 2

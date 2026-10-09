@@ -21,7 +21,7 @@ def _product(session, ext, title, source="etsy", licensed=False):
     return p
 
 
-def test_detects_niche_listing_and_amazon(session):
+def test_detects_niche_and_listing_but_never_amazon(session):
     session.add(Seed(keyword="game day"))
     seed_kw = get_or_create_keyword(session, "game day")
     child = get_or_create_keyword(session, "game day vibes", origin="discovered", has_parent=True)
@@ -51,7 +51,7 @@ def test_detects_niche_listing_and_amazon(session):
 
     alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
     got = sorted((a.kind, a.subject_id) for a in alerts)
-    assert got == sorted([("niche", child.id), ("listing", lp.id), ("amazon", a_new.id)])
+    assert got == sorted([("niche", child.id), ("listing", lp.id)])
     listing = next(a for a in alerts if a.kind == "listing")
     assert listing.watch_keyword == "game day"
     assert listing.link == "/signals?keyword=game+day&status=all"
@@ -67,13 +67,6 @@ def test_second_run_is_deduped(session):
     assert session.scalar(select(Alert.link)) == "/signals?status=super_breakout"
 
 
-def test_no_amazon_alerts_without_previous_day(session):
-    a = _product(session, "a9", "Tee", source="amazon")
-    session.add(AmazonRank(product_id=a.id, date=TODAY, category_key="men_tshirts", list_name="bestsellers", rank=1))
-    session.flush()
-    assert detect_alerts(session, TODAY, AlertsConfig(), NOW) == []
-
-
 async def test_run_scan_survives_alert_failure(session_factory, monkeypatch):
     from app.pipeline import scan as scan_mod
     from tests.fakes import FakeConnector
@@ -84,34 +77,3 @@ async def test_run_scan_survives_alert_failure(session_factory, monkeypatch):
     monkeypatch.setattr(scan_mod, "detect_alerts", boom)
     run_ids = await scan_mod.run_scan(session_factory, [FakeConnector()])
     assert len(run_ids) == 1
-
-
-def test_amazon_previous_date_is_per_category(session):
-    a_new = _product(session, "pa1", "New A", source="amazon")
-    b_any = _product(session, "pb1", "New B", source="amazon")
-    prev = date(2026, 10, 7)
-    session.add_all([
-        AmazonRank(product_id=a_new.id, date=prev, category_key="cat_a", list_name="bestsellers", rank=50),
-        AmazonRank(product_id=a_new.id, date=TODAY, category_key="cat_a", list_name="bestsellers", rank=3),
-        # cat_b is new today: no previous date, so nothing in it can be "new in top 20"
-        AmazonRank(product_id=b_any.id, date=TODAY, category_key="cat_b", list_name="bestsellers", rank=1),
-    ])
-    session.flush()
-    alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
-    assert [(a.kind, a.subject_id) for a in alerts] == [("amazon", a_new.id)]
-
-
-def test_amazon_skips_categories_stale_versus_global_latest(session):
-    a_new = _product(session, "sa1", "New A", source="amazon")
-    b_new = _product(session, "sb1", "New B", source="amazon")
-    d, d1, d2 = TODAY, date(2026, 10, 7), date(2026, 10, 6)
-    session.add_all([
-        AmazonRank(product_id=a_new.id, date=d1, category_key="cat_a", list_name="bestsellers", rank=50),
-        AmazonRank(product_id=a_new.id, date=d, category_key="cat_a", list_name="bestsellers", rank=3),
-        # cat_b failed on the latest scan: its newest data is D-1, older than the global latest D
-        AmazonRank(product_id=b_new.id, date=d2, category_key="cat_b", list_name="bestsellers", rank=50),
-        AmazonRank(product_id=b_new.id, date=d1, category_key="cat_b", list_name="bestsellers", rank=3),
-    ])
-    session.flush()
-    alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
-    assert [(a.kind, a.subject_id) for a in alerts] == [("amazon", a_new.id)]

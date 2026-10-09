@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 class AlertsConfig:
     niche_min_score: float = 60
     niche_min_growth: float = 0.20
-    amazon_top_n: int = 20
     cooldown_days: int = 7
     telegram_max_items: int = 5
     quiet_start: int = 22  # local hour; no Telegram from quiet_start until quiet_end (equal = off)
@@ -35,15 +34,10 @@ def load_alerts_config() -> AlertsConfig:
     return AlertsConfig(**kwargs)
 
 
-AMAZON_CATEGORY_LABEL = {
-    "women_tshirts": "Áo thun nữ", "men_tshirts": "Áo thun nam", "women_hoodies": "Hoodie nữ",
-    "women_sweatshirts": "Sweatshirt nữ", "men_hoodies": "Hoodie nam", "men_sweatshirts": "Sweatshirt nam",
-    "boys_tops": "Áo bé trai", "girls_tops": "Áo bé gái",
-}
 LISTING_LABEL = {"super_breakout": "Super Breakout", "steady_grower": "Steady Grower"}
 METRIC_LABEL = {"reviews": "reviews", "favorites": "lượt lưu", "views": "lượt xem"}
-# Telegram order: super breakout, niche, amazon, steady grower, hot product
-KIND_RANK = {("listing", 2): 0, ("niche", 1): 1, ("amazon", 1): 2, ("listing", 1): 3, ("hot_product", 1): 4}
+# Telegram order: super breakout, niche, steady grower, hot product (unknown kinds last)
+KIND_RANK = {("listing", 2): 0, ("niche", 1): 1, ("listing", 1): 2, ("hot_product", 1): 3}
 
 
 @dataclass(frozen=True)
@@ -92,17 +86,6 @@ class HotRow:
     metric: str | None
     watch_keyword: str
     link: str
-
-
-@dataclass(frozen=True)
-class AmazonRow:
-    product_id: int
-    title: str
-    url: str
-    image_url: str | None
-    category_key: str
-    rank: int
-    was_in_top: bool
 
 
 @dataclass(frozen=True)
@@ -159,19 +142,6 @@ def hot_candidates(rows: Iterable[HotRow]) -> list[AlertCandidate]:
             external_url=r.url, watch_keyword=r.watch_keyword,
         ))
     return out
-
-
-def amazon_candidates(rows: Iterable[AmazonRow], cfg: AlertsConfig) -> list[AlertCandidate]:
-    return [
-        AlertCandidate(
-            kind="amazon", subject_id=r.product_id, level=1, priority=-float(r.rank), title=r.title,
-            reason=f"Hạng {r.rank} · {AMAZON_CATEGORY_LABEL.get(r.category_key, r.category_key)} · Best Sellers",
-            image_url=r.image_url, link=f"/amazon?category={r.category_key}",
-            external_url=r.url, watch_keyword=None,
-        )
-        for r in rows
-        if r.rank <= cfg.amazon_top_n and not r.was_in_top
-    ]
 
 
 def dedupe(

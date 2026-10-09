@@ -1,4 +1,4 @@
-"""Detect alerts (niches, listings, hot products, Amazon entrants) after a scan."""
+"""Detect alerts (niches, listings, hot products) after a scan."""
 
 from datetime import date, datetime, timedelta
 from urllib.parse import urlencode
@@ -7,13 +7,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.analysis.alerts import (
-    AlertCandidate, AlertsConfig, AmazonRow, HotRow, ListingRow, NicheRow, PastAlert,
-    amazon_candidates, dedupe, hot_candidates, listing_candidates, load_alerts_config, niche_candidates,
+    AlertCandidate, AlertsConfig, HotRow, ListingRow, NicheRow, PastAlert,
+    dedupe, hot_candidates, listing_candidates, load_alerts_config, niche_candidates,
 )
 from app.analysis.listing_signals import load_signals_config
 from app.db import utcnow
 from app.models import (
-    Alert, AmazonRank, Keyword, KeywordScore, ListingSignal, Product, ProductKeyword,
+    Alert, Keyword, KeywordScore, ListingSignal, Product, ProductKeyword,
 )
 from app.services.hot import compute_product_metrics
 from app.services.watchlist import child_keyword_ids, listing_matches, seed_keyword_ids, watch_keywords
@@ -84,37 +84,6 @@ def _hot_rows(session: Session, seeds: list[str]) -> list[HotRow]:
     return out
 
 
-def _amazon_rows(session: Session, cfg: AlertsConfig) -> list[AmazonRow]:
-    """Top-N rows of each category's latest bestsellers date, compared with that category's own previous
-    date. A category with no previous date (new, or failed every earlier day) yields no rows, and a category
-    whose latest date is older than the global latest (it failed the last scan) is skipped."""
-    best = AmazonRank.list_name == "bestsellers"
-    latest_by_cat = dict(session.execute(
-        select(AmazonRank.category_key, func.max(AmazonRank.date)).where(best).group_by(AmazonRank.category_key)
-    ).all())
-    global_latest = max(latest_by_cat.values(), default=None)
-    out = []
-    for cat, latest in sorted(latest_by_cat.items()):
-        if latest != global_latest:
-            continue  # category failed the most recent scan: its data is stale
-        in_cat = (best, AmazonRank.category_key == cat)
-        prev = session.scalar(select(func.max(AmazonRank.date)).where(*in_cat, AmazonRank.date < latest))
-        if prev is None:
-            continue
-        was_top = set(session.scalars(
-            select(AmazonRank.product_id).where(*in_cat, AmazonRank.date == prev, AmazonRank.rank <= cfg.amazon_top_n)
-        ))
-        for r, p in session.execute(
-            select(AmazonRank, Product)
-            .join(Product, Product.id == AmazonRank.product_id)
-            .where(*in_cat, AmazonRank.date == latest, AmazonRank.rank <= cfg.amazon_top_n,
-                   Product.licensed.is_(False))
-            .order_by(AmazonRank.rank)
-        ):
-            out.append(AmazonRow(p.id, p.title, p.url, p.image_url, cat, r.rank, r.product_id in was_top))
-    return out
-
-
 def detect_alerts(
     session: Session, today: date, cfg: AlertsConfig | None = None, now: datetime | None = None
 ) -> list[Alert]:
@@ -126,7 +95,6 @@ def detect_alerts(
         *niche_candidates(_niche_rows(session, seeds), cfg),
         *listing_candidates(_listing_rows(session, seeds)),
         *hot_candidates(_hot_rows(session, seeds)),
-        *amazon_candidates(_amazon_rows(session, cfg), cfg),
     ]
     past = [
         PastAlert(a.kind, a.subject_id, a.level, a.created_at)

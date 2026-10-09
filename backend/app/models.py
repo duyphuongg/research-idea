@@ -175,7 +175,7 @@ class ListingSignal(Base):
 
 
 class AmazonRank(Base):
-    """Daily Amazon list rank (bestsellers or new_releases) of a product within a category."""
+    """Daily Amazon list rank of a product within a category. Historical only: Amazon is no longer scanned."""
 
     __tablename__ = "amazon_ranks"
     __table_args__ = (UniqueConstraint("product_id", "date", "category_key", "list_name"),)
@@ -195,7 +195,7 @@ class Alert(Base):
     __table_args__ = (Index("ix_alerts_kind_subject_created", "kind", "subject_id", "created_at"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    kind: Mapped[str] = mapped_column(String(20))  # niche | listing | hot_product | amazon
+    kind: Mapped[str] = mapped_column(String(20))  # niche | listing | hot_product (old "amazon" rows were dropped)
     subject_id: Mapped[int] = mapped_column(Integer)  # keyword id (niche) or product id
     level: Mapped[int] = mapped_column(Integer, default=1)
     priority: Mapped[float] = mapped_column(Float, default=0.0)  # higher = more important within a kind

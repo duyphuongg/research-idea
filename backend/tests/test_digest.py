@@ -131,11 +131,11 @@ def test_alert_summary(session):
         _alert(session, i, kind="niche")
     for i in range(3):
         _alert(session, 10 + i, kind="listing")
-    _alert(session, 20, kind="amazon", created=NOW - timedelta(days=2))
-    _alert(session, 21, kind="amazon", created=NOW - timedelta(days=9))
+    _alert(session, 20, kind="hot_product", created=NOW - timedelta(days=2))
+    _alert(session, 21, kind="hot_product", created=NOW - timedelta(days=9))
     text = build_digest(session, TODAY, APP, now=NOW)
-    assert "🔔 <b>Tuần qua:</b> 6 tin (2 🚀 · 3 🔥 · 1 🛒)" in text
-    assert "⭐" not in text
+    assert "🔔 <b>Tuần qua:</b> 6 tin (2 🚀 · 3 🔥 · 1 ⭐)" in text
+    assert "🛒" not in text
     assert text.endswith(f'<a href="{APP}/alerts">Mở app →</a>')
 
 

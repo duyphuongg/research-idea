@@ -32,7 +32,6 @@ KIND_STYLE = {
     "niche": ("🚀", "Ngách bứt phá"),
     "listing": ("🔥", "Etsy bứt phá"),
     "hot_product": ("⭐", "Sản phẩm hot"),
-    "amazon": ("🛒", "Amazon mới vào top"),
 }
 
 

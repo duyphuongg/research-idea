@@ -120,9 +120,9 @@ async def test_no_app_url_plain_title_and_no_view_all_link(session):
 
 
 @pytest.mark.parametrize("kinds,silent", [
-    ([("amazon", 1), ("hot_product", 1), ("listing", 1)], True),
-    ([("amazon", 1), ("hot_product", 1), ("niche", 1)], False),
-    ([("amazon", 1), ("listing", 2)], False),
+    ([("hot_product", 1), ("listing", 1)], True),
+    ([("hot_product", 1), ("niche", 1)], False),
+    ([("hot_product", 1), ("listing", 2)], False),
 ])
 async def test_silent_unless_high_priority(session, kinds, silent):
     for i, (kind, level) in enumerate(kinds):
