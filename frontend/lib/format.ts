@@ -35,7 +35,6 @@ export const SOURCE_LABEL: Record<string, string> = {
   google_suggest: "Google gợi ý",
   google_daily: "Google xu hướng ngày",
   etsy_signals: "Etsy bứt phá",
-  amazon: "Amazon",
 };
 
 export const METRIC_LABEL: Record<string, string> = {
@@ -49,7 +48,6 @@ export const METRIC_LABEL: Record<string, string> = {
   suggest_score: "Thứ hạng gợi ý Google (10 = đầu tiên)",
   traffic: "Lượt tìm kiếm ước tính (US)",
   breakout_tag_count: "Số listing bứt phá dùng tag",
-  title_phrase_count: "Số sản phẩm Amazon top có cụm từ",
 };
 
 export function formatGrowth(growth: number | null): string {

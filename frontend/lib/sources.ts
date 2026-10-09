@@ -7,7 +7,6 @@ export const SOURCE_INK: Record<string, Ink> = {
   etsy: "cyan",
   etsy_tags: "cyan",
   etsy_signals: "cyan",
-  amazon: "magenta",
   google_suggest: "yellow",
   google_daily: "yellow",
 };

@@ -9,8 +9,12 @@ const KIND: Record<AlertKind, { icon: string; label: string }> = {
   niche: { icon: "🚀", label: "Ngách bứt phá" },
   listing: { icon: "🔥", label: "Etsy bứt phá" },
   hot_product: { icon: "⭐", label: "Sản phẩm hot" },
-  amazon: { icon: "🛒", label: "Amazon mới vào top" },
 };
+
+/** Style for an alert kind; unknown kinds (e.g. from an older backend) get 🔔 and the raw kind. */
+function kindStyle(kind: string): { icon: string; label: string } {
+  return Object.prototype.hasOwnProperty.call(KIND, kind) ? KIND[kind as AlertKind] : { icon: "🔔", label: kind };
+}
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-");
@@ -92,7 +96,7 @@ export default function AlertsPage() {
       <PageHeader
         eyebrow="Tin mới"
         title="Tin mới"
-        description="Phát hiện sau mỗi lần quét (8:00 và 20:00): ngách bứt phá, Etsy bứt phá, sản phẩm hot, Amazon mới vào top."
+        description="Phát hiện sau mỗi lần quét (8:00 và 20:00): ngách bứt phá, Etsy bứt phá, sản phẩm hot."
       />
 
       <Card className="mb-6">
@@ -157,7 +161,7 @@ export default function AlertsPage() {
 }
 
 function AlertRow({ alert: a, unread }: { alert: AlertItem; unread: boolean }) {
-  const kind = KIND[a.kind];
+  const kind = kindStyle(a.kind);
   return (
     <div
       className={`relative flex items-start gap-3 p-3 ${unread ? "before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-cyan" : ""}`}
@@ -197,7 +201,7 @@ function AlertRow({ alert: a, unread }: { alert: AlertItem; unread: boolean }) {
           rel="noopener noreferrer"
           className="shrink-0 text-xs font-medium text-ink underline underline-offset-2"
         >
-          {a.kind === "amazon" ? "Amazon ↗" : "Etsy ↗"}
+          Etsy ↗
         </a>
       )}
     </div>

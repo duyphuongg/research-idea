@@ -30,7 +30,7 @@ const COLORS = [
   { token: "ink-2", hex: "#5B6170", use: "chữ phụ" },
   { token: "rule", hex: "#D5DAE1", use: "viền 1px" },
   { token: "cyan", hex: "#0096B7", use: "Etsy" },
-  { token: "magenta", hex: "#C8246E", use: "Amazon, bản quyền" },
+  { token: "magenta", hex: "#C8246E", use: "cảnh báo bản quyền" },
   { token: "yellow", hex: "#E3A600", use: "Google" },
   { token: "go", hex: "#1F8A5B", use: "tăng, ok" },
   { token: "stop", hex: "#C8371D", use: "giảm, lỗi" },
@@ -220,8 +220,8 @@ export default function DesignPage() {
 
       <Section title="Thông báo">
         <div className="space-y-2">
-          <Notice tone="info" title="Dữ liệu Amazon lấy qua proxy">
-            Kết quả có thể chậm hơn vài phút so với trang gốc.
+          <Notice tone="info" title="Dữ liệu Etsy cập nhật 2 lần/ngày">
+            Kết quả có thể chậm hơn vài giờ so với trang gốc.
           </Notice>
           <Notice tone="warn" action={<Button size="sm">Cài đặt</Button>}>
             Etsy: chưa cấu hình API key.
@@ -257,7 +257,7 @@ export default function DesignPage() {
               {[
                 { k: "retro halloween", s: 0.87, g: 0.64, src: "etsy", v: [1, 2, 2, 4, 6, 9] },
                 { k: "teacher fall", s: 0.62, g: 0.12, src: "google_daily", v: [3, 3, 4, 4, 5, 5] },
-                { k: "christmas family", s: 0.41, g: -0.08, src: "amazon", v: [6, 5, 5, 4, 4, 3] },
+                { k: "christmas family", s: 0.41, g: -0.08, src: "google_suggest", v: [6, 5, 5, 4, 4, 3] },
               ].map((r, i) => (
                 <tr key={r.k} className="border-b border-rule last:border-0">
                   <td className="px-4 py-2.5 font-mono text-ink-2">{i + 1}</td>

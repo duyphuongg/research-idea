@@ -178,35 +178,11 @@ export type CalendarEvent = {
 };
 export type CalendarPage = { today: string; fulfillment_days: number; events: CalendarEvent[] };
 
-export type AmazonList = "bestsellers" | "new_releases";
-export type AmazonItem = {
-  product_id: number;
-  asin: string;
-  rank: number;
-  prev_rank: number | null;
-  rank_change: number | null;
-  is_new_entry: boolean;
-  title: string;
-  url: string;
-  image_url: string | null;
-  rating: number | null;
-  reviews: number | null;
-  product_type: string;
-  licensed: boolean | null;
-};
-export type AmazonPage = {
-  date: string | null;
-  category: string;
-  list: string;
-  categories: { key: string; product_type: string }[];
-  items: AmazonItem[];
-};
-export type AmazonQuery = { category?: string; list?: AmazonList; hide_licensed?: boolean };
-
-export type AlertKind = "niche" | "listing" | "hot_product" | "amazon";
+export type AlertKind = "niche" | "listing" | "hot_product";
 export type AlertItem = {
   id: number;
-  kind: AlertKind;
+  /** A known AlertKind, or a kind this UI does not know (shown with a fallback icon). */
+  kind: AlertKind | (string & {});
   level: number;
   title: string;
   reason: string;
@@ -278,10 +254,6 @@ export const api = {
     request<{ sources: string[] }>("/api/scans", { method: "POST", body: JSON.stringify({ sources }) }),
   listScans: (limit = 20) => request<ScanRun[]>(`/api/scans${toQuery({ limit })}`),
   sourceHealth: () => request<SourceHealth[]>("/api/health/sources"),
-  getAmazon: (q: AmazonQuery = {}) =>
-    request<AmazonPage>(
-      `/api/amazon${toQuery({ ...q, hide_licensed: q.hide_licensed === undefined ? undefined : String(q.hide_licensed) })}`,
-    ),
   listAlerts: (limit = 100) => request<AlertPage>(`/api/alerts${toQuery({ limit })}`),
   unreadAlerts: () => request<{ unread: number }>("/api/alerts/unread-count"),
   markAlertsRead: () => request<{ unread: number }>("/api/alerts/read", { method: "POST" }),

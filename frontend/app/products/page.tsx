@@ -78,14 +78,13 @@ function ProductsView() {
           </>
         }
         title="Best Sellers"
-        description="Sản phẩm bán chạy theo keyword trên Etsy và Amazon, xếp theo mức tăng gần đây."
+        description="Sản phẩm bán chạy theo keyword trên Etsy, xếp theo mức tăng gần đây."
       />
 
       <div className="mb-3 grid grid-cols-2 items-end gap-3 rounded-md max-sm:[&_select]:w-full sm:flex sm:flex-wrap border border-rule bg-sheet p-3 shadow-card">
         <Select label="Nguồn" value={query.source ?? ""} onChange={(e) => update({ source: e.target.value || undefined })}>
           <option value="">Tất cả nguồn</option>
           <option value="etsy">Etsy</option>
-          <option value="amazon">Amazon</option>
         </Select>
         <Select
           label="Loại áo"
