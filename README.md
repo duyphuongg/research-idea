@@ -28,9 +28,9 @@ make up     # bật backend + giao diện và mở http://localhost:3737
 make down   # tắt
 ```
 
-`make up` chạy bản build của giao diện (tự build lại khi code thay đổi). Giao diện tự chuyển `/api/*` sang backend, nên chỉ cần mở cổng 3737; backend chỉ nghe trong máy (127.0.0.1:8000).
+`make up` chạy bản build của giao diện (tự build lại khi code thay đổi). Giao diện tự chuyển `/api/*` sang backend, nên chỉ cần mở cổng 3737; backend chỉ nghe trong máy (127.0.0.1:8020).
 
-(Chạy riêng từng phần khi phát triển: `make dev-backend` — API ở http://localhost:8000, tài liệu API ở /docs; `make dev-frontend`.)
+(Chạy riêng từng phần khi phát triển: `make dev-backend` — API ở http://localhost:8020, tài liệu API ở /docs; `make dev-frontend`.)
 
 Tự bật giao diện mỗi khi đăng nhập máy (sau khi Mac khởi động lại):
 
