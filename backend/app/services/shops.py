@@ -14,6 +14,8 @@ from app.services.watchlist import keyword_regex
 # Snapshots older than this (relative to each shop's own latest snapshot) are never needed:
 # 30-day window + the 7-day previous-week window + slack for gaps in daily scans.
 HISTORY_DAYS = 45
+# A shop whose latest snapshot is older than this (vs. the newest snapshot of any shop) is stale.
+STALE_DAYS = 3
 
 
 @dataclass(frozen=True)
@@ -88,6 +90,8 @@ def shop_metrics(session: Session, shop_ids: Iterable[int] | None = None) -> lis
     for shop_id, *rest in session.execute(snap_q):
         rows_by_shop[shop_id].append(rest)
 
+    global_latest = session.scalar(select(func.max(ShopSnapshot.date)))
+
     result = []
     for shop in session.scalars(shop_q):
         rows = rows_by_shop.get(shop.id)
@@ -97,16 +101,17 @@ def shop_metrics(session: Session, shop_ids: Iterable[int] | None = None) -> lis
         latest_date, last_sold, _, last_listings, last_rating, last_reviews = rows[-1]
         sold = [(r[0], r[1]) for r in rows]
         favs = [(r[0], r[2]) for r in rows]
+        stale = global_latest is not None and latest_date < global_latest - timedelta(days=STALE_DAYS)
         spl = last_sold / last_listings if last_sold is not None and last_listings else None
         result.append(ShopMetrics(
             shop=shop,
             sold_count=last_sold,
             listing_count=last_listings,
             review_average=last_rating,
-            sales_7d=window_delta(sold, latest_date, 7),
-            sales_30d=window_delta(sold, latest_date, 30),
-            prev_sales_7d=_prev_week(sold, latest_date),
-            favorers_7d=window_delta(favs, latest_date, 7),
+            sales_7d=None if stale else window_delta(sold, latest_date, 7),
+            sales_30d=None if stale else window_delta(sold, latest_date, 30),
+            prev_sales_7d=None if stale else _prev_week(sold, latest_date),
+            favorers_7d=None if stale else window_delta(favs, latest_date, 7),
             sales_per_listing=spl,
             review_count=last_reviews,
         ))

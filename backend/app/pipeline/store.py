@@ -85,6 +85,12 @@ def _upsert_relation(
 
 def upsert_shop(session: Session, info: ShopInfo, today: date) -> Shop:
     """Upsert the shop row and today's snapshot (a later call the same day overwrites it)."""
+    # A shop appears on many products per batch: skip identical repeats (changed values still write).
+    memo: dict = session.info.setdefault("shop_upserts", {})
+    key = (info.shop_id, today)
+    memoized = memo.get(key)
+    if memoized is not None and memoized[0] == info:
+        return memoized[1]
     shop = session.get(Shop, info.shop_id)
     if shop is None:
         shop = Shop(id=info.shop_id, first_seen=today)
@@ -105,12 +111,13 @@ def upsert_shop(session: Session, info: ShopInfo, today: date) -> Shop:
     if snapshot is None:
         snapshot = ShopSnapshot(shop_id=shop.id, date=today)
         session.add(snapshot)
-    snapshot.sold_count = info.sold_count
-    snapshot.favorers = info.favorers
-    snapshot.listing_count = info.listing_count
-    snapshot.review_average = info.review_average
-    snapshot.review_count = info.review_count
+    # A same-day rescan never blanks a value an earlier scan captured.
+    for field in ("sold_count", "favorers", "listing_count", "review_average", "review_count"):
+        value = getattr(info, field)
+        if value is not None:
+            setattr(snapshot, field, value)
     session.flush()
+    memo[key] = (info, shop)  # strong ref: keeps the Shop in the identity map
     return shop
 
 

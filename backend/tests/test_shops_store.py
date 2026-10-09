@@ -81,3 +81,38 @@ def test_upsert_product_without_shop_leaves_shop_id_none(session):
     assert product.shop_id is None
     assert session.scalars(select(Shop)).all() == []
     assert session.scalar(select(Product)).shop_id is None
+
+
+def test_same_day_rescan_keeps_earlier_non_none_snapshot_fields(session):
+    upsert_shop(session, shop_info(sold_count=1000, favorers=200, review_average=4.9), D1)
+    upsert_shop(session, shop_info(sold_count=1005, favorers=None, review_average=None), D1)
+    session.commit()
+    snap = session.scalar(select(ShopSnapshot))
+    assert (snap.sold_count, snap.favorers, snap.review_average) == (1005, 200, 4.9)
+
+
+def test_many_products_of_one_shop_upsert_shop_once(session):
+    import re
+
+    from sqlalchemy import event
+
+    info = shop_info()
+    upsert_product(session, make_product(external_id="p0", shop=info), D1)
+    statements: list[str] = []
+
+    def grab(conn, cur, stmt, *a):
+        statements.append(stmt)
+
+    event.listen(session.get_bind(), "before_cursor_execute", grab)
+    for i in range(1, 5):
+        upsert_product(session, make_product(external_id=f"p{i}", shop=info), D1)
+    event.remove(session.get_bind(), "before_cursor_execute", grab)
+    assert len(session.scalars(select(ShopSnapshot)).all()) == 1
+    assert not [s for s in statements if re.search(r"\bshops\b|shop_snapshots", s)]
+
+
+def test_memo_does_not_hide_changed_values(session):
+    upsert_shop(session, shop_info(sold_count=1000), D1)
+    upsert_shop(session, shop_info(sold_count=1012), D1)
+    session.commit()
+    assert session.scalar(select(ShopSnapshot)).sold_count == 1012

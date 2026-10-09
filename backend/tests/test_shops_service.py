@@ -98,15 +98,15 @@ def test_shop_metrics_short_history_and_no_prev(session):
     assert (three.sold_count, three.listing_count, three.sales_7d) == (None, None, None)
 
 
-def test_shop_metrics_uses_each_shops_own_latest_and_old_history(session):
-    # shop 1 was last seen 60 days ago; its deltas are computed relative to its own latest snapshot
+def test_shop_metrics_old_history_window_and_stale_shop_has_no_deltas(session):
+    # shop 1 was last seen 60 days ago: stale, so no deltas (but its latest totals remain)
     add_shop(session, 1, [(67, 100, 0, 1), (60, 130, 0, 1)])
     # shop 2 has a snapshot 45 days ago and today: 30d window falls back to the 45-day-old one
     add_shop(session, 2, [(45, 100, 0, 1), (0, 400, 0, 1)])
     session.commit()
 
     by_id = {m.shop.id: m for m in shop_metrics(session)}
-    assert by_id[1].sales_7d == Delta(30, 7)
+    assert by_id[1].sales_7d is None and by_id[1].sold_count == 130
     assert by_id[2].sales_30d == Delta(300, 45)
     assert by_id[2].sales_7d == Delta(300, 45)
 
@@ -140,3 +140,31 @@ def test_shops_matching_whole_word(session):
     assert shops_matching(session, "nurse") == {1, 3}
     assert shops_matching(session, "NURSE") == {1, 3}
     assert shops_matching(session, "teacher") == set()
+
+
+# --- stale shops ----------------------------------------------------------------------------
+
+def _snap_shop(session, sid, last_ago):
+    session.add(Shop(id=sid, name=f"S{sid}", first_seen=d(20), last_seen=d(last_ago)))
+    for ago, sold in ((last_ago + 10, 100), (last_ago, 150)):
+        session.add(ShopSnapshot(shop_id=sid, date=d(ago), sold_count=sold, favorers=sold))
+    session.commit()
+
+
+def test_stale_shop_has_no_deltas(session):
+    _snap_shop(session, 1, 0)   # defines the global latest
+    _snap_shop(session, 2, 5)   # 5 days behind
+    _snap_shop(session, 3, 3)   # within tolerance
+    by_id = {m.shop.id: m for m in shop_metrics(session)}
+    assert by_id[1].sales_7d is not None
+    assert by_id[3].sales_7d is not None and by_id[3].sales_30d is not None
+    s = by_id[2]
+    assert (s.sales_7d, s.sales_30d, s.prev_sales_7d, s.favorers_7d) == (None, None, None, None)
+    assert s.sold_count == 150
+
+
+def test_stale_check_uses_global_latest_even_for_id_subset(session):
+    _snap_shop(session, 1, 0)
+    _snap_shop(session, 2, 5)
+    (m,) = shop_metrics(session, [2])
+    assert m.sales_7d is None

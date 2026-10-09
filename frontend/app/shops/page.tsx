@@ -320,7 +320,9 @@ function ShopsView() {
 
       {!loading && items.length > 0 && historyDays < 7 && (
         <Notice tone="info" className="mb-3">
-          Số đơn 7 ngày cần đủ 7 ngày dữ liệu — hiện tính từ {historyDays} ngày.
+          {historyDays === 0
+            ? "Đang thu thập dữ liệu shop — số đơn 7 ngày có sau 7 ngày chụp liên tục."
+            : `Số đơn 7 ngày cần đủ 7 ngày dữ liệu — hiện tính từ ${historyDays} ngày.`}
         </Notice>
       )}
       {message && (

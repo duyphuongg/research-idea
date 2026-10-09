@@ -269,3 +269,11 @@ def test_alert_summary_counts_shop_alerts(session):
     _alert(session, 2, kind="shop")
     _alert(session, 3, kind="hot_product")
     assert "🔔 <b>Tuần qua:</b> 3 tin (1 🔥 · 1 🏪 · 1 ⭐)" in build_digest(session, TODAY, None, now=NOW)
+
+
+def test_top_shops_skips_zero_sales(session):
+    session.add(Seed(keyword="ghost"))
+    _shop(session, 1, "Flat", 50, 50, "Ghost Tee")      # +0
+    _shop(session, 2, "Alpha", 0, 12, "Ghost Tee")
+    text = build_digest(session, TODAY, APP, now=NOW)
+    assert "Flat" not in text and "Alpha" in text
