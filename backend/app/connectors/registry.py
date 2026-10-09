@@ -50,6 +50,6 @@ def connector_status(settings: Settings, enabled_overrides: dict[str, bool]) -> 
     )
     statuses.extend(
         {"name": name, "kind": "sports", "configured": True, "enabled": enabled_overrides.get(name, True)}
-        for name in ("nfl", "nfl_moments")
+        for name in ("nfl", "nfl_moments", "events")
     )
     return statuses

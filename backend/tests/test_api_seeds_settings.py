@@ -27,6 +27,7 @@ def test_settings_defaults(client):
             {"name": "etsy_counts", "kind": "counts", "configured": True, "enabled": True},
             {"name": "nfl", "kind": "sports", "configured": True, "enabled": True},
             {"name": "nfl_moments", "kind": "sports", "configured": True, "enabled": True},
+            {"name": "events", "kind": "sports", "configured": True, "enabled": True},
         ],
     }
 

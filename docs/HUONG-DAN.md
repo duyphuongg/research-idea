@@ -87,6 +87,14 @@ Cầu thủ chơi nổi bật nhất trong tuần NFL, xếp theo **tiềm năng
 - Có tin 🏈 Telegram (có chuông) khi cầu thủ đạt tiềm năng ≥ 85 — thường sáng thứ Hai sau các trận Chủ nhật. Ngưỡng: `nfl_min_potential`, `nfl_max_per_week` trong `backend/config/alerts.yaml`.
 - ⚠️ Tên, số áo, hình cầu thủ và logo đội thuộc bản quyền NFL/NFLPA — dùng làm cảm hứng, tránh in trực tiếp.
 
+### Sự kiện lớn (tin 🏆, không có trang riêng)
+
+App kiểm tra ESPN **mỗi 5 phút** và báo Telegram **ngay** khi xong một trận chung kết hoặc có đội vô địch: MLB (World Series từng trận; vô địch AL/NL), NBA Finals, NHL Stanley Cup Final, NFL (Super Bowl; vô địch AFC/NFC). Giờ yên lặng 22:00–7:00 vẫn áp dụng: tin giữ lại và gửi lúc 7:00. Tin cũng hiện ở **Tin mới**.
+
+- Thêm/bớt giải và vòng trong `backend/config/events.yaml` (`games: true` = báo từng trận, `false` = chỉ báo khi có đội thắng).
+- Lịch: `make install-events` / `make uninstall-events`; chạy ngay: `make events-now`; log `backend/data/logs/events.log`. Bật/tắt ở **Cài đặt → Sự kiện lớn (mỗi 5 phút)**.
+- Tên đội, logo và chữ "World Series" là thương hiệu của giải — dùng làm cảm hứng.
+
 ### Việc của tôi (`/work`)
 
 Đánh dấu ngách hoặc listing bằng nút trạng thái (có ở Trend Radar, Watchlist, Etsy bứt phá, Bán chạy, Phân tích ngách): **💡 Ý tưởng → 🎨 Đang thiết kế → ✅ Đã đăng**, hoặc **⏸ Bỏ qua**, kèm ghi chú. Trang này gom tất cả theo trạng thái.
@@ -148,6 +156,7 @@ Các phát hiện sau mỗi lần quét. Số trên menu = số tin chưa đọc
 | 🔥 Etsy bứt phá | listing thành Steady Grower (ngách trong Watchlist) | im lặng |
 | ⭐ Sản phẩm hot | sản phẩm của keyword Watchlist vừa có nhãn 🔥 | im lặng |
 | 🏪 Shop tăng tốc | shop đang theo dõi bán ≥ 30 đơn/7 ngày và ≥ 1,5× tuần trước | im lặng |
+| 🏆 Sự kiện lớn | trận chung kết xong (World Series, NBA Finals, Stanley Cup Final, Super Bowl) và đội vô địch — kể cả vô địch AL/NL, AFC/NFC; kiểm tra mỗi 5 phút | có |
 | 🗯️ Khoảnh khắc NFL | tìm kiếm NFL ≥ 20.000 lượt trên Google Mỹ (quét mỗi giờ); tối đa 2 tin/24 giờ | có |
 | 🏈 Cầu thủ NFL tiềm năng | cầu thủ tuần gần nhất đã đá đủ có tiềm năng làm áo ≥ 85; tối đa 3 cầu thủ/tuần thi đấu, mỗi người 1 lần | có |
 
@@ -183,6 +192,7 @@ Khối **"Bản in hôm nay"** cuối thanh menu trái cho biết từng nguồn
 | File | Chỉnh gì |
 | --- | --- |
 | `backend/.env` | Etsy API key, Telegram token/chat, địa chỉ app, thư mục sao lưu (không chia sẻ file này) |
+| `backend/config/events.yaml` | Các giải/vòng chung kết được báo 🏆 |
 | `backend/config/alerts.yaml` | Ngưỡng tin, số tin mỗi thông báo, giờ yên lặng |
 | `backend/config/listing_signals.yaml` | Truy vấn Etsy bứt phá, ngưỡng Super Breakout / Steady Grower |
 | `backend/config/us_calendar.yaml` | Dịp lễ, ngày fulfillment |

@@ -38,6 +38,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   etsy_counts: "Etsy đếm cạnh tranh",
   nfl: "NFL (ESPN)",
   nfl_moments: "Khoảnh khắc NFL (mỗi giờ)",
+  events: "Sự kiện lớn (mỗi 5 phút)",
 };
 
 export const METRIC_LABEL: Record<string, string> = {

@@ -12,6 +12,7 @@ const KIND: Record<AlertKind, { icon: string; label: string }> = {
   shop: { icon: "🏪", label: "Shop tăng tốc" },
   nfl: { icon: "🏈", label: "Cầu thủ NFL tiềm năng" },
   nfl_moment: { icon: "🗯️", label: "Khoảnh khắc NFL" },
+  event: { icon: "🏆", label: "Sự kiện lớn" },
 };
 
 /** Style for an alert kind; unknown kinds (e.g. from an older backend) get 🔔 and the raw kind. */

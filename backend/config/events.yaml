@@ -1,0 +1,16 @@
+# Sự kiện thể thao lớn — báo Telegram ngay (trừ giờ yên lặng: giữ lại tới 7:00), kiểm tra mỗi 5 phút (make install-events).
+# match: chữ trong tên vòng của ESPN (vd "World Series - Game 4"); games: true = báo từng trận, false = chỉ báo khi xong.
+# title: tên hiển thị; champion: câu khi có đội thắng loạt/trận cuối ({team}, {year}).
+leagues:
+  - {sport: baseball, league: mlb, label: MLB, stages: [
+      {match: "World Series", games: true, title: "World Series", champion: "{team} vô địch World Series {year}"},
+      {match: "ALCS", games: false, title: "ALCS", champion: "{team} vô địch American League {year}, vào World Series"},
+      {match: "NLCS", games: false, title: "NLCS", champion: "{team} vô địch National League {year}, vào World Series"}]}
+  - {sport: basketball, league: nba, label: NBA, stages: [
+      {match: "NBA Finals", games: true, title: "NBA Finals", champion: "{team} vô địch NBA {year}"}]}
+  - {sport: hockey, league: nhl, label: NHL, stages: [
+      {match: "Stanley Cup Final", games: true, title: "Stanley Cup Final", champion: "{team} vô địch Stanley Cup {year}"}]}
+  - {sport: football, league: nfl, label: NFL, stages: [
+      {match: "Super Bowl", games: true, title: "Super Bowl", champion: "{team} vô địch Super Bowl {year}"},
+      {match: "AFC Championship", games: false, title: "AFC Championship", champion: "{team} vô địch AFC, vào Super Bowl"},
+      {match: "NFC Championship", games: false, title: "NFC Championship", champion: "{team} vô địch NFC, vào Super Bowl"}]}

@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now install-hourly uninstall-hourly hourly-now
+.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now install-hourly uninstall-hourly hourly-now install-events uninstall-events events-now
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -97,6 +97,26 @@ uninstall-hourly:
 
 hourly-now:
 	cd backend && .venv/bin/python scripts/hourly.py
+
+EVENTS_LABEL := io.podtrendradar.events
+EVENTS_PLIST := $(HOME)/Library/LaunchAgents/$(EVENTS_LABEL).plist
+
+# mỗi 5 phút: sự kiện lớn (World Series, NBA Finals, Stanley Cup, Super Bowl…) → tin Telegram 🏆 (config/events.yaml)
+install-events:
+	mkdir -p backend/data/logs $(HOME)/Library/LaunchAgents
+	sed -e "s#__ROOT__#$(CURDIR)#g" -e "s#__LABEL__#$(EVENTS_LABEL)#g" deploy/launchd/events.plist.template > $(EVENTS_PLIST)
+	plutil -lint $(EVENTS_PLIST) >/dev/null
+	-launchctl bootout gui/$$(id -u) $(EVENTS_PLIST) 2>/dev/null
+	launchctl bootstrap gui/$$(id -u) $(EVENTS_PLIST)
+	@echo "Đã cài: kiểm tra sự kiện lớn mỗi 5 phút. Log: backend/data/logs/events.log"
+
+uninstall-events:
+	-launchctl bootout gui/$$(id -u) $(EVENTS_PLIST)
+	rm -f $(EVENTS_PLIST)
+	@echo "Đã gỡ lịch kiểm tra sự kiện lớn."
+
+events-now:
+	cd backend && .venv/bin/python scripts/events.py
 
 telegram-setup:
 	cd backend && .venv/bin/python scripts/telegram_setup.py

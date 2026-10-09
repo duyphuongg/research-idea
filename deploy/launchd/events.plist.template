@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- POD Trend Radar: mỗi 5 phút: sự kiện thể thao lớn (World Series, NBA Finals…) → tin Telegram 🏆. Cài bằng `make install-events`. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>__LABEL__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__ROOT__/backend/.venv/bin/python</string>
+    <string>scripts/events.py</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__ROOT__/backend</string>
+  <key>StartInterval</key>
+  <integer>300</integer>
+  <key>StandardOutPath</key>
+  <string>__ROOT__/backend/data/logs/events.log</string>
+  <key>StandardErrorPath</key>
+  <string>__ROOT__/backend/data/logs/events.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+  </dict>
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

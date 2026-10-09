@@ -4,6 +4,7 @@ and raw httpx exceptions must never reach logs or error messages."""
 import html
 import logging
 import re
+from collections.abc import Collection
 from datetime import datetime, timedelta
 
 import httpx
@@ -35,6 +36,7 @@ KIND_STYLE = {
     "hot_product": ("⭐", "Sản phẩm hot"),
     "nfl": ("🏈", "Cầu thủ NFL tiềm năng"),
     "nfl_moment": ("🗯️", "Khoảnh khắc NFL"),
+    "event": ("🏆", "Sự kiện lớn"),
 }
 
 
@@ -140,13 +142,16 @@ async def _deliver(client: httpx.AsyncClient, settings: Settings, caption: str, 
 
 
 def _high_priority(alert: Alert) -> bool:
-    return alert.kind in ("niche", "nfl", "nfl_moment") or (alert.kind == "listing" and alert.level == 2)
+    return alert.kind in ("niche", "nfl", "nfl_moment", "event") or (alert.kind == "listing" and alert.level == 2)
 
 
 async def send_pending(session: Session, settings: Settings, cfg: AlertsConfig | None = None,
                        *, client: httpx.AsyncClient | None = None, now: datetime | None = None,
-                       local_now: datetime | None = None) -> int:
-    """Send every pending alert as ONE Telegram notification. Returns how many alerts were marked sent."""
+                       local_now: datetime | None = None, kinds: Collection[str] | None = None) -> int:
+    """Send every pending alert (of `kinds`, default all) as ONE Telegram notification.
+
+    Returns how many alerts were marked sent.
+    """
     if not telegram_configured(settings):
         return 0
     cfg = cfg or load_alerts_config()
@@ -154,9 +159,10 @@ async def send_pending(session: Session, settings: Settings, cfg: AlertsConfig |
     if in_quiet_hours(local_now.hour, cfg):
         return 0  # held: the next scan outside quiet hours sends them
     now = now or utcnow()
-    pending = list(session.scalars(
-        select(Alert).where(Alert.sent_at.is_(None), Alert.created_at >= now - timedelta(days=PENDING_DAYS))
-    ))
+    query = select(Alert).where(Alert.sent_at.is_(None), Alert.created_at >= now - timedelta(days=PENDING_DAYS))
+    if kinds is not None:
+        query = query.where(Alert.kind.in_(kinds))
+    pending = list(session.scalars(query))
     if not pending:
         return 0
     pending.sort(key=lambda a: telegram_order(a.kind, a.level, a.priority))

@@ -1,0 +1,260 @@
+{
+ "season": {
+  "type": 3,
+  "year": 2026
+ },
+ "events": [
+  {
+   "id": "401907993",
+   "name": "Cleveland Guardians at Chicago White Sox",
+   "date": "2026-10-09T00:00Z",
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL",
+       "completed": true
+      }
+     },
+     "notes": [
+      {
+       "type": "event",
+       "headline": "World Series - Game 6"
+      }
+     ],
+     "series": {
+      "type": "playoff",
+      "summary": "CLE wins series 4-2",
+      "completed": true,
+      "totalCompetitions": 7,
+      "competitors": [
+       {
+        "id": "4",
+        "wins": 2
+       },
+       {
+        "id": "5",
+        "wins": 4
+       }
+      ]
+     },
+     "competitors": [
+      {
+       "id": "4",
+       "homeAway": "home",
+       "winner": false,
+       "score": "5",
+       "team": {
+        "id": "4",
+        "abbreviation": "CHW",
+        "displayName": "Chicago White Sox",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/chw.png"
+       }
+      },
+      {
+       "id": "5",
+       "homeAway": "away",
+       "winner": true,
+       "score": "9",
+       "team": {
+        "id": "5",
+        "abbreviation": "CLE",
+        "displayName": "Cleveland Guardians",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/cle.png"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401999004",
+   "name": "Cleveland Guardians at Chicago White Sox",
+   "date": "2026-10-09T00:00Z",
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL",
+       "completed": true
+      }
+     },
+     "notes": [
+      {
+       "type": "event",
+       "headline": "World Series - Game 4"
+      }
+     ],
+     "series": {
+      "type": "playoff",
+      "summary": "CLE leads series 3-1",
+      "completed": false,
+      "totalCompetitions": 7,
+      "competitors": [
+       {
+        "id": "4",
+        "wins": 1
+       },
+       {
+        "id": "5",
+        "wins": 3
+       }
+      ]
+     },
+     "competitors": [
+      {
+       "id": "4",
+       "homeAway": "home",
+       "winner": false,
+       "score": "5",
+       "team": {
+        "id": "4",
+        "abbreviation": "CHW",
+        "displayName": "Chicago White Sox",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/chw.png"
+       }
+      },
+      {
+       "id": "5",
+       "homeAway": "away",
+       "winner": true,
+       "score": "9",
+       "team": {
+        "id": "5",
+        "abbreviation": "CLE",
+        "displayName": "Cleveland Guardians",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/cle.png"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401999001",
+   "name": "Cleveland Guardians at Chicago White Sox",
+   "date": "2026-10-09T00:00Z",
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL",
+       "completed": true
+      }
+     },
+     "notes": [
+      {
+       "type": "event",
+       "headline": "ALDS - Game 5"
+      }
+     ],
+     "series": {
+      "type": "playoff",
+      "summary": "CLE wins series 4-2",
+      "completed": true,
+      "totalCompetitions": 7,
+      "competitors": [
+       {
+        "id": "4",
+        "wins": 2
+       },
+       {
+        "id": "5",
+        "wins": 4
+       }
+      ]
+     },
+     "competitors": [
+      {
+       "id": "4",
+       "homeAway": "home",
+       "winner": false,
+       "score": "5",
+       "team": {
+        "id": "4",
+        "abbreviation": "CHW",
+        "displayName": "Chicago White Sox",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/chw.png"
+       }
+      },
+      {
+       "id": "5",
+       "homeAway": "away",
+       "winner": true,
+       "score": "9",
+       "team": {
+        "id": "5",
+        "abbreviation": "CLE",
+        "displayName": "Cleveland Guardians",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/cle.png"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401999005",
+   "name": "Cleveland Guardians at Chicago White Sox",
+   "date": "2026-10-09T00:00Z",
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_IN_PROGRESS",
+       "completed": false
+      }
+     },
+     "notes": [
+      {
+       "type": "event",
+       "headline": "World Series - Game 4"
+      }
+     ],
+     "series": {
+      "type": "playoff",
+      "summary": "CLE leads series 3-1",
+      "completed": false,
+      "totalCompetitions": 7,
+      "competitors": [
+       {
+        "id": "4",
+        "wins": 1
+       },
+       {
+        "id": "5",
+        "wins": 3
+       }
+      ]
+     },
+     "competitors": [
+      {
+       "id": "4",
+       "homeAway": "home",
+       "winner": false,
+       "score": "5",
+       "team": {
+        "id": "4",
+        "abbreviation": "CHW",
+        "displayName": "Chicago White Sox",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/chw.png"
+       }
+      },
+      {
+       "id": "5",
+       "homeAway": "away",
+       "winner": true,
+       "score": "9",
+       "team": {
+        "id": "5",
+        "abbreviation": "CLE",
+        "displayName": "Cleveland Guardians",
+        "logo": "https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/cle.png"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
