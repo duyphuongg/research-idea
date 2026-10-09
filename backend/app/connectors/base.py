@@ -18,6 +18,22 @@ class RawBatch:
     errors: list[str] = field(default_factory=list)  # per-query failures (partial scan)
 
 
+@dataclass(frozen=True)
+class ShopInfo:
+    """An Etsy shop as embedded in a listing payload (US shops only)."""
+
+    shop_id: int
+    name: str
+    url: str | None
+    icon_url: str | None
+    opened_at: datetime | None  # from create_date (epoch seconds), naive UTC
+    sold_count: int | None  # transaction_sold_count (lifetime)
+    favorers: int | None  # num_favorers
+    listing_count: int | None  # listing_active_count
+    review_average: float | None
+    review_count: int | None
+
+
 @dataclass
 class NormalizedProduct:
     source: str
@@ -40,6 +56,7 @@ class NormalizedProduct:
     shop_sold_count: int | None = None
     tags: list[str] | None = None
     licensed: bool | None = None
+    shop: ShopInfo | None = None
 
 
 @dataclass

@@ -16,7 +16,7 @@
   "details": {
     "count": 6,
     "results": [
-      {"listing_id": 1001, "images": [{"url_570xN": "https://i.etsystatic.com/1001_570xN.jpg"}], "shop": {"shop_id": 11, "shop_name": "NurseLifeCo", "is_shop_us_based": true, "transaction_sold_count": 15400}},
+      {"listing_id": 1001, "images": [{"url_570xN": "https://i.etsystatic.com/1001_570xN.jpg"}], "shop": {"shop_id": 11, "shop_name": "NurseLifeCo", "is_shop_us_based": true, "transaction_sold_count": 15400, "url": "https://www.etsy.com/shop/NurseLifeCo", "icon_url_fullxfull": "https://i.etsystatic.com/icon11.jpg", "create_date": 1609459200, "num_favorers": 2100, "listing_active_count": 340, "review_average": 4.8, "review_count": 1250}},
       {"listing_id": 1002, "images": [], "shop": {"shop_id": 11, "shop_name": "NurseLifeCo", "is_shop_us_based": true, "transaction_sold_count": 15400}},
       {"listing_id": 1003, "images": [], "shop": {"shop_id": 12, "shop_name": "RetroScrubs", "is_shop_us_based": true, "transaction_sold_count": 820}},
       {"listing_id": 1004, "images": [], "shop": {"shop_id": 13, "shop_name": "FarAwayTees", "is_shop_us_based": false, "transaction_sold_count": 3}},

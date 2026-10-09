@@ -15,6 +15,7 @@ from app.connectors.base import (
     NormalizedProduct,
     NormalizedSignal,
     RawBatch,
+    ShopInfo,
 )
 from app.connectors.http import RateLimiter, Sleep, request_with_retry
 from app.keywords import normalize_keyword
@@ -138,6 +139,27 @@ def _created_at(listing: dict[str, Any]) -> datetime | None:
     return datetime.fromtimestamp(created, tz=timezone.utc).replace(tzinfo=None) if created else None
 
 
+def shop_info_from_payload(shop: dict[str, Any]) -> ShopInfo | None:
+    """US shop from an Etsy shop object; None without a shop_id or when not US-based."""
+    if shop.get("shop_id") is None or shop.get("is_shop_us_based") is not True:
+        return None
+    created = shop.get("create_date")
+    return ShopInfo(
+        shop_id=int(shop["shop_id"]),
+        name=shop.get("shop_name") or str(shop["shop_id"]),
+        url=shop.get("url"),
+        icon_url=shop.get("icon_url_fullxfull"),
+        opened_at=(
+            datetime.fromtimestamp(created, tz=timezone.utc).replace(tzinfo=None) if created else None
+        ),
+        sold_count=shop.get("transaction_sold_count"),
+        favorers=shop.get("num_favorers"),
+        listing_count=shop.get("listing_active_count"),
+        review_average=shop.get("review_average"),
+        review_count=shop.get("review_count"),
+    )
+
+
 def _is_us_usd(listing: dict[str, Any]) -> bool:
     shop = listing.get("shop") or {}
     price = listing.get("price") or {}
@@ -174,6 +196,7 @@ def _to_product(listing: dict[str, Any], keyword: str | None, rank: int) -> Norm
         views=listing.get("views"),
         shop_sold_count=shop.get("transaction_sold_count"),
         tags=_tags(listing),
+        shop=shop_info_from_payload(shop),
     )
 
 

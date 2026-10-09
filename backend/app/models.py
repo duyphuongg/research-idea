@@ -50,6 +50,43 @@ class TrendSignal(Base):
     date: Mapped[date] = mapped_column(Date)
 
 
+class Shop(Base):
+    """A US Etsy shop seen in a listing payload; id is Etsy's shop_id."""
+
+    __tablename__ = "shops"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(String(200))
+    url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    icon_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    first_seen: Mapped[date] = mapped_column(Date)
+    last_seen: Mapped[date] = mapped_column(Date)
+    watched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # watchlist flag
+
+    snapshots: Mapped[list["ShopSnapshot"]] = relationship(
+        order_by="ShopSnapshot.date", back_populates="shop"
+    )
+
+
+class ShopSnapshot(Base):
+    """One per shop per UTC date; a later scan the same day overwrites it."""
+
+    __tablename__ = "shop_snapshots"
+    __table_args__ = (UniqueConstraint("shop_id", "date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    shop_id: Mapped[int] = mapped_column(ForeignKey("shops.id"))
+    date: Mapped[date] = mapped_column(Date)
+    sold_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    favorers: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    listing_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    review_average: Mapped[float | None] = mapped_column(Float, nullable=True)
+    review_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    shop: Mapped[Shop] = relationship(back_populates="snapshots")
+
+
 class Product(Base):
     __tablename__ = "products"
     __table_args__ = (UniqueConstraint("source", "external_id"),)
@@ -68,6 +105,7 @@ class Product(Base):
     shop_sold_count: Mapped[int | None] = mapped_column(Integer)
     tags: Mapped[Any] = mapped_column(JSON, nullable=True)
     licensed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    shop_id: Mapped[int | None] = mapped_column(ForeignKey("shops.id"), nullable=True)
 
     snapshots: Mapped[list["ProductSnapshot"]] = relationship(
         order_by="ProductSnapshot.date", back_populates="product"

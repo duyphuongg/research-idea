@@ -8,6 +8,7 @@ from app.connectors.base import (
     NormalizedBatch,
     NormalizedProduct,
     NormalizedSignal,
+    ShopInfo,
 )
 from app.keywords import get_or_create_keyword, normalize_keyword
 from app.models import (
@@ -15,6 +16,8 @@ from app.models import (
     Product,
     ProductKeyword,
     ProductSnapshot,
+    Shop,
+    ShopSnapshot,
     TrendSignal,
 )
 
@@ -80,6 +83,37 @@ def _upsert_relation(
     session.flush()
 
 
+def upsert_shop(session: Session, info: ShopInfo, today: date) -> Shop:
+    """Upsert the shop row and today's snapshot (a later call the same day overwrites it)."""
+    shop = session.get(Shop, info.shop_id)
+    if shop is None:
+        shop = Shop(id=info.shop_id, first_seen=today)
+        session.add(shop)
+    shop.name = info.name
+    if info.url is not None:
+        shop.url = info.url
+    if info.icon_url is not None:
+        shop.icon_url = info.icon_url
+    if info.opened_at is not None:
+        shop.opened_at = info.opened_at
+    shop.last_seen = max(shop.last_seen or today, today)
+    session.flush()
+
+    snapshot = session.scalar(
+        select(ShopSnapshot).where(ShopSnapshot.shop_id == shop.id, ShopSnapshot.date == today)
+    )
+    if snapshot is None:
+        snapshot = ShopSnapshot(shop_id=shop.id, date=today)
+        session.add(snapshot)
+    snapshot.sold_count = info.sold_count
+    snapshot.favorers = info.favorers
+    snapshot.listing_count = info.listing_count
+    snapshot.review_average = info.review_average
+    snapshot.review_count = info.review_count
+    session.flush()
+    return shop
+
+
 def upsert_product(session: Session, item: NormalizedProduct, today: date) -> Product:
     product = session.scalar(
         select(Product).where(Product.source == item.source, Product.external_id == item.external_id)
@@ -100,6 +134,8 @@ def upsert_product(session: Session, item: NormalizedProduct, today: date) -> Pr
         product.tags = item.tags
     if item.licensed is not None:
         product.licensed = item.licensed
+    if item.shop is not None:
+        product.shop_id = upsert_shop(session, item.shop, today).id
     session.flush()
 
     if item.keyword is not None:

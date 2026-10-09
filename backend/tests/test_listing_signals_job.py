@@ -361,3 +361,17 @@ async def test_tracked_only_snapshots_pruned(session_factory):
         dates = lambda pid: {x.date for x in s.scalars(select(ProductSnapshot).where(ProductSnapshot.product_id == pid))}
         assert old not in dates(tracked_pid) and recent in dates(tracked_pid)
         assert old in dates(other.id)
+
+
+async def test_job_records_us_shops_and_daily_snapshots(session_factory):
+    from app.models import Shop, ShopSnapshot
+
+    await run_day(session_factory, DAY1, day(100, 10, 50, 2))
+    await run_day(session_factory, DAY2, day(160, 22, 80, 4))
+    with session_factory() as s:
+        shops = s.scalars(select(Shop)).all()
+        assert [(sh.id, sh.name, sh.first_seen, sh.last_seen) for sh in shops] == [(1, "UsShop", DAY1, DAY2)]
+        snaps = s.scalars(select(ShopSnapshot).order_by(ShopSnapshot.date)).all()
+        assert [(sn.date, sn.sold_count) for sn in snaps] == [(DAY1, 50), (DAY2, 50)]
+        products = s.scalars(select(Product)).all()
+        assert products and {p.shop_id for p in products} == {1}

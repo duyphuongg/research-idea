@@ -164,3 +164,31 @@ def test_normalize_fills_normalized_tags():
     raw = RawBatch(source="etsy", payloads=[load_payload()])
     shirt = EtsyConnector("k").normalize(raw, TODAY).products[0]
     assert shirt.tags == ["nurse shirt", "nurse gift", "funny nurse", "rn shirt"]
+
+
+def test_normalize_attaches_us_shop_info():
+    raw = RawBatch(source="etsy", payloads=[load_payload()])
+    shirt, hoodie, _crew = EtsyConnector("k").normalize(raw, TODAY).products
+
+    shop = shirt.shop
+    assert shop is not None
+    assert (shop.shop_id, shop.name, shop.url, shop.icon_url) == (
+        11, "NurseLifeCo", "https://www.etsy.com/shop/NurseLifeCo", "https://i.etsystatic.com/icon11.jpg"
+    )
+    assert shop.opened_at == datetime(2021, 1, 1)
+    assert (shop.sold_count, shop.favorers, shop.listing_count) == (15400, 2100, 340)
+    assert (shop.review_average, shop.review_count) == (4.8, 1250)
+    # sparse shop object: missing fields stay None, never 0
+    assert (hoodie.shop.shop_id, hoodie.shop.name, hoodie.shop.sold_count) == (12, "RetroScrubs", 820)
+    assert (hoodie.shop.url, hoodie.shop.opened_at, hoodie.shop.favorers) == (None, None, None)
+
+
+def test_shop_info_from_payload_rejects_non_us_or_missing_id():
+    from app.connectors.etsy import shop_info_from_payload
+
+    assert shop_info_from_payload({}) is None
+    assert shop_info_from_payload({"shop_name": "X", "is_shop_us_based": True}) is None
+    assert shop_info_from_payload({"shop_id": 5, "shop_name": "X", "is_shop_us_based": False}) is None
+    assert shop_info_from_payload({"shop_id": 5, "shop_name": "X"}) is None
+    info = shop_info_from_payload({"shop_id": 5, "shop_name": "X", "is_shop_us_based": True})
+    assert (info.shop_id, info.name, info.sold_count) == (5, "X", None)
