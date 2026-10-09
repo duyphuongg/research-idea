@@ -9,6 +9,7 @@ const KIND: Record<AlertKind, { icon: string; label: string }> = {
   niche: { icon: "🚀", label: "Ngách bứt phá" },
   listing: { icon: "🔥", label: "Etsy bứt phá" },
   hot_product: { icon: "⭐", label: "Sản phẩm hot" },
+  shop: { icon: "🏪", label: "Shop tăng tốc" },
 };
 
 /** Style for an alert kind; unknown kinds (e.g. from an older backend) get 🔔 and the raw kind. */
@@ -96,7 +97,7 @@ export default function AlertsPage() {
       <PageHeader
         eyebrow="Tin mới"
         title="Tin mới"
-        description="Phát hiện sau mỗi lần quét (8:00 và 20:00): ngách bứt phá, Etsy bứt phá, sản phẩm hot."
+        description="Phát hiện sau mỗi lần quét (8:00 và 20:00): ngách bứt phá, Etsy bứt phá, sản phẩm hot, shop tăng tốc."
       />
 
       <Card className="mb-6">

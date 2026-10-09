@@ -60,3 +60,8 @@ export function formatNumber(n: number | null): string {
   if (n === null) return "—";
   return new Intl.NumberFormat("en-US", { notation: n >= 10000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(n);
 }
+
+/** Full integer with thousands separators ("—" when missing). */
+export function formatInt(n: number | null): string {
+  return n === null ? "—" : Math.round(n).toLocaleString("en-US");
+}

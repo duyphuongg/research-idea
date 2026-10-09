@@ -178,7 +178,7 @@ export type CalendarEvent = {
 };
 export type CalendarPage = { today: string; fulfillment_days: number; events: CalendarEvent[] };
 
-export type AlertKind = "niche" | "listing" | "hot_product";
+export type AlertKind = "niche" | "listing" | "hot_product" | "shop";
 export type AlertItem = {
   id: number;
   /** A known AlertKind, or a kind this UI does not know (shown with a fallback icon). */
@@ -209,6 +209,53 @@ export type WatchItem = {
   alerts_7d: number;
 };
 export type WatchPage = { date: string | null; items: WatchItem[] };
+
+/** A change over an actual span of `days` (may be shorter than the window while history builds up). */
+export type ShopDelta = { value: number; days: number };
+export type Shop = {
+  id: number;
+  name: string;
+  url: string | null;
+  icon_url: string | null;
+  opened_year: number | null;
+  listing_count: number | null;
+  sold_count: number | null;
+  sales_7d: ShopDelta | null;
+  sales_30d: ShopDelta | null;
+  favorers_7d: ShopDelta | null;
+  sales_per_listing: number | null;
+  review_average: number | null;
+  review_count: number | null;
+  watched: boolean;
+  last_seen: string;
+};
+export type ShopPage = { total: number; latest_date: string | null; items: Shop[] };
+export type ShopPoint = { date: string; sold_count: number | null; favorers: number | null };
+export type ShopDetail = Shop & { series: ShopPoint[]; products: Product[] };
+export type ShopSort =
+  | "sales_7d"
+  | "sales_30d"
+  | "sold_count"
+  | "sales_per_listing"
+  | "opened_at"
+  | "listing_count"
+  | "review_average"
+  | "last_seen";
+export type ShopListings = "lt200" | "200_1000" | "gt1000";
+export type ShopOpened = "2026" | "2025plus" | "2024plus" | "before2024";
+export type ShopQuery = {
+  q?: string;
+  min_sales?: number;
+  listings?: ShopListings;
+  min_spl?: number;
+  opened?: ShopOpened;
+  min_rating?: number;
+  watched?: boolean;
+  sort?: ShopSort;
+  order?: "desc" | "asc";
+  limit?: number;
+  offset?: number;
+};
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -260,5 +307,10 @@ export const api = {
   telegramStatus: () => request<TelegramStatus>("/api/alerts/telegram"),
   testTelegram: () => request<{ ok: boolean }>("/api/alerts/test", { method: "POST" }),
   getWatchlist: () => request<WatchPage>("/api/watchlist"),
+  listShops: (q: ShopQuery = {}) =>
+    request<ShopPage>(`/api/shops${toQuery({ ...q, watched: q.watched === undefined ? undefined : String(q.watched) })}`),
+  getShop: (id: number) => request<ShopDetail>(`/api/shops/${id}`),
+  watchShop: (id: number) => request<Shop>(`/api/shops/${id}/watch`, { method: "POST" }),
+  unwatchShop: (id: number) => request<Shop>(`/api/shops/${id}/watch`, { method: "DELETE" }),
   getCalendar: (days = 120) => request<CalendarPage>(`/api/calendar${toQuery({ days })}`),
 };

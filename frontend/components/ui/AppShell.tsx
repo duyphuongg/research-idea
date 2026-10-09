@@ -11,6 +11,7 @@ export const NAV_ITEMS = [
   { href: "/", label: "Trend Radar" },
   { href: "/watchlist", label: "Watchlist" },
   { href: "/signals", label: "Listing Signals" },
+  { href: "/shops", label: "Shop" },
   { href: "/products", label: "Bán chạy" },
   { href: "/alerts", label: "Tin mới" },
   { href: "/calendar", label: "Lịch mùa vụ" },

@@ -2,6 +2,7 @@
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import WatchCard from "@/components/WatchCard";
+import WatchedShops from "@/components/WatchedShops";
 import { Button, EmptyState, Notice, PageHeader } from "@/components/ui";
 import { ApiError, api, type WatchItem, type WatchPage } from "@/lib/api";
 
@@ -94,6 +95,8 @@ export default function WatchlistPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {data?.items.map((item) => <WatchCard key={item.seed_id} item={item} onRemove={remove} />)}
       </div>
+
+      <WatchedShops className="mt-10" />
     </div>
   );
 }
