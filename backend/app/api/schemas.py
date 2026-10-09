@@ -110,6 +110,9 @@ class TrendOut(BaseModel):
     sources: list[str]
     sources_rising: int
     sparkline: list[float]
+    listing_count: int | None = None  # Etsy results for "<kw> shirt"
+    competition_level: Literal["low", "medium", "high"] | None = None
+    opportunity: float | None = None
 
 
 class TrendPage(BaseModel):
@@ -321,3 +324,69 @@ class ShopPoint(BaseModel):
 class ShopDetail(ShopOut):
     series: list[ShopPoint]
     products: list[ProductOut]
+
+
+WorkStatus = Literal["idea", "designing", "listed", "skipped"]
+
+
+class WorkIn(BaseModel):
+    status: WorkStatus
+    note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("note")
+    @classmethod
+    def _strip(cls, v: str | None) -> str | None:
+        return (v.strip() or None) if v is not None else None
+
+
+class WorkOut(BaseModel):
+    subject_kind: Literal["keyword", "product"]
+    subject_id: int
+    status: WorkStatus
+    note: str | None
+    updated_at: datetime
+    title: str
+    image_url: str | None
+    link: str | None
+    external_url: str | None
+
+
+class NicheCompetition(BaseModel):
+    date: date | None
+    counts: dict[str, int]
+    level: Literal["low", "medium", "high"] | None
+
+
+class NichePrice(BaseModel):
+    product_type: str
+    count: int
+    p25: float
+    median: float
+    p75: float
+    breakout_median: float | None
+
+
+class NicheTag(BaseModel):
+    tag: str
+    listings: int
+    breakouts: int
+    share: float
+    lift: float
+    rising: bool
+
+
+class NicheGenerated(BaseModel):
+    tags: list[str]
+    title_phrases: list[str]
+
+
+class NicheReport(BaseModel):
+    keyword: str
+    keyword_id: int | None
+    product_type: str | None
+    listings: int
+    breakouts: int
+    competition: NicheCompetition
+    prices: list[NichePrice]
+    tags: list[NicheTag]
+    generated: NicheGenerated

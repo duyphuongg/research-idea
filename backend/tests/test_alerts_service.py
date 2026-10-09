@@ -106,3 +106,27 @@ def test_shop_alerts_only_for_watched_shops(session):
         "Shop1", "+40 đơn/7 ngày (tuần trước +20)", "/shops/1", "https://img/s1.jpg",
         "https://www.etsy.com/shop/S1", None, 40)
     assert detect_alerts(session, TODAY, AlertsConfig(), NOW) == []  # cooldown
+
+
+def test_listed_or_skipped_subjects_are_not_alerted(session):
+    from app.models import WorkItem
+
+    session.add(Seed(keyword="game day"))
+    seed_kw = get_or_create_keyword(session, "game day")
+    child = get_or_create_keyword(session, "game day vibes", origin="discovered", has_parent=True)
+    session.add(KeywordRelation(parent_id=seed_kw.id, child_id=child.id, source="etsy", last_seen=TODAY))
+    session.add(KeywordScore(keyword_id=child.id, score=70, growth=0.5, date=TODAY))
+    done = _product(session, "d1", "Anything")
+    idea = _product(session, "d2", "Other")
+    for p in (done, idea):
+        session.add(ListingSignal(product_id=p.id, discovered_on=TODAY, discovery_query="shirt",
+                                  status="super_breakout", delta_saves=20, dsr=0.3, updated_on=TODAY))
+    session.add_all([
+        WorkItem(subject_kind="keyword", subject_id=child.id, status="listed"),
+        WorkItem(subject_kind="product", subject_id=done.id, status="skipped"),
+        WorkItem(subject_kind="product", subject_id=idea.id, status="idea"),
+    ])
+    session.flush()
+
+    alerts = detect_alerts(session, TODAY, AlertsConfig(), NOW)
+    assert [(a.kind, a.subject_id) for a in alerts] == [("listing", idea.id)]

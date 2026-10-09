@@ -16,6 +16,7 @@ from app.api.schemas import (
     TrendOut,
     TrendPage,
 )
+from app.services.niche import COMPETITION_DAYS, competition_level
 from app.models import Keyword, KeywordRelation, KeywordScore, Seed, TrendSignal
 
 router = APIRouter(prefix="/api")
@@ -47,8 +48,40 @@ def _sparklines(session: Session, keyword_ids: list[int], latest: date) -> dict[
     return out
 
 
+def _listing_counts(session: Session, keyword_ids: list[int], latest: date) -> dict[int, int]:
+    """Latest Etsy "<kw> shirt" result count within COMPETITION_DAYS of the score date."""
+    if not keyword_ids:
+        return {}
+    out: dict[int, int] = {}
+    for keyword_id, value in session.execute(
+        select(TrendSignal.keyword_id, TrendSignal.value)
+        .where(
+            TrendSignal.keyword_id.in_(keyword_ids),
+            TrendSignal.source == "etsy",
+            TrendSignal.metric == "listing_count_tshirt",
+            TrendSignal.date <= latest,
+            TrendSignal.date > latest - timedelta(days=COMPETITION_DAYS),
+        )
+        .order_by(TrendSignal.date)
+    ):
+        out[keyword_id] = int(value)
+    return out
+
+
+def opportunity(score: KeywordScore) -> float | None:
+    """Hot and uncrowded: mean(demand, momentum) scaled by how little competition there is."""
+    if score.competition is None:
+        return None
+    heat = ((score.demand or 0.0) + (0.5 if score.momentum is None else score.momentum)) / 2
+    return round(100 * heat * (1 - score.competition), 1)
+
+
 def _trend_out(
-    score: KeywordScore, keyword: Keyword, seeds: set[str], sparkline: list[float]
+    score: KeywordScore,
+    keyword: Keyword,
+    seeds: set[str],
+    sparkline: list[float],
+    listing_count: int | None = None,
 ) -> TrendOut:
     return TrendOut(
         keyword_id=keyword.id,
@@ -65,6 +98,9 @@ def _trend_out(
         sources=list(score.sources or []),
         sources_rising=score.sources_rising,
         sparkline=sparkline,
+        listing_count=listing_count,
+        competition_level=competition_level(listing_count),
+        opportunity=opportunity(score),
     )
 
 
@@ -73,6 +109,7 @@ def list_trends(
     source: str | None = None,
     origin: Literal["seed", "discovered"] | None = None,
     pod_only: bool = True,
+    sort: Literal["score", "opportunity"] = "score",
     limit: int = Query(100, ge=1, le=500),
     session: Session = Depends(get_session),
 ) -> TrendPage:
@@ -91,13 +128,18 @@ def list_trends(
         and (origin is None or keyword.origin == origin)
         and (source is None or source in (score.sources or []))
     ]
-    selected.sort(key=lambda row: (-row[0].score, row[1].id))
+    if sort == "opportunity":
+        selected.sort(key=lambda row: (opportunity(row[0]) is None, -(opportunity(row[0]) or 0), row[1].id))
+    else:
+        selected.sort(key=lambda row: (-row[0].score, row[1].id))
     selected = selected[:limit]
     seeds = _seed_texts(session)
-    history = _sparklines(session, [k.id for _, k in selected], latest)
+    ids = [k.id for _, k in selected]
+    history = _sparklines(session, ids, latest)
+    counts = _listing_counts(session, ids, latest)
     return TrendPage(
         date=latest,
-        items=[_trend_out(s, k, seeds, history.get(k.id, [])) for s, k in selected],
+        items=[_trend_out(s, k, seeds, history.get(k.id, []), counts.get(k.id)) for s, k in selected],
     )
 
 
@@ -116,7 +158,8 @@ def trend_detail(keyword_id: int, session: Session = Depends(get_session)) -> Tr
     trend = None
     if latest_score is not None:
         sparkline = _sparklines(session, [keyword_id], latest_score.date).get(keyword_id, [])
-        trend = _trend_out(latest_score, keyword, seeds, sparkline)
+        count = _listing_counts(session, [keyword_id], latest_score.date).get(keyword_id)
+        trend = _trend_out(latest_score, keyword, seeds, sparkline, count)
 
     anchor = (
         latest_score.date

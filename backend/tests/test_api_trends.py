@@ -103,3 +103,31 @@ def test_detail(client, data):
 
 def test_detail_404(client):
     assert client.get("/api/trends/999").status_code == 404
+
+
+def test_trends_competition_and_opportunity_sort(client, session):
+    low = get_or_create_keyword(session, "pickleball")
+    high = get_or_create_keyword(session, "game day")
+    unknown = get_or_create_keyword(session, "hockey mom")
+    for kw, score, demand, momentum, comp in (
+        (low, 50.0, 0.8, 0.8, 0.2), (high, 90.0, 0.9, 0.9, 0.9), (unknown, 70.0, 0.9, None, None),
+    ):
+        session.add(KeywordScore(keyword_id=kw.id, date=TODAY, score=score, demand=demand, momentum=momentum,
+                                 competition=comp, sources_rising=0, sources=["etsy"]))
+    session.add_all([
+        TrendSignal(keyword_id=low.id, source="etsy", metric="listing_count_tshirt", value=30989, date=TODAY),
+        TrendSignal(keyword_id=high.id, source="etsy", metric="listing_count_tshirt", value=9000,
+                    date=TODAY - timedelta(days=8)),  # too old
+        TrendSignal(keyword_id=high.id, source="etsy", metric="listing_count_tshirt", value=445597,
+                    date=TODAY - timedelta(days=1)),
+    ])
+    session.commit()
+
+    items = client.get("/api/trends?sort=opportunity").json()["items"]
+    assert [i["keyword"] for i in items] == ["pickleball", "game day", "hockey mom"]
+    assert items[0]["opportunity"] == 64.0 and items[0]["competition_level"] == "medium"
+    assert items[0]["listing_count"] == 30989
+    assert items[1]["listing_count"] == 445597 and items[1]["competition_level"] == "high"
+    assert items[2]["opportunity"] is None and items[2]["listing_count"] is None
+    default = client.get("/api/trends").json()["items"]
+    assert [i["keyword"] for i in default] == ["game day", "hockey mom", "pickleball"]

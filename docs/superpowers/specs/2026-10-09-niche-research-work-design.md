@@ -7,7 +7,8 @@ Features (user's numbering): 1 Top Tags, 2 13-tag generator, 3 competition, 4 pr
 ## 1. Data we already have
 
 - `products` (source `etsy`): `title`, `price` (USD), `product_type` (tshirt|sweatshirt|hoodie), `tags` (JSON list of normalized tags, ~94% filled).
-- `listing_signals.status` — breakout = `super_breakout` | `steady_grower` (`BREAKOUT_STATUSES`).
+- `listing_signals.status` — breakout = `super_breakout` | `steady_grower` (`BREAKOUT_STATUSES`). The niche
+  page counts `graduated` (proven sellers) as breakouts too.
 - `trend_signals` source `etsy`, metrics `listing_count_tshirt|_sweatshirt|_hoodie` = Etsy's total
   search result count for "<kw> shirt|sweatshirt|hoodie". Today only for seed keywords.
 - Scoring already uses `("etsy", "listing_count_tshirt")` as competition.

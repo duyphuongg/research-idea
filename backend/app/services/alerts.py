@@ -17,7 +17,11 @@ from app.models import (
 )
 from app.services.hot import compute_product_metrics
 from app.services.shops import shop_metrics
+from app.services.work import blocked_subjects
 from app.services.watchlist import child_keyword_ids, listing_matches, seed_keyword_ids, watch_keywords
+
+
+SUBJECT_KIND = {"niche": "keyword", "listing": "product", "hot_product": "product"}
 
 
 def _niche_rows(session: Session, seeds: list[str]) -> list[NicheRow]:
@@ -112,6 +116,8 @@ def detect_alerts(
         *shop_candidates(_shop_rows(session), cfg),
         *hot_candidates(_hot_rows(session, seeds)),
     ]
+    blocked = blocked_subjects(session)  # the user marked these listed/skipped
+    cands = [c for c in cands if (SUBJECT_KIND.get(c.kind), c.subject_id) not in blocked]
     past = [
         PastAlert(a.kind, a.subject_id, a.level, a.created_at)
         for a in session.scalars(select(Alert).where(Alert.created_at >= now - timedelta(days=cfg.cooldown_days)))

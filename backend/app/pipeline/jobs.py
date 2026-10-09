@@ -5,6 +5,7 @@ from datetime import date
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import Settings
+from app.pipeline.etsy_counts import SOURCE as ETSY_COUNTS, run_etsy_counts
 from app.pipeline.listing_signals import SOURCE as ETSY_SIGNALS, run_listing_signals
 
 
@@ -22,13 +23,12 @@ def build_jobs(
 ) -> list[ScanJob]:
     if not settings.etsy_api_key:
         return []
-    if not overrides.get(ETSY_SIGNALS, True):
-        return []
-    if only is not None and ETSY_SIGNALS not in only:
-        return []
+    key = settings.etsy_api_key
+    jobs = [
+        ScanJob(ETSY_SIGNALS, lambda sf, kw, today: run_listing_signals(sf, key, kw, today)),
+        ScanJob(ETSY_COUNTS, lambda sf, kw, today: run_etsy_counts(sf, key, today)),
+    ]
     return [
-        ScanJob(
-            ETSY_SIGNALS,
-            lambda sf, kw, today: run_listing_signals(sf, settings.etsy_api_key, kw, today),
-        )
+        job for job in jobs
+        if overrides.get(job.name, True) and (only is None or job.name in only)
     ]

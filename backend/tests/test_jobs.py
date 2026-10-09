@@ -11,7 +11,7 @@ def test_no_etsy_key_means_no_jobs():
 
 
 def test_override_disables_job():
-    assert build_jobs(_settings(), {"etsy_signals": False}) == []
+    assert [j.name for j in build_jobs(_settings(), {"etsy_signals": False})] == ["etsy_counts"]
 
 
 def test_only_other_source_excludes_job():
@@ -23,4 +23,4 @@ def test_only_etsy_signals_selects_job():
 
 
 def test_no_filter_returns_job():
-    assert [j.name for j in build_jobs(_settings(), {}, None)] == ["etsy_signals"]
+    assert [j.name for j in build_jobs(_settings(), {}, None)] == ["etsy_signals", "etsy_counts"]

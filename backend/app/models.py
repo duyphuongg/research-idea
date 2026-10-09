@@ -247,3 +247,18 @@ class Alert(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class WorkItem(Base):
+    """The user's own progress on a niche (keyword) or a listing (product)."""
+
+    __tablename__ = "work_items"
+    __table_args__ = (UniqueConstraint("subject_kind", "subject_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    subject_kind: Mapped[str] = mapped_column(String(10))  # keyword | product
+    subject_id: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20))  # idea | designing | listed | skipped
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
