@@ -14,7 +14,7 @@ from app.api.schemas import DeltaOut, ShopDetail, ShopOut, ShopPage, ShopPoint
 from app.db import utcnow
 from app.models import Keyword, Product, ProductKeyword, Shop, ShopSnapshot
 from app.services.hot import ProductMetrics, compute_product_metrics
-from app.services.shops import Delta, ShopMetrics, shop_metrics, shops_matching
+from app.services.shops import Delta, ShopMetrics, is_full_window, shop_metrics, shops_matching
 
 router = APIRouter(prefix="/api")
 
@@ -72,13 +72,30 @@ def _at_least(value: float | None, minimum: float | None) -> bool:
     return minimum is None or (value is not None and value >= minimum)
 
 
+# Sales sorts: values covering the full window rank before shorter (partial) spans, in either order.
+SALES_WINDOWS: dict[str, tuple[Callable[[ShopMetrics], Delta | None], int]] = {
+    "sales_7d": (lambda m: m.sales_7d, 7),
+    "sales_30d": (lambda m: m.sales_30d, 30),
+}
+
+
 def _sorted(metrics: list[ShopMetrics], sort: str, order: str) -> list[ShopMetrics]:
-    """Sort by `sort` in `order`; shops without a value always go last (stable within ties)."""
+    """Sort by `sort` in `order`; shops without a value always go last (stable within ties).
+
+    For sales_7d / sales_30d, full-window values come first, then partial spans, each group by value.
+    """
     key = SORT_VALUES[sort]
     present = [m for m in metrics if key(m) is not None]
     missing = [m for m in metrics if key(m) is None]
-    present.sort(key=key, reverse=order == "desc")
-    return present + missing
+    groups = [present]
+    if sort in SALES_WINDOWS:
+        get, days = SALES_WINDOWS[sort]
+        groups = [[m for m in present if is_full_window(get(m), days)],
+                  [m for m in present if not is_full_window(get(m), days)]]
+    out: list[ShopMetrics] = []
+    for group in groups:
+        out += sorted(group, key=key, reverse=order == "desc")
+    return out + missing
 
 
 @router.get("/shops", response_model=ShopPage)

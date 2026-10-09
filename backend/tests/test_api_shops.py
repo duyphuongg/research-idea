@@ -65,12 +65,22 @@ def test_list_default_sort_sales_7d_none_last(client, shops):
 
 
 def test_list_sort_asc_keeps_none_last(client, shops):
-    assert ids(client.get("/api/shops?order=asc")) == [4, 2, 1, 3]
+    # full 7-day values first (asc), then the partial 2-day value, then None
+    assert ids(client.get("/api/shops?order=asc")) == [2, 1, 4, 3]
     assert ids(client.get("/api/shops?sort=review_average")) == [1, 3, 2, 4]
     assert ids(client.get("/api/shops?sort=review_average&order=asc")) == [2, 3, 1, 4]
     assert ids(client.get("/api/shops?sort=opened_at")) == [1, 2, 3, 4]
     assert ids(client.get("/api/shops?sort=sold_count&order=asc")) == [4, 2, 3, 1]
     assert ids(client.get("/api/shops?sort=last_seen&order=asc"))[0] == 4
+
+
+def test_sales_sort_ranks_full_window_before_partial_spans(client, session, shops):
+    add_shop(session, 5, [(3, 0, 10, None), (0, 5000, 10, None)])  # 7d/30d +5000 over only 3 days
+    session.commit()
+    assert ids(client.get("/api/shops?sort=sales_7d")) == [1, 2, 5, 4, 3]
+    assert ids(client.get("/api/shops?sort=sales_7d&order=asc")) == [2, 1, 4, 5, 3]
+    # 30d: only shop 1 covers 30 days; shops 2 (7 days), 5 and 4 are partial
+    assert ids(client.get("/api/shops?sort=sales_30d")) == [1, 5, 2, 4, 3]
 
 
 def test_list_filters(client, shops):
