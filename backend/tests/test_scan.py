@@ -275,3 +275,30 @@ async def test_run_scan_sends_digest_and_persists_week_marker(session_factory, m
     assert "Tổng kết" in route.calls[0].request.content.decode()
     with session_factory() as s:  # a fresh session: the marker was committed
         assert get_setting(s, "digest_last_week") == iso_week(datetime.now().astimezone().date())
+
+
+async def test_purge_vacuums_a_file_database(tmp_path):
+    from app.db import Base, make_engine, make_session_factory
+
+    engine = make_engine(f"sqlite:///{tmp_path / 'radar.db'}")
+    Base.metadata.create_all(engine)
+    factory = make_session_factory(engine)
+    with factory() as s:
+        run = ScanRun(source="fake", status="ok")
+        s.add(run)
+        s.flush()
+        old = utcnow() - timedelta(days=5)
+        s.add_all(
+            RawPayload(scan_run_id=run.id, source="fake", payload={"blob": "x" * 50_000}, fetched_at=old)
+            for _ in range(40)
+        )
+        s.commit()
+    with engine.connect() as con:
+        before = con.exec_driver_sql("pragma page_count").scalar()
+
+    await run_scan(factory, [], today=TODAY, retention_days=1)
+
+    with engine.connect() as con:
+        after = con.exec_driver_sql("pragma page_count").scalar()
+    engine.dispose()
+    assert after < before / 10

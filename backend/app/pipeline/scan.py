@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import delete, select
+from sqlalchemy import Engine, delete, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.connectors.base import Connector
@@ -70,8 +70,11 @@ async def run_scan(
         logger.exception("Telegram delivery failed")
 
     with session_factory() as session:
-        purge_raw_payloads(session, older_than=utcnow() - timedelta(days=retention_days))
+        purged = purge_raw_payloads(session, older_than=utcnow() - timedelta(days=retention_days))
         session.commit()
+        bind = session.get_bind()
+    if purged:
+        vacuum(bind)
     return run_ids
 
 
@@ -138,6 +141,17 @@ async def _run_one(
 
     finish_run(session_factory, run_id, connector.name, status, records, error)
     return run_id
+
+
+def vacuum(engine: Engine) -> None:
+    """Give the space of deleted rows back to the disk (SQLite never shrinks the file on its own)."""
+    if engine.dialect.name != "sqlite":
+        return
+    try:
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as con:
+            con.exec_driver_sql("VACUUM")
+    except Exception:  # e.g. the app holds a read lock; the next scan tries again
+        logger.warning("VACUUM skipped", exc_info=True)
 
 
 def purge_raw_payloads(session: Session, older_than: datetime) -> int:

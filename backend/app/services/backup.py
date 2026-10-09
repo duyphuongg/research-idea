@@ -16,8 +16,16 @@ def sqlite_path(database_url: str, base_dir: Path) -> Path | None:
     return path if path.is_absolute() else (base_dir / path).resolve()
 
 
+def _drop_raw_payloads(con: sqlite3.Connection) -> None:
+    """Raw API responses are most of the file and only useful for debugging the live DB."""
+    if con.execute("select 1 from sqlite_master where type='table' and name='raw_payloads'").fetchone():
+        con.execute("delete from raw_payloads")
+        con.commit()
+        con.execute("vacuum")
+
+
 def backup_database(db_path: Path, dest_dir: Path, *, keep: int = 14, today: date | None = None) -> Path:
-    """Consistent online copy via SQLite's backup API; a second run on the same day replaces it."""
+    """Consistent online copy via SQLite's backup API, without raw payloads; a second run on the same day replaces it."""
     dest_dir.mkdir(parents=True, exist_ok=True)
     target = dest_dir / f"{PREFIX}{(today or date.today()):%Y-%m-%d}.db"
     tmp = target.with_name(target.name + ".tmp")
@@ -26,6 +34,7 @@ def backup_database(db_path: Path, dest_dir: Path, *, keep: int = 14, today: dat
         dst = sqlite3.connect(tmp)
         try:
             src.backup(dst)
+            _drop_raw_payloads(dst)
         finally:
             dst.close()
     finally:

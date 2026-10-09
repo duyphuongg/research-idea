@@ -44,3 +44,29 @@ def test_backup_keeps_only_latest_n(tmp_path):
     assert sorted(p.name for p in dest.iterdir()) == [
         "radar-2026-10-03.db", "radar-2026-10-04.db", "radar-2026-10-05.db",
     ]
+
+
+def test_backup_drops_raw_payloads_but_keeps_the_source(tmp_path):
+    db = tmp_path / "radar.db"
+    _make_db(db)
+    con = sqlite3.connect(db)
+    con.execute("create table raw_payloads (id int, payload text)")
+    con.executemany("insert into raw_payloads values (?, ?)", [(i, "x" * 50_000) for i in range(40)])
+    con.commit()
+    con.close()
+
+    out = backup_database(db, tmp_path / "backups", today=date(2026, 10, 8))
+
+    copy = sqlite3.connect(out)
+    assert copy.execute("select count(*) from raw_payloads").fetchone() == (0,)
+    assert copy.execute("select x from t").fetchone() == (42,)
+    copy.close()
+    assert out.stat().st_size < db.stat().st_size / 10
+    assert sqlite3.connect(db).execute("select count(*) from raw_payloads").fetchone() == (40,)
+
+
+def test_settings_keep_raw_payloads_one_day_by_default(monkeypatch):
+    from app.config import Settings
+
+    monkeypatch.delenv("RAW_RETENTION_DAYS", raising=False)
+    assert Settings(_env_file=None).raw_retention_days == 1

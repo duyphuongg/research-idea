@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/radar.db"
     etsy_api_key: str | None = None
     scheduler_enabled: bool = True
-    raw_retention_days: int = 30
+    raw_retention_days: int = 1  # raw API responses are only for debugging; ~27 MB per scan
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
     app_url: str | None = None
