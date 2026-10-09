@@ -99,15 +99,6 @@ Chạy riêng: `POST /api/scans` với `{"sources": ["etsy_signals"]}`.
 
 
 Listing bán **file thiết kế** (PNG/SVG, mockup, digital download, sublimation design, DTF/iron-on transfer — hoặc Etsy ghi `listing_type: download`) bị bỏ qua, không tính là áo; listing đã theo dõi mà là file số sẽ chuyển sang "Đã gỡ" ở lần quét kế tiếp.
-## Amazon (bản gọn)
-
-Nguồn **Amazon** (amazon.com, thị trường Mỹ) lấy Best Sellers và New Releases của 8 danh mục áo/hoodie, mỗi danh sách top 100, bằng trình duyệt Chromium tự động (`make install` đã cài Chromium qua Playwright).
-- Mỗi lần quét mất ~6 phút.
-- Trang **Amazon** hiện thứ hạng theo danh mục/danh sách; sản phẩm có cờ **bản quyền** (tên thương hiệu/IP có thể bị khiếu nại) để bạn tránh.
-- Cụm từ phổ biến trong tiêu đề được đưa vào Trend Radar (tín hiệu `title_phrase_count`).
-- Chạy riêng: `POST /api/scans` với `{"sources": ["amazon"]}`.
-- Cảnh báo: Amazon có thể chặn truy cập tự động (captcha/chặn). Khi đó trạng thái nguồn hiện lỗi, hãy thử lại sau.
-- Nguồn này dùng trình duyệt Chromium headless mặc định, nghỉ 4–8 giây giữa trang, dừng ngay khi bị chặn. Việc tự động thu thập dữ liệu trái với Điều khoản sử dụng của Amazon — bạn tự cân nhắc rủi ro; có thể tắt nguồn Amazon trong Cài đặt.
 
 ## Lịch mùa vụ (Mỹ)
 
@@ -119,7 +110,7 @@ Chỉnh sự kiện / thời gian giao hàng trong `backend/config/us_calendar.y
 
 ## Watchlist & Tin mới
 
-**Watchlist** (`/watchlist`): các keyword bạn theo dõi. Mỗi keyword là một thẻ: điểm, ngách con tìm được (từ tag Etsy và gợi ý Google), số mẫu Etsy đang Super Breakout / Steady Grower kèm ảnh, nút xem chi tiết và xem listing (trang Etsy bứt phá lọc sẵn theo keyword). Etsy, Google gợi ý và Etsy bứt phá dùng Watchlist để tìm; Amazon và Google xu hướng ngày thì không.
+**Watchlist** (`/watchlist`): các keyword bạn theo dõi. Mỗi keyword là một thẻ: điểm, ngách con tìm được (từ tag Etsy và gợi ý Google), số mẫu Etsy đang Super Breakout / Steady Grower kèm ảnh, nút xem chi tiết và xem listing (trang Etsy bứt phá lọc sẵn theo keyword). Etsy, Google gợi ý và Etsy bứt phá dùng Watchlist để tìm; Google xu hướng ngày thì không.
 
 **Tin mới** (`/alerts`): sau mỗi lần quét, app tìm và lưu tin:
 
@@ -128,7 +119,6 @@ Chỉnh sự kiện / thời gian giao hàng trong `backend/config/us_calendar.y
 | 🚀 Ngách bứt phá | điểm ≥ 60 và tăng trưởng > 20% | keyword trong Watchlist + ngách con |
 | 🔥 Etsy bứt phá | listing vừa thành Super Breakout (mọi ngách) hoặc Steady Grower (ngách trong Watchlist) | |
 | ⭐ Sản phẩm hot | sản phẩm vừa có nhãn 🔥 ở trang Bán chạy | keyword trong Watchlist |
-| 🛒 Amazon mới vào top | lọt top 20 Best Sellers so với ngày quét trước, bỏ hàng có bản quyền | 8 danh mục áo |
 
 Mỗi ngách/sản phẩm chỉ báo 1 lần trong 7 ngày, trừ khi lên mức cao hơn (Steady Grower → Super Breakout). Ngưỡng chỉnh trong `backend/config/alerts.yaml`. Tin ngách bứt phá cần vài ngày dữ liệu để có tăng trưởng.
 
