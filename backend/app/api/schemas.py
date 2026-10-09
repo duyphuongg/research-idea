@@ -281,3 +281,43 @@ class WatchItem(BaseModel):
 class WatchPage(BaseModel):
     date: date | None
     items: list[WatchItem]
+
+
+class DeltaOut(BaseModel):
+    value: int
+    days: int
+
+
+class ShopOut(BaseModel):
+    id: int
+    name: str
+    url: str | None
+    icon_url: str | None
+    opened_year: int | None
+    listing_count: int | None
+    sold_count: int | None
+    sales_7d: DeltaOut | None
+    sales_30d: DeltaOut | None
+    favorers_7d: DeltaOut | None
+    sales_per_listing: float | None
+    review_average: float | None
+    review_count: int | None
+    watched: bool
+    last_seen: date
+
+
+class ShopPage(BaseModel):
+    total: int
+    latest_date: date | None
+    items: list[ShopOut]
+
+
+class ShopPoint(BaseModel):
+    date: date
+    sold_count: int | None
+    favorers: int | None
+
+
+class ShopDetail(ShopOut):
+    series: list[ShopPoint]
+    products: list[ProductOut]
