@@ -66,3 +66,9 @@ async def test_send_once_per_morning(session):
                                                    cfg=cfg, client=client)
     assert (evening, first, again) == (False, True, False)
     assert route.call_count == 1 and get_setting(session, "brief_last_date") == "2026-10-09"
+
+
+def test_calendar_handles_events_without_order_by(session):
+    # 19/10/2026 has upcoming events with no ship-by date (order_by None) inside the 120-day window
+    text = build_brief(session, date(2026, 10, 19), None, now=datetime(2026, 10, 19, 1, 0))
+    assert text is None or "📅" in text

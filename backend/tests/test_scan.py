@@ -242,6 +242,7 @@ async def test_run_scan_uses_passed_settings_for_telegram(session_factory, monke
         return False
 
     monkeypatch.setattr("app.pipeline.scan.maybe_send_weekly_digest", no_digest)
+    monkeypatch.setattr("app.pipeline.scan.maybe_send_morning_brief", no_digest)
     with session_factory() as s:
         _pending_alert(s)
         s.commit()
@@ -263,6 +264,11 @@ async def test_run_scan_sends_digest_and_persists_week_marker(session_factory, m
     from app.settings_store import get_setting, set_setting
 
     _no_quiet_hours(monkeypatch)
+
+    async def no_brief(*a, **k):  # sent only in the morning hours: keep the test independent of the clock
+        return False
+
+    monkeypatch.setattr("app.pipeline.scan.maybe_send_morning_brief", no_brief)
     with session_factory() as s:
         set_setting(s, "digest_last_week", "2000-W01")  # an earlier week: the digest is due
         s.commit()

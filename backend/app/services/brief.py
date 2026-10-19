@@ -50,11 +50,11 @@ def _calendar(today: date) -> list[str]:
             continue
         current = phase(occ, today, cfg.fulfillment_days, cfg.ship_buffer_days)
         m = milestones(occ, cfg.fulfillment_days, cfg.ship_buffer_days)
-        order_in = (m.order_by - today).days
-        if current not in ACTIVE_PHASES and not 0 <= order_in <= ORDER_SOON_DAYS:
+        order_soon = m.order_by is not None and 0 <= (m.order_by - today).days <= ORDER_SOON_DAYS
+        if current not in ACTIVE_PHASES and not order_soon:
             continue
         line = f"• {_esc(occ.event.name)} còn {(occ.start - today).days} ngày — {PHASE_LABEL[current]}"
-        if 0 <= order_in <= ORDER_SOON_DAYS:
+        if order_soon:
             line += f", hạn đặt hàng {m.order_by:%d/%m}"
         lines.append(line)
         if len(lines) >= MAX_EVENTS:
