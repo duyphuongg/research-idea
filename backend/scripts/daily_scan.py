@@ -1,6 +1,7 @@
 """Run one full scan of every enabled source, back up the database, print a summary and exit.
 
 Used by the launchd daily job (`make install-daily`); also `make scan-now`.
+`--if-stale HOURS` scans only when the last scan is older than HOURS (catch-up after the Mac was off; run by `make up`).
 """
 
 import asyncio
@@ -13,7 +14,7 @@ from app.config import get_settings
 from app.db import make_engine, make_session_factory
 from app.models import ScanRun
 from app.services.backup import backup_database, sqlite_path
-from app.services.daily import run_daily_scan
+from app.services.daily import hours_since_last_scan, run_daily_scan
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
@@ -27,6 +28,13 @@ def main() -> int:
         backup(settings)
         return 0
     session_factory = make_session_factory(make_engine(settings.database_url))
+    if "--if-stale" in sys.argv[1:]:
+        limit = float(sys.argv[sys.argv.index("--if-stale") + 1])
+        with session_factory() as session:
+            age = hours_since_last_scan(session)
+        if age is not None and age < limit:
+            return 0
+        print(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] catch-up: last scan {age or 0:.0f}h ago", flush=True)
     print(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] daily scan start", flush=True)
     run_ids = asyncio.run(run_daily_scan(session_factory, settings))
     if run_ids is None:

@@ -1,17 +1,32 @@
 """One-shot daily scan, for running outside the web server (e.g. from a launchd job)."""
 
 import logging
+from datetime import datetime
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import Settings
 from app.connectors.registry import ConnectorFactory, build_connectors
+from app.db import utcnow
+from app.models import ScanRun
+from app.pipeline import nfl_moments
 from app.pipeline.jobs import JobFactory, build_jobs
 from app.pipeline.scan import run_scan
 from app.services.scans import scan_in_progress
 from app.settings_store import get_setting
 
 logger = logging.getLogger(__name__)
+
+
+def hours_since_last_scan(session: Session, now: datetime | None = None) -> float | None:
+    """Hours since the last full-scan source started (the hourly NFL moments job doesn't count)."""
+    last = session.scalar(
+        select(func.max(ScanRun.started_at)).where(ScanRun.source != nfl_moments.SOURCE)
+    )
+    if last is None:
+        return None
+    return ((now or utcnow()) - last).total_seconds() / 3600
 
 
 async def run_daily_scan(

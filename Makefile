@@ -12,6 +12,8 @@ migrate:
 UI_PORT ?= 3737
 # cổng backend API (chỉ nghe trong máy)
 API_PORT ?= 8020
+# bật máy mà lần quét gần nhất đã quá số giờ này → quét bù ngay (launchd không chạy bù khi máy tắt)
+CATCHUP_HOURS ?= 13
 up:
 	@mkdir -p backend/data/logs
 	@if lsof -ti tcp:$(API_PORT) >/dev/null 2>&1; then echo "Backend đã chạy sẵn (cổng $(API_PORT))"; \
@@ -21,6 +23,7 @@ up:
 	  echo "Đang build giao diện (chỉ khi code thay đổi)…"; BACKEND_URL=http://127.0.0.1:$(API_PORT) npm run build > ../backend/data/logs/frontend-build.log 2>&1 || { echo "Build lỗi — xem backend/data/logs/frontend-build.log"; exit 1; }; fi; \
 	  (BACKEND_URL=http://127.0.0.1:$(API_PORT) nohup npm run start -- -p $(UI_PORT) -H 0.0.0.0 > ../backend/data/logs/frontend.log 2>&1 < /dev/null &) ; echo "Đang bật giao diện…"; fi
 	@for i in $$(seq 1 90); do curl -s -m 3 -o /dev/null localhost:$(UI_PORT) && curl -s -m 3 -o /dev/null localhost:$(API_PORT)/api/ping && break; sleep 1; done
+	@(cd backend && nohup .venv/bin/python scripts/daily_scan.py --if-stale $(CATCHUP_HOURS) >> data/logs/daily-scan.log 2>&1 < /dev/null &)
 	@[ -n "$(NO_OPEN)" ] || open http://localhost:$(UI_PORT)
 	@echo "Giao diện: http://localhost:$(UI_PORT) — tắt bằng: make down (log: backend/data/logs/)"
 	@TS=$$(command -v tailscale || echo /Applications/Tailscale.app/Contents/MacOS/Tailscale); \

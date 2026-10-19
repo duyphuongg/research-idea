@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 from app.db import utcnow
 from app.models import ScanRun, Seed
 from app.pipeline.jobs import ScanJob
-from app.services.daily import run_daily_scan
+from app.services.daily import hours_since_last_scan, run_daily_scan
 from app.settings_store import set_setting
 from tests.fakes import FakeConnector
 
@@ -58,3 +60,13 @@ async def test_no_enabled_sources_returns_empty(session_factory, settings):
         session_factory, settings, connector_factory=lambda *a: [], job_factory=lambda *a: []
     )
     assert result == []
+
+
+def test_hours_since_last_scan_ignores_hourly_moments(session_factory):
+    now = utcnow()
+    with session_factory() as s:
+        assert hours_since_last_scan(s, now=now) is None
+        s.add(ScanRun(source="etsy", status="ok", started_at=now - timedelta(hours=30)))
+        s.add(ScanRun(source="nfl_moments", status="ok", started_at=now - timedelta(hours=1)))
+        s.commit()
+        assert round(hours_since_last_scan(s, now=now)) == 30
