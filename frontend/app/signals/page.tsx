@@ -26,6 +26,7 @@ const AGES: { value: number | undefined; label: string }[] = [
 
 const SORTS: { value: SignalSort; label: string }[] = [
   { value: "delta_saves", label: "Δ lượt lưu" },
+  { value: "momentum", label: "Tăng đều (trừ spike)" },
   { value: "dsr", label: "DSR" },
   { value: "delta_views", label: "Δ lượt xem" },
   { value: "newest", label: "Mới nhất" },

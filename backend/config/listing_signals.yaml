@@ -27,3 +27,10 @@ thresholds:
   steady_min_saves_per_day: 2
   steady_min_dsr: 0.05
   dsr_min_delta_views: 10
+# Tăng đều (phạt spike): lượt lưu/ngày tính trên 7 ngày, bị giảm khi phần lớn mức tăng dồn vào 1 ngày.
+# Khi đã đủ dữ liệu, các ngưỡng *_saves_per_day ở trên so với số này thay cho mức tăng 1 ngày.
+momentum:
+  window_days: 7
+  min_intervals: 3      # cần ít nhất 3 khoảng tăng giữa các lần quét trong 7 ngày
+  spike_share: 0.6      # 1 ngày chiếm > 60% tổng tăng = spike …
+  max_penalty: 0.7      # … bị trừ tối đa 70% (khi 100% tăng dồn vào 1 ngày)

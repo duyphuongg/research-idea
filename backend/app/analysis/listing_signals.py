@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field, fields
 from datetime import date, timedelta
 
+from app.analysis.momentum import MomentumConfig, steady_rate
 from app.analysis.velocity import SnapshotPoint
 from app.config_files import load_yaml
 
@@ -34,6 +35,7 @@ class SignalsConfig:
     min_tag_listings: int = 2
     max_tags: int = 50
     thresholds: Thresholds = field(default_factory=Thresholds)
+    momentum: MomentumConfig = field(default_factory=MomentumConfig)
 
 
 @dataclass(frozen=True)
@@ -44,19 +46,26 @@ class ListingMetrics:
     delta_views: float | None
     delta_saves: float | None
     dsr: float | None
+    momentum: float | None = None  # spike-penalised saves/day (None while history is short)
+    top_share: float | None = None  # largest single-day share of the saves gained in the window
+    spike: bool = False
+
+    @property
+    def saves_per_day(self) -> float | None:
+        """Saves/day the classification uses: the penalised rate once known, else the 1-day change."""
+        return self.momentum if self.momentum is not None else self.delta_saves
+
+
+def _load_dataclass(cls, raw: dict):
+    names = {f.name: f.type for f in fields(cls)}
+    return cls(**{
+        k: (int(v) if names[k] in (int, "int") else float(v)) for k, v in (raw or {}).items() if k in names
+    })
 
 
 def load_signals_config() -> SignalsConfig:
     data = load_yaml("listing_signals.yaml")
-    raw = data.get("thresholds") or {}
-    names = {f.name: f.type for f in fields(Thresholds)}
-    thresholds = Thresholds(
-        **{
-            k: (int(v) if names[k] in (int, "int") else float(v))
-            for k, v in raw.items()
-            if k in names
-        }
-    )
+    thresholds = _load_dataclass(Thresholds, data.get("thresholds"))
     defaults = SignalsConfig(queries=())
     return SignalsConfig(
         queries=tuple(str(q) for q in data.get("queries") or ()),
@@ -68,6 +77,7 @@ def load_signals_config() -> SignalsConfig:
         min_tag_listings=int(data.get("min_tag_listings", defaults.min_tag_listings)),
         max_tags=int(data.get("max_tags", defaults.max_tags)),
         thresholds=thresholds,
+        momentum=_load_dataclass(MomentumConfig, data.get("momentum")),
     )
 
 
@@ -87,12 +97,13 @@ def compute_metrics(
     listed_on: date | None,
     today: date,
     min_dsr_views: int = Thresholds().dsr_min_delta_views,
+    momentum_cfg: MomentumConfig = MomentumConfig(),
 ) -> ListingMetrics:
     """Per-listing growth metrics.
 
     Each metric picks its own latest/base points (ignoring None values): base is the most
     recent point at least one day before that metric's latest. DSR uses a common pair where
-    both views and favorites are present. If several points share a date, the later one in
+    both views and favorites are present: the latest and the oldest within the momentum window. If several points share a date, the later one in
     input order wins as "latest" (the pipeline passes one snapshot per day).
     """
     ordered = sorted(points, key=lambda p: p.date)  # stable: input order kept within a date
@@ -102,12 +113,16 @@ def compute_metrics(
     both = [(p.date, p.views, p.favorites) for p in ordered if p.views is not None and p.favorites is not None]
     dsr = None
     if both:
+        # Over the momentum window, not one day: Etsy refreshes views only every day or two, so a 1-day
+        # pair often shows 0 new views and no DSR at all.
         latest = both[-1]
-        base = [p for p in both[:-1] if p[0] <= latest[0] - timedelta(days=1)]
+        oldest = latest[0] - timedelta(days=momentum_cfg.window_days)
+        base = [p for p in both[:-1] if oldest <= p[0] <= latest[0] - timedelta(days=1)]
         if base:
-            total_views = latest[1] - base[-1][1]
+            total_views = latest[1] - base[0][1]
             if total_views >= min_dsr_views:
-                dsr = (latest[2] - base[-1][2]) / total_views
+                dsr = (latest[2] - base[0][2]) / total_views
+    steady = steady_rate(saves, momentum_cfg)
     return ListingMetrics(
         age,
         views[-1][1] if views else None,
@@ -115,16 +130,21 @@ def compute_metrics(
         _delta(views),
         _delta(saves),
         dsr,
+        momentum=steady.momentum if steady else None,
+        top_share=steady.top_share if steady else None,
+        spike=steady.spike if steady else False,
     )
 
 
 def classify(m: ListingMetrics, t: Thresholds) -> str:
-    if m.delta_saves is None:
+    """Status from saves/day: the spike-penalised rate once known, so one lucky day does not qualify."""
+    rate = m.saves_per_day
+    if rate is None:
         return "calibrating"
     age = m.age_days if m.age_days is not None else 0
     if (
         age <= t.breakout_max_age
-        and m.delta_saves >= t.breakout_min_saves_per_day
+        and rate >= t.breakout_min_saves_per_day
         and m.dsr is not None
         and m.dsr >= t.breakout_min_dsr
     ):
@@ -132,11 +152,11 @@ def classify(m: ListingMetrics, t: Thresholds) -> str:
     if (
         age > t.graduated_min_age
         and (m.saves or 0) >= t.graduated_min_saves
-        and m.delta_saves >= t.graduated_min_saves_per_day
+        and rate >= t.graduated_min_saves_per_day
     ):
         return "graduated"
     if (
-        m.delta_saves >= t.steady_min_saves_per_day
+        rate >= t.steady_min_saves_per_day
         and m.dsr is not None
         and m.dsr >= t.steady_min_dsr
     ):

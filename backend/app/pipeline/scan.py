@@ -16,6 +16,7 @@ from app.pipeline.store import persist_batch
 from app.services.alerts import detect_alerts
 from app.services.brief import maybe_send_morning_brief
 from app.services.digest import maybe_send_weekly_digest
+from app.services.topics import compute_topics
 
 if TYPE_CHECKING:  # jobs imports listing_signals, which imports this module
     from app.pipeline.jobs import ScanJob
@@ -52,6 +53,13 @@ async def run_scan(
             session.commit()
     except Exception:  # scoring must never break a scan
         logger.exception("Rescoring failed")
+
+    try:
+        with session_factory() as session:
+            compute_topics(session, today)
+            session.commit()
+    except Exception:  # topics must never break a scan
+        logger.exception("Topic clustering failed")
 
     try:
         with session_factory() as session:

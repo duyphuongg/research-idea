@@ -10,6 +10,7 @@ import { api } from "@/lib/api";
 export const NAV_ITEMS = [
   { href: "/", label: "Trend Radar" },
   { href: "/watchlist", label: "Watchlist" },
+  { href: "/topics", label: "Ngách mới nổi" },
   { href: "/niche", label: "Phân tích ngách" },
   { href: "/nfl", label: "NFL tuần này" },
   { href: "/work", label: "Việc của tôi" },

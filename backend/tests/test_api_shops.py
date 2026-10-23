@@ -157,3 +157,29 @@ def test_watch_toggle(client, session, shops):
 
     assert client.post("/api/shops/999/watch").status_code == 404
     assert client.delete("/api/shops/999/watch").status_code == 404
+
+
+def test_pace_revenue_and_spark(client, session, shops):
+    add_shop(session, 5, [(14, 1000, 10, 5.0), (7, 1100, 10, 5.0), (0, 1250, 10, 5.0)])
+    for n, price in enumerate((20.0, 30.0, 25.0)):
+        session.add(Product(source="etsy", external_id=f"p{n}", title="x", url="https://e/x", product_type="tshirt",
+                            shop_id=5, price=price, currency="USD"))
+    session.add(Product(source="etsy", external_id="eur", title="x", url="https://e/x", product_type="tshirt",
+                        shop_id=5, price=999.0, currency="EUR"))
+    session.commit()
+    items = {i["id"]: i for i in client.get("/api/shops").json()["items"]}
+    five = items[5]
+    assert five["pace"] == pytest.approx(1.5)  # 150 this week vs 100 the week before
+    assert five["median_price"] == 25.0
+    assert five["revenue_7d"] == pytest.approx(150 * 25.0)
+    assert five["spark"] == [1000, 1100, 1250]
+    assert items[1]["pace"] is None  # no previous week reaching back 14 days
+    assert ids(client.get("/api/shops?sort=pace"))[0] == 5
+    assert ids(client.get("/api/shops?sort=revenue_7d"))[0] == 5
+
+
+def test_pace_needs_a_real_previous_week(client, session, shops):
+    add_shop(session, 6, [(14, 100, 10, 5.0), (7, 105, 10, 5.0), (0, 140, 10, 5.0)])  # 5 → 35 orders
+    session.commit()
+    six = next(i for i in client.get("/api/shops").json()["items"] if i["id"] == 6)
+    assert six["pace"] is None

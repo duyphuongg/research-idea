@@ -33,6 +33,7 @@ export type Product = {
   hot: boolean;
   keywords: string[];
   licensed: boolean | null;
+  spark: number[];
 };
 
 export type ProductPage = { total: number; items: Product[] };
@@ -45,10 +46,11 @@ export type ProductQuery = {
   limit?: number;
   offset?: number;
   hide_licensed?: boolean;
+  max_age?: number;
 };
 
 export type SignalStatus = "super_breakout" | "steady_grower" | "graduated" | "calibrating" | "normal" | "gone";
-export type SignalSort = "delta_saves" | "dsr" | "delta_views" | "newest";
+export type SignalSort = "delta_saves" | "momentum" | "dsr" | "delta_views" | "newest";
 export type SignalTag = { tag: string; keyword_id: number | null };
 export type SignalItem = {
   product_id: number;
@@ -70,6 +72,9 @@ export type SignalItem = {
   status: SignalStatus;
   discovery_query: string;
   tags: SignalTag[];
+  spark: number[];
+  momentum: number | null;
+  spike: boolean;
 };
 export type SignalPage = { updated_on: string | null; counts: Record<string, number>; total: number; items: SignalItem[] };
 export type SignalQuery = {
@@ -248,7 +253,7 @@ export type CalendarEvent = {
 };
 export type CalendarPage = { today: string; fulfillment_days: number; events: CalendarEvent[] };
 
-export type AlertKind = "niche" | "listing" | "hot_product" | "shop" | "nfl" | "nfl_moment" | "event";
+export type AlertKind = "niche" | "listing" | "hot_product" | "shop" | "nfl" | "nfl_moment" | "event" | "topic";
 export type AlertItem = {
   id: number;
   /** A known AlertKind, or a kind this UI does not know (shown with a fallback icon). */
@@ -298,6 +303,10 @@ export type Shop = {
   review_count: number | null;
   watched: boolean;
   last_seen: string;
+  pace: number | null;
+  median_price: number | null;
+  revenue_7d: number | null;
+  spark: number[];
 };
 export type ShopPage = { total: number; latest_date: string | null; items: Shop[] };
 export type ShopPoint = { date: string; sold_count: number | null; favorers: number | null };
@@ -310,7 +319,9 @@ export type ShopSort =
   | "opened_at"
   | "listing_count"
   | "review_average"
-  | "last_seen";
+  | "last_seen"
+  | "pace"
+  | "revenue_7d";
 export type ShopListings = "lt200" | "200_1000" | "gt1000";
 export type ShopOpened = "2026" | "2025plus" | "2024plus" | "before2024";
 export type ShopQuery = {
@@ -326,6 +337,26 @@ export type ShopQuery = {
   limit?: number;
   offset?: number;
 };
+
+export type TopicSort = "score" | "growth" | "new";
+export type Topic = {
+  key: string;
+  rank: number;
+  aliases: string[];
+  listings: number;
+  shops: number;
+  rising: number;
+  gain_7d: number;
+  prev_gain_7d: number | null;
+  growth: number | null;
+  score: number;
+  ip_level: IpLevel;
+  new: boolean;
+  series: { date: string; score: number }[];
+  products: { id: number; title: string; url: string; image_url: string | null }[];
+};
+export type TopicPage = { date: string | null; total: number; items: Topic[] };
+export type TopicQuery = { sort?: TopicSort; new_only?: boolean; hide_ip?: boolean };
 
 export type NflWeek = { season: number; season_type: number; week: number; games: number };
 export type NflLine = { category: string; stat_line: string };
@@ -406,6 +437,14 @@ export const api = {
       `/api/products${toQuery({ ...q, hide_licensed: q.hide_licensed ? "true" : undefined })}`,
     ),
   listSignals: (q: SignalQuery = {}) => request<SignalPage>(`/api/signals${toQuery(q)}`),
+  listTopics: (q: TopicQuery = {}) =>
+    request<TopicPage>(
+      `/api/topics${toQuery({
+        sort: q.sort,
+        new_only: q.new_only ? "true" : undefined,
+        hide_ip: q.hide_ip ? "true" : undefined,
+      })}`,
+    ),
   listTrends: (q: TrendQuery = {}) =>
     request<TrendPage>(
       `/api/trends${toQuery({ ...q, pod_only: q.pod_only === undefined ? undefined : String(q.pod_only) })}`,

@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { SalesDelta, ShopIcon, WatchToggle, formatRating, formatSpl } from "@/components/ShopBits";
+import { Pace, SalesDelta, ShopIcon, WatchToggle, formatRating, formatSpl, formatUsdShort } from "@/components/ShopBits";
+import Sparkline from "@/components/Sparkline";
 import { Button, Card, EmptyState, Notice, PageHeader, Select } from "@/components/ui";
 import {
   api,
@@ -20,6 +21,8 @@ const PAGE_SIZE = 50;
 
 const SORTS: { value: ShopSort; label: string }[] = [
   { value: "sales_7d", label: "+Đơn 7 ngày" },
+  { value: "pace", label: "Tăng tốc (so tuần trước)" },
+  { value: "revenue_7d", label: "≈ Doanh thu 7 ngày" },
   { value: "sales_30d", label: "+Đơn 30 ngày" },
   { value: "sold_count", label: "Tổng đơn" },
   { value: "sales_per_listing", label: "Đơn/listing" },
@@ -59,6 +62,7 @@ const MIN_RATING: { value: number; label: string }[] = [
 /** Quick filters: each sets a fixed patch; clicking an active chip clears it. */
 const CHIPS: { label: string; patch: Partial<ShopQuery> }[] = [
   { label: "Đang lên 7 ngày", patch: { sort: "sales_7d" } },
+  { label: "Đang tăng tốc", patch: { sort: "pace" } },
   { label: "Shop mới 2025–2026", patch: { opened: "2025plus" } },
   { label: "Ít listing bán nhiều", patch: { listings: "lt200", min_spl: 30 } },
   { label: "Shop lớn", patch: { min_sales: 50000 } },
@@ -387,13 +391,13 @@ function ShopsView() {
   );
 }
 
-const TH_BASE = "eyebrow whitespace-nowrap px-3 py-2 font-bold text-ink-2";
+const TH_BASE = "eyebrow whitespace-nowrap px-2 py-2 font-bold text-ink-2";
 const TH = `${TH_BASE} text-right`;
-const TD = "whitespace-nowrap px-3 py-2 text-right font-mono text-[13px] text-ink";
+const TD = "whitespace-nowrap px-2 py-2 text-right font-mono text-[13px] text-ink";
 
 function ShopTable({ items, busy, onToggle }: { items: Shop[]; busy: Set<number>; onToggle: (s: Shop) => void }) {
   return (
-    <table className="w-full min-w-[880px] border-collapse text-sm">
+    <table className="w-full min-w-[960px] border-collapse text-sm">
       <thead className="border-b border-rule">
         <tr>
           <th scope="col" className={`${TH_BASE} sticky left-0 z-10 bg-sheet shadow-[1px_0_0_var(--color-rule)] text-left`}>
@@ -408,11 +412,17 @@ function ShopTable({ items, busy, onToggle }: { items: Shop[]; busy: Set<number>
           <th scope="col" className={TH}>
             Tổng đơn
           </th>
-          <th scope="col" className={`${TH} text-ink`}>
+          <th scope="col" className={`${TH} text-ink`} title="Số đơn thêm trong 7 ngày; dòng dưới: nhanh/chậm hơn tuần trước">
             +Đơn 7 ngày
+          </th>
+          <th scope="col" className={TH} title="Ước tính doanh thu 7 ngày: đơn 7 ngày × giá trung vị các listing của shop">
+            ≈ $ 7 ngày
           </th>
           <th scope="col" className={TH}>
             +Đơn 30 ngày
+          </th>
+          <th scope="col" className={TH} title="Tổng đơn theo ngày, 30 ngày gần nhất">
+            30 ngày
           </th>
           <th scope="col" className={TH}>
             Đơn/listing
@@ -429,7 +439,7 @@ function ShopTable({ items, busy, onToggle }: { items: Shop[]; busy: Set<number>
         {items.map((s) => (
           <tr key={s.id} className="group hover:bg-paper/50">
             <th scope="row" className="sticky left-0 z-10 bg-sheet shadow-[1px_0_0_var(--color-rule)] px-3 py-2 text-left font-normal group-hover:bg-paper">
-              <span className="flex max-w-[150px] items-center sm:max-w-[260px] gap-2">
+              <span className="flex max-w-[150px] items-center sm:max-w-[196px] gap-2">
                 <ShopIcon shop={s} />
                 <Link href={`/shops/${s.id}`} className="truncate font-medium text-ink hover:underline">
                   {s.name}
@@ -453,9 +463,21 @@ function ShopTable({ items, busy, onToggle }: { items: Shop[]; busy: Set<number>
             <td className={TD}>{formatInt(s.sold_count)}</td>
             <td className={`${TD} font-medium`}>
               <SalesDelta delta={s.sales_7d} window={7} />
+              {s.pace !== null && (
+                <span className="block text-[11px] leading-4">
+                  <Pace pace={s.pace} />
+                  <span className="sr-only"> so với tuần trước</span>
+                </span>
+              )}
             </td>
+            <td className={TD}>{formatUsdShort(s.revenue_7d)}</td>
             <td className={TD}>
               <SalesDelta delta={s.sales_30d} window={30} />
+            </td>
+            <td className="px-3 py-1.5 text-right">
+              <span className="inline-flex align-middle">
+                <Sparkline values={s.spark} width={64} height={20} />
+              </span>
             </td>
             <td className={TD}>{formatSpl(s.sales_per_listing)}</td>
             <td className={TD}>{formatRating(s.review_average)}</td>

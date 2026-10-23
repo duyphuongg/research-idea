@@ -113,3 +113,25 @@ def test_signals_keyword_filter(client, session):
     assert body["counts"] == {"steady_grower": 1}
     unfiltered = client.get("/api/signals", params={"status": "all"}).json()
     assert unfiltered["total"] == 3
+
+
+def test_items_carry_saves_spark(client, session, data):
+    from app.models import ProductSnapshot
+
+    for day, fav in ((date(2026, 9, 20), 1), (date(2026, 10, 3), 4), (D, 10)):
+        session.add(ProductSnapshot(product_id=1, date=day, favorites=fav, views=fav * 10))
+    session.commit()
+    items = {i["product_id"]: i for i in client.get("/api/signals?status=all").json()["items"]}
+    assert items[1]["spark"] == [4, 10]  # 09-20 is older than 14 days
+    assert items[2]["spark"] == []
+
+
+def test_momentum_sort_and_spike_flag(client, session, data):
+    session.query(ListingSignal).filter_by(product_id=1).update({"momentum": 2.0, "top_share": 0.9})
+    session.query(ListingSignal).filter_by(product_id=3).update({"momentum": 3.0, "top_share": 0.3})
+    session.commit()
+    r = client.get("/api/signals?sort=momentum")
+    assert ids(r) == [3, 1]
+    items = {i["product_id"]: i for i in r.json()["items"]}
+    assert items[1]["spike"] is True and items[3]["spike"] is False
+    assert items[3]["momentum"] == 3.0

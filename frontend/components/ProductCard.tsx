@@ -1,3 +1,4 @@
+import Sparkline from "@/components/Sparkline";
 import WorkStatus from "@/components/WorkStatus";
 import { SourceChip } from "@/components/ui";
 import type { Product } from "@/lib/api";
@@ -65,6 +66,12 @@ export default function ProductCard({ product }: { product: Product }) {
             <SpecCell label="Đánh giá" value={`★ ${product.rating}`} />
           ) : null}
         </div>
+        {product.spark.length >= 2 && (
+          <div className="-mt-1 flex items-center justify-between gap-2" title={`${METRIC_LABEL[metric]} 14 ngày gần nhất`}>
+            <span className="eyebrow text-[10px] leading-4 text-ink-2">14 ngày</span>
+            <Sparkline values={product.spark} width={88} height={18} />
+          </div>
+        )}
         {product.licensed && (
           <div>
             <LicensedTag />

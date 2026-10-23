@@ -24,6 +24,19 @@ const TYPES: { value: ProductType | ""; label: string }[] = [
   { value: "hoodie", label: "Hoodie" },
 ];
 
+const AGES: { value: number | ""; label: string }[] = [
+  { value: "", label: "Mọi tuổi" },
+  { value: 30, label: "Đăng ≤ 30 ngày" },
+  { value: 60, label: "Đăng ≤ 60 ngày" },
+  { value: 90, label: "Đăng ≤ 90 ngày" },
+];
+
+/** One-tap views; clicking an active preset clears its age filter. */
+const PRESETS: { label: string; hint: string; patch: Partial<ProductQuery> }[] = [
+  { label: "Listing mới đang chạy", hint: "Đăng ≤ 30 ngày, xếp theo tăng trưởng 7 ngày", patch: { max_age: 30, sort: "velocity" } },
+  { label: "Mới trong 90 ngày", hint: "Đăng ≤ 90 ngày, xếp theo tăng trưởng 7 ngày", patch: { max_age: 90, sort: "velocity" } },
+];
+
 type Result = { key: string; data?: ProductPage; error?: string };
 
 export default function ProductsPage() {
@@ -110,6 +123,17 @@ function ProductsView() {
             </option>
           ))}
         </Select>
+        <Select
+          label="Tuổi listing"
+          value={query.max_age ?? ""}
+          onChange={(e) => update({ max_age: e.target.value ? Number(e.target.value) : undefined })}
+        >
+          {AGES.map((a) => (
+            <option key={a.value} value={a.value}>
+              {a.label}
+            </option>
+          ))}
+        </Select>
         <Select label="Sắp xếp" value={query.sort} onChange={(e) => update({ sort: e.target.value as ProductSort })}>
           {SORTS.map((s) => (
             <option key={s.value} value={s.value}>
@@ -123,6 +147,26 @@ function ProductsView() {
           checked={query.hide_licensed ?? false}
           onChange={(e) => update({ hide_licensed: e.target.checked || undefined })}
         />
+      </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="eyebrow text-ink-2">Lọc nhanh</span>
+        {PRESETS.map((preset) => {
+          const active = Object.entries(preset.patch).every(([k, v]) => query[k as keyof ProductQuery] === v);
+          return (
+            <button
+              key={preset.label}
+              type="button"
+              aria-pressed={active}
+              title={preset.hint}
+              onClick={() => update(active ? { max_age: undefined } : preset.patch)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                active ? "border-ink bg-ink text-white" : "border-rule bg-sheet text-ink hover:border-ink-2"
+              }`}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
       </div>
       <p className="mb-5 text-xs leading-5 text-ink-2">
         Lượt xem / favorites / reviews và mức tăng 7 ngày là chỉ số ước tính (proxy), không phải doanh số thật. Chỉ

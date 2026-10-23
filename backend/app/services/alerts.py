@@ -8,10 +8,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.analysis.alerts import (
-    AlertCandidate, AlertsConfig, HotRow, ListingRow, MomentRow, NflRow, NicheRow, PastAlert, ShopRow,
+    AlertCandidate, AlertsConfig, HotRow, ListingRow, MomentRow, NflRow, NicheRow, PastAlert, ShopRow, TopicRow,
     dedupe, hot_candidates, listing_candidates, load_alerts_config, moment_candidates, nfl_candidates, niche_candidates,
-    shop_candidates,
+    shop_candidates, topic_candidates,
 )
+from app.analysis.topics import load_topics_config
 from app.analysis.listing_signals import load_signals_config
 from app.db import utcnow
 from app.models import (
@@ -20,6 +21,7 @@ from app.models import (
 from app.services.hot import compute_product_metrics
 from app.services.nfl import standouts
 from app.services.shops import shop_metrics
+from app.services.topics import latest_topics, topic_subject_id
 from app.services.work import blocked_subjects
 from app.services.watchlist import child_keyword_ids, listing_matches, seed_keyword_ids, watch_keywords
 
@@ -63,7 +65,8 @@ def _listing_rows(session: Session, seeds: list[str]) -> list[ListingRow]:
             "/signals?" + urlencode({"keyword": matched, "status": "all"})
             if matched else "/signals?status=super_breakout"
         )
-        out.append(ListingRow(p.id, p.title, p.url, p.image_url, sig.status, sig.delta_saves, sig.dsr, matched, link))
+        rate = sig.momentum if sig.momentum is not None else sig.delta_saves  # what the status was based on
+        out.append(ListingRow(p.id, p.title, p.url, p.image_url, sig.status, rate, sig.dsr, matched, link))
     return out
 
 
@@ -104,6 +107,17 @@ def _shop_rows(session: Session) -> list[ShopRow]:
         for m in shop_metrics(session, watched)
         if m.sales_7d is not None
     ]
+
+
+def _topic_candidates(session: Session) -> list[AlertCandidate]:
+    cfg = load_topics_config()
+    rows = [
+        TopicRow(topic_subject_id(t["key"]), t["key"], t["rank"], t["listings"], t["shops"], t["gain_7d"],
+                 t["growth"], t["products"][0]["image_url"] if t["products"] else None)
+        for t in latest_topics(session, cfg)["items"]
+        if t["new"] and t["ip_level"] != "red"
+    ]
+    return topic_candidates(rows, cfg.alert_top, cfg.alert_max)
 
 
 NFL_FRESH_DAYS = 8  # only alert on a week whose last game is this recent
@@ -191,6 +205,7 @@ def detect_alerts(
         *listing_candidates(_listing_rows(session, seeds)),
         *shop_candidates(_shop_rows(session), cfg),
         *hot_candidates(_hot_rows(session, seeds)),
+        *_topic_candidates(session),
         *_nfl_candidates(session, now, cfg),
         *_moment_candidates(session, now, cfg),
     ]

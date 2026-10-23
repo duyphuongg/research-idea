@@ -37,6 +37,7 @@ KIND_STYLE = {
     "nfl": ("🏈", "Cầu thủ NFL tiềm năng"),
     "nfl_moment": ("🗯️", "Khoảnh khắc NFL"),
     "event": ("🏆", "Sự kiện lớn"),
+    "topic": ("🧭", "Ngách mới nổi"),
 }
 
 

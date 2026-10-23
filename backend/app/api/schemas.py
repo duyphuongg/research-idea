@@ -26,6 +26,7 @@ class ProductOut(BaseModel):
     hot: bool
     keywords: list[str]
     licensed: bool | None = None
+    spark: list[int] = []  # velocity metric per snapshot date, last 14 days, oldest first
 
 
 class ProductPage(BaseModel):
@@ -216,6 +217,9 @@ class SignalItem(BaseModel):
     status: str
     discovery_query: str
     tags: list[SignalTag]
+    spark: list[int] = []  # saves per snapshot date, last 14 days, oldest first
+    momentum: float | None = None  # spike-penalised saves/day over 7 days
+    spike: bool = False  # most of the recent saves came in one day
 
 
 class SignalPage(BaseModel):
@@ -307,6 +311,10 @@ class ShopOut(BaseModel):
     review_count: int | None
     watched: bool
     last_seen: date
+    pace: float | None = None  # 7-day sales / previous week's (both per 7 days)
+    median_price: float | None = None
+    revenue_7d: float | None = None  # sales_7d × median price (estimate)
+    spark: list[int] = []  # sold_count per snapshot date, last 30 days, oldest first
 
 
 class ShopPage(BaseModel):
@@ -492,3 +500,38 @@ class IpCheckOut(BaseModel):
 class NicheRemovedTag(BaseModel):
     tag: str
     term: str
+
+
+class TopicPoint(BaseModel):
+    date: date
+    score: float
+
+
+class TopicProduct(BaseModel):
+    id: int
+    title: str
+    url: str
+    image_url: str | None
+
+
+class TopicOut(BaseModel):
+    key: str
+    rank: int
+    aliases: list[str]
+    listings: int
+    shops: int
+    rising: int
+    gain_7d: float
+    prev_gain_7d: float | None
+    growth: float | None
+    score: float
+    ip_level: str
+    new: bool
+    series: list[TopicPoint]
+    products: list[TopicProduct]
+
+
+class TopicPage(BaseModel):
+    date: date | None
+    total: int
+    items: list[TopicOut]

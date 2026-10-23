@@ -52,6 +52,29 @@ export function SalesDelta({
   );
 }
 
+/** Sales pace vs the previous week: "▲ +45%" in go, "▼ −20%" in stop; "—" when unknown. */
+export function Pace({ pace, className = "" }: { pace: number | null; className?: string }) {
+  if (pace === null) return <span className={`font-mono text-ink-2 ${className}`}>—</span>;
+  const pct = Math.round((pace - 1) * 100);
+  if (pct === 0) return <span className={`font-mono text-ink-2 ${className}`}>= 0%</span>;
+  const up = pct > 0;
+  return (
+    <span className={`whitespace-nowrap font-mono ${up ? "text-go" : "text-stop"} ${className}`}>
+      {up ? "▲ +" : "▼ −"}
+      {formatInt(Math.abs(pct))}%
+    </span>
+  );
+}
+
+/** Rough USD amount: "$1.2k", "$35k", "$420". */
+export function formatUsdShort(value: number | null): string {
+  if (value === null) return "—";
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 10_000) return `$${Math.round(value / 1000)}k`;
+  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
+  return `$${Math.round(value)}`;
+}
+
 /** ☆ / ★ toggle for watching a shop. */
 export function WatchToggle({
   shop,

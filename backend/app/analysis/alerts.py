@@ -4,6 +4,7 @@ import logging
 from collections.abc import Iterable
 from dataclasses import dataclass, fields
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 
 from app.config_files import load_yaml
 
@@ -43,8 +44,8 @@ def load_alerts_config() -> AlertsConfig:
 LISTING_LABEL = {"super_breakout": "Super Breakout", "steady_grower": "Steady Grower"}
 METRIC_LABEL = {"reviews": "reviews", "favorites": "lượt lưu", "views": "lượt xem"}
 # Telegram order: super breakout, niche, steady grower, shop, hot product (unknown kinds last)
-KIND_RANK = {("listing", 2): 0, ("nfl_moment", 1): 1, ("nfl", 1): 1, ("niche", 1): 2, ("listing", 1): 3, ("shop", 1): 4,
-             ("hot_product", 1): 5}
+KIND_RANK = {("listing", 2): 0, ("nfl_moment", 1): 1, ("nfl", 1): 1, ("niche", 1): 2, ("topic", 1): 2,
+             ("listing", 1): 3, ("shop", 1): 4, ("hot_product", 1): 5}
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,18 @@ class NflRow:
 
 
 @dataclass(frozen=True)
+class TopicRow:
+    subject_id: int
+    key: str
+    rank: int
+    listings: int
+    shops: int
+    gain_7d: float
+    growth: float | None
+    image_url: str | None
+
+
+@dataclass(frozen=True)
 class PastAlert:
     kind: str
     subject_id: int
@@ -159,6 +172,21 @@ def listing_candidates(rows: Iterable[ListingRow]) -> list[AlertCandidate]:
             kind="listing", subject_id=r.product_id, level=level, priority=r.delta_saves or 0.0,
             title=r.title, reason=" · ".join(parts), image_url=r.image_url, link=r.link,
             external_url=r.url, watch_keyword=r.watch_keyword,
+        ))
+    return out
+
+
+def topic_candidates(rows: Iterable[TopicRow], top: int, max_items: int) -> list[AlertCandidate]:
+    """🧭 new micro-niches that entered the top `top` (rows: new, not IP red), best rank first."""
+    out = []
+    for r in sorted((r for r in rows if r.rank <= top), key=lambda r: r.rank)[:max_items]:
+        parts = [f"#{r.rank}", f"{r.listings} listing · {r.shops} shop", f"+{r.gain_7d:.0f} lượt lưu/7 ngày"]
+        if r.growth is not None:
+            parts.append(f"{'+' if r.growth >= 0 else ''}{r.growth * 100:.0f}% so tuần trước")
+        out.append(AlertCandidate(
+            kind="topic", subject_id=r.subject_id, level=1, priority=float(-r.rank), title=r.key,
+            reason=" · ".join(parts), image_url=r.image_url, link="/topics?" + urlencode({"key": r.key}),
+            external_url=None, watch_keyword=None,
         ))
     return out
 

@@ -13,6 +13,7 @@ const KIND: Record<AlertKind, { icon: string; label: string }> = {
   nfl: { icon: "🏈", label: "Cầu thủ NFL tiềm năng" },
   nfl_moment: { icon: "🗯️", label: "Khoảnh khắc NFL" },
   event: { icon: "🏆", label: "Sự kiện lớn" },
+  topic: { icon: "🧭", label: "Ngách mới nổi" },
 };
 
 /** Style for an alert kind; unknown kinds (e.g. from an older backend) get 🔔 and the raw kind. */
@@ -197,7 +198,7 @@ function AlertRow({ alert: a, unread }: { alert: AlertItem; unread: boolean }) {
           {a.title}
         </Link>
         <p className="mt-0.5 font-mono text-xs text-ink-2">{a.reason}</p>
-        {a.kind === "niche" && (
+        {(a.kind === "niche" || a.kind === "topic") && (
           <Link
             href={`/niche?keyword=${encodeURIComponent(a.title)}`}
             className="mt-1 inline-block text-xs font-medium text-ink underline underline-offset-2"

@@ -1,0 +1,17 @@
+# Ngách mới nổi — gom listing Etsy theo tag (bỏ từ chung), xếp theo tốc độ lượt lưu 7 ngày. Chỉnh tự do.
+min_listings: 5        # ngách cần ≥ 5 listing …
+min_shops: 3           # … của ≥ 3 shop khác nhau
+max_top_share: 0.5     # 1 listing không được chiếm > 50% tổng lượt lưu tăng của ngách (tránh 1 listing viral)
+merge_jaccard: 0.6     # 2 ngách chung ≥ 60% listing thì gộp làm 1
+prior_weight: 10       # Bayesian: ngách ít listing bị kéo về mức trung bình (càng lớn càng thận trọng)
+rising_min_gain: 3     # listing "đang lên" = ≥ 3 lượt lưu / 7 ngày
+max_topics: 100
+new_lookback_days: 7   # "Mới" = chưa có trong danh sách ở 7 ngày trước
+alert_top: 10          # 🧭 báo khi ngách mới vào top 10 …
+alert_max: 3           # … tối đa 3 tin mỗi lần quét
+# Từ chung bị bỏ khỏi tag trước khi gom (loại áo, giới tính, "gift"…)
+generic_words: [
+  shirt, t-shirt, tshirt, tee, tees, sweatshirt, hoodie, crewneck, crew, neck, sweater, top, pullover, apparel,
+  clothing, outfit, gift, unisex, comfort, colors, color, graphic, women, men, woman, man, womens, mens, ladies,
+  kid, kids, toddler, youth, adult, for, and, the, a, of, with, in, on, to, my, cute, funny, trendy, oversized,
+]

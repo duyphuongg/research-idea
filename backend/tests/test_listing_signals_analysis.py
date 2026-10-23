@@ -93,3 +93,45 @@ def test_classify_boundaries():
     assert classify(metrics(14, 22, 5.0, 0.15), t) == "super_breakout"
     assert classify(metrics(30, 40, 2, 0.01), t) == "normal"
     assert classify(metrics(31, 40, 2, 0.01), t) == "graduated"
+
+
+def test_config_loads_momentum_section():
+    from app.analysis.momentum import MomentumConfig
+
+    assert load_signals_config().momentum == MomentumConfig()
+
+
+def _daily(saves):
+    return [pt(date(2026, 10, 7 - len(saves) + 1 + i), 1000 + 50 * i, s) for i, s in enumerate(saves)]
+
+
+def test_one_day_spike_is_not_a_breakout():
+    # 40 saves in the last day only: the 1-day change says 40/day, the penalised rate says 40/4 × 0.3 = 3
+    m = compute_metrics(_daily([0, 0, 0, 0, 40]), date(2026, 10, 1), TODAY)
+    assert m.delta_saves == pytest.approx(40)
+    assert m.spike is True and m.top_share == 1.0
+    assert m.momentum == pytest.approx(3)
+    assert classify(m, Thresholds()) == "steady_grower"  # 3/day ≥ 2, dsr 0.8 — no longer super breakout
+
+
+def test_steady_growth_keeps_breakout():
+    m = compute_metrics(_daily([0, 10, 20, 30, 40]), date(2026, 10, 1), TODAY)
+    assert m.spike is False and m.momentum == pytest.approx(10)
+    assert classify(m, Thresholds()) == "super_breakout"
+
+
+def test_short_history_uses_one_day_change():
+    m = compute_metrics(_daily([0, 40]), date(2026, 10, 1), TODAY)
+    assert m.momentum is None and m.saves_per_day == pytest.approx(40)
+    assert classify(m, Thresholds()) == "super_breakout"
+
+
+def test_dsr_spans_the_window_when_views_lag():
+    # views refreshed only every other day: the last 1-day pair has 0 new views
+    points = [pt(date(2026, 10, 3), 100, 0), pt(date(2026, 10, 5), 200, 10), pt(date(2026, 10, 6), 300, 15),
+              pt(TODAY, 300, 20)]
+    m = compute_metrics(points, None, TODAY)
+    assert m.delta_views == 0
+    assert m.dsr == pytest.approx(0.1)  # 20 saves / 200 views since Oct 3
+    old = [pt(date(2026, 9, 20), 0, 0), pt(date(2026, 10, 6), 300, 15), pt(TODAY, 300, 20)]
+    assert compute_metrics(old, None, TODAY).dsr is None  # Sep 20 is outside the window; Oct 6 pair has 0 views

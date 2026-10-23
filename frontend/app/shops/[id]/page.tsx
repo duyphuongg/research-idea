@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import ProductCard from "@/components/ProductCard";
-import { SalesDelta, ShopIcon, WatchToggle, formatRating, formatSpl } from "@/components/ShopBits";
+import { Pace, SalesDelta, ShopIcon, WatchToggle, formatRating, formatSpl, formatUsdShort } from "@/components/ShopBits";
 import { Card, EmptyState, Notice, PageHeader, Section } from "@/components/ui";
 import { ApiError, api, type ShopDetail } from "@/lib/api";
 import { formatInt } from "@/lib/format";
@@ -132,13 +132,15 @@ export default function ShopDetailPage() {
       </div>
 
       <section aria-label="Thông số" className="overflow-hidden rounded-md border border-rule shadow-card">
-        <div className="grid grid-cols-2 gap-px bg-rule sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-px bg-rule sm:grid-cols-4">
           <StatBlock label="Tổng đơn" value={formatInt(shop.sold_count)} />
           <StatBlock label="+7 ngày" value={<SalesDelta delta={shop.sales_7d} window={7} />} />
+          <StatBlock label="Nhịp so tuần trước" value={<Pace pace={shop.pace} />} />
+          <StatBlock label="≈ Doanh thu 7 ngày" value={formatUsdShort(shop.revenue_7d)} />
           <StatBlock label="+30 ngày" value={<SalesDelta delta={shop.sales_30d} window={30} />} />
           <StatBlock label="Đơn/listing" value={formatSpl(shop.sales_per_listing)} />
           <StatBlock label="+Yêu thích 7 ngày" value={<SalesDelta delta={shop.favorers_7d} window={7} />} />
-          <div className="bg-sheet lg:hidden" aria-hidden="true" />
+          <div className="bg-sheet" aria-hidden="true" />
         </div>
       </section>
 

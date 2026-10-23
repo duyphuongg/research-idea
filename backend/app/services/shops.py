@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
+from statistics import median
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -18,6 +19,10 @@ HISTORY_DAYS = 45
 STALE_DAYS = 3
 # A window's base snapshot may be up to this many days older than the window (missed daily scans).
 WINDOW_SLACK_DAYS = 2
+# Shorter spans are too noisy to scale to a week (same rule as the 🏪 shop alert).
+MIN_PACE_DAYS = 3
+# Below this many orders the week before (per 7 days), a ratio is noise (1 → 15 orders = +1,400%).
+MIN_PACE_PREV_SALES = 10
 
 
 @dataclass(frozen=True)
@@ -38,6 +43,25 @@ class ShopMetrics:
     favorers_7d: Delta | None
     sales_per_listing: float | None
     review_count: int | None = None
+    median_price: float | None = None  # of the shop's known USD products
+
+    @property
+    def pace(self) -> float | None:
+        """7-day sales / previous week's, both per 7 days; None for short spans or a tiny previous week."""
+        cur, prev = self.sales_7d, self.prev_sales_7d
+        if cur is None or prev is None or cur.days < MIN_PACE_DAYS or prev.days < MIN_PACE_DAYS:
+            return None
+        prev_week = prev.value * 7 / prev.days
+        if prev_week < MIN_PACE_PREV_SALES:
+            return None
+        return (cur.value * 7 / cur.days) / prev_week
+
+    @property
+    def revenue_7d(self) -> float | None:
+        """Estimated sales revenue of the last 7 days (orders × median listing price)."""
+        if self.sales_7d is None or self.median_price is None:
+            return None
+        return self.sales_7d.value * self.median_price
 
 
 def window_delta(points: list[tuple[date, int | None]], latest: date, days: int) -> Delta | None:
@@ -107,11 +131,21 @@ def shop_metrics(session: Session, shop_ids: Iterable[int] | None = None) -> lis
 
     global_latest = session.scalar(select(func.max(ShopSnapshot.date)))
 
+    price_q = select(Product.shop_id, Product.price).where(
+        Product.shop_id.is_not(None), Product.price.is_not(None), Product.currency == "USD"
+    )
+    if shop_ids is not None:
+        price_q = price_q.where(Product.shop_id.in_(ids))
+    prices: dict[int, list[float]] = defaultdict(list)
+    for shop_id, price in session.execute(price_q):
+        prices[shop_id].append(price)
+
     result = []
     for shop in session.scalars(shop_q):
         rows = rows_by_shop.get(shop.id)
         if not rows:
-            result.append(ShopMetrics(shop, None, None, None, None, None, None, None, None, None))
+            result.append(ShopMetrics(shop, None, None, None, None, None, None, None, None, None,
+                                      median_price=_median(prices.get(shop.id))))
             continue
         latest_date, last_sold, _, last_listings, last_rating, last_reviews = rows[-1]
         sold = [(r[0], r[1]) for r in rows]
@@ -129,8 +163,13 @@ def shop_metrics(session: Session, shop_ids: Iterable[int] | None = None) -> lis
             favorers_7d=None if stale else window_delta(favs, latest_date, 7),
             sales_per_listing=spl,
             review_count=last_reviews,
+            median_price=_median(prices.get(shop.id)),
         ))
     return result
+
+
+def _median(values: list[float] | None) -> float | None:
+    return round(median(values), 2) if values else None
 
 
 def shops_matching(session: Session, keyword: str) -> set[int]:

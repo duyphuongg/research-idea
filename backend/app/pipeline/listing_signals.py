@@ -271,6 +271,7 @@ def persist_listings(
             product.listed_at.date() if product.listed_at else None,
             today,
             min_dsr_views=config.thresholds.dsr_min_delta_views,
+            momentum_cfg=config.momentum,
         )
         signal.status = classify(metrics, config.thresholds)
         signal.age_days = metrics.age_days
@@ -279,6 +280,8 @@ def persist_listings(
         signal.delta_views = metrics.delta_views
         signal.delta_saves = metrics.delta_saves
         signal.dsr = metrics.dsr
+        signal.momentum = metrics.momentum
+        signal.top_share = metrics.top_share
         signal.updated_on = today
         if is_new:
             discovered += 1

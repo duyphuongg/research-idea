@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -5,10 +6,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.analysis.listing_signals import SIGNAL_STATUSES, load_signals_config
+from app.analysis.velocity import SnapshotPoint, spark_values
 from app.api.deps import get_session
 from app.api.schemas import SignalItem, SignalPage, SignalTag
 from app.keywords import canonical_keyword
-from app.models import Keyword, ListingSignal, Product
+from app.models import Keyword, ListingSignal, Product, ProductSnapshot
 from app.services.watchlist import listing_keyword_filter
 
 router = APIRouter(prefix="/api")
@@ -22,7 +24,7 @@ def list_signals(
     status: str = "signals",
     max_age: int | None = Query(None, ge=1),
     keyword: str | None = None,
-    sort: Literal["delta_saves", "dsr", "delta_views", "newest"] = "delta_saves",
+    sort: Literal["delta_saves", "momentum", "dsr", "delta_views", "newest"] = "delta_saves",
     limit: int = Query(60, ge=1, le=200),
     offset: int = Query(0, ge=0),
     session: Session = Depends(get_session),
@@ -40,9 +42,10 @@ def list_signals(
     if latest is None:
         return SignalPage(updated_on=None, counts={}, total=0, items=[])
 
+    config = load_signals_config()
     base = [ListingSignal.updated_on == latest]
     if keyword:
-        base.append(listing_keyword_filter(keyword, load_signals_config().seed_query_suffix))
+        base.append(listing_keyword_filter(keyword, config.seed_query_suffix))
     count_rows = session.execute(
         select(ListingSignal.status, func.count())
         .select_from(ListingSignal)
@@ -82,6 +85,12 @@ def list_signals(
         else {}
     )
 
+    points: dict[int, list[SnapshotPoint]] = defaultdict(list)
+    for snap in session.scalars(
+        select(ProductSnapshot).where(ProductSnapshot.product_id.in_([p.id for _, p in rows]))
+    ):
+        points[snap.product_id].append(SnapshotPoint(snap.date, snap.reviews, snap.favorites, snap.views))
+
     items = []
     for (sig, p), tags in zip(rows, tags_by_row):
         items.append(
@@ -96,6 +105,9 @@ def list_signals(
                     SignalTag(tag=t, keyword_id=kw_ids.get(canonical_keyword(t), kw_ids.get(t)))
                     for t in tags
                 ],
+                spark=spark_values(points[p.id], "favorites"),
+                momentum=sig.momentum,
+                spike=sig.momentum is not None and (sig.top_share or 0) > config.momentum.spike_share,
             )
         )
     return SignalPage(updated_on=latest, counts=counts, total=total, items=items)

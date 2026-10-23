@@ -64,3 +64,17 @@ def hot_ids(
         n = max(1, math.ceil(len(values) * top_fraction))
         hot.update(pid for _, pid in values[:n])
     return hot
+
+
+SPARK_DAYS = 14
+
+
+def spark_values(snapshots: list[SnapshotPoint], metric: str | None, days: int = SPARK_DAYS) -> list[int]:
+    """`metric` values of the last `days` days (relative to the newest snapshot), oldest first."""
+    if metric is None:
+        return []
+    points = sorted((p for p in snapshots if getattr(p, metric) is not None), key=lambda p: p.date)
+    if not points:
+        return []
+    cutoff = points[-1].date - timedelta(days=days)
+    return [getattr(p, metric) for p in points if p.date > cutoff]

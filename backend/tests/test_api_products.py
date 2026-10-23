@@ -180,3 +180,15 @@ def test_amazon_products_are_excluded_from_best_sellers(client, session, catalog
     assert resp.json()["total"] == 3
     assert old.id not in ids(resp)
     assert ids(client.get("/api/products?source=amazon")) == []
+
+
+def test_max_age_filter_is_relative_to_newest_snapshot(client, catalog):
+    # newest snapshot 2026-09-27: A (listed 09-13) and C (09-26) are within 30 days, B (2025) is not
+    assert sorted(ids(client.get("/api/products?max_age=30"))) == sorted([catalog["A"], catalog["C"]])
+    assert client.get("/api/products?max_age=0").status_code == 422
+
+
+def test_spark_follows_velocity_metric(client, catalog):
+    items = {i["id"]: i for i in client.get("/api/products").json()["items"]}
+    assert items[catalog["A"]]["spark"] == [100, 170]
+    assert items[catalog["C"]]["spark"] == [3]

@@ -1,11 +1,13 @@
 from collections import defaultdict
 from collections.abc import Callable
+from datetime import timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.analysis.velocity import SnapshotPoint, spark_values
 from app.api.deps import get_session
 from app.api.schemas import ProductOut, ProductPage
 from app.models import Keyword, Product, ProductKeyword
@@ -39,9 +41,14 @@ def list_products(
     limit: int = Query(60, ge=1, le=200),
     offset: int = Query(0, ge=0),
     hide_licensed: bool = False,
+    max_age: int | None = Query(None, ge=1, le=365),
     session: Session = Depends(get_session),
 ) -> ProductPage:
     products, metrics = compute_product_metrics(session)
+    listed_after = None
+    if max_age is not None:  # relative to the newest data, not the wall clock
+        newest = max((p.snapshots[-1].date for p in products if p.snapshots), default=None)
+        listed_after = newest - timedelta(days=max_age) if newest else None
 
     keyword_texts: dict[int, list[str]] = defaultdict(list)
     keyword_ids: dict[int, set[int]] = defaultdict(set)
@@ -61,6 +68,8 @@ def list_products(
         and (product_type is None or p.product_type == product_type)
         and (keyword_id is None or keyword_id in keyword_ids[p.id])
         and not (hide_licensed and p.licensed)
+        and (max_age is None or (listed_after is not None and p.listed_at is not None
+                                 and p.listed_at.date() >= listed_after))
     ]
     items.sort(key=SORTS[sort])
     return ProductPage(total=len(items), items=items[offset : offset + limit])
@@ -92,4 +101,5 @@ def _to_out(
         hot=m.hot,
         keywords=keywords,
         licensed=p.licensed,
+        spark=spark_values([SnapshotPoint(s.date, s.reviews, s.favorites, s.views) for s in p.snapshots], m.metric),
     )

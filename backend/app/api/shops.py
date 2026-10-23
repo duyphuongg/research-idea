@@ -20,11 +20,12 @@ router = APIRouter(prefix="/api")
 
 ShopSort = Literal[
     "sales_7d", "sales_30d", "sold_count", "sales_per_listing", "opened_at", "listing_count",
-    "review_average", "last_seen",
+    "review_average", "last_seen", "pace", "revenue_7d",
 ]
 ListingsBand = Literal["lt200", "200_1000", "gt1000"]
 OpenedBand = Literal["2026", "2025plus", "2024plus", "before2024"]
 SERIES_DAYS = 90
+SPARK_DAYS = 30
 MAX_PRODUCTS = 24
 
 SORT_VALUES: dict[str, Callable[[ShopMetrics], Any]] = {
@@ -36,6 +37,8 @@ SORT_VALUES: dict[str, Callable[[ShopMetrics], Any]] = {
     "listing_count": lambda m: m.listing_count,
     "review_average": lambda m: m.review_average,
     "last_seen": lambda m: m.shop.last_seen,
+    "pace": lambda m: m.pace,
+    "revenue_7d": lambda m: m.revenue_7d,
 }
 
 LISTING_BANDS: dict[str, Callable[[int], bool]] = {
@@ -56,7 +59,7 @@ def _delta(d: Delta | None) -> DeltaOut | None:
     return DeltaOut(value=d.value, days=d.days) if d else None
 
 
-def _shop_out(m: ShopMetrics) -> ShopOut:
+def _shop_out(m: ShopMetrics, spark: list[int] | None = None) -> ShopOut:
     s = m.shop
     return ShopOut(
         id=s.id, name=s.name, url=s.url, icon_url=s.icon_url,
@@ -65,7 +68,22 @@ def _shop_out(m: ShopMetrics) -> ShopOut:
         sales_7d=_delta(m.sales_7d), sales_30d=_delta(m.sales_30d), favorers_7d=_delta(m.favorers_7d),
         sales_per_listing=m.sales_per_listing, review_average=m.review_average, review_count=m.review_count,
         watched=s.watched_at is not None, last_seen=s.last_seen,
+        pace=m.pace, median_price=m.median_price, revenue_7d=m.revenue_7d, spark=spark or [],
     )
+
+
+def _sparks(session: Session, shop_ids: list[int]) -> dict[int, list[int]]:
+    """sold_count of the last SPARK_DAYS days (relative to each shop's newest snapshot), oldest first."""
+    rows: dict[int, list[tuple]] = defaultdict(list)
+    for shop_id, d, sold in session.execute(
+        select(ShopSnapshot.shop_id, ShopSnapshot.date, ShopSnapshot.sold_count)
+        .where(ShopSnapshot.shop_id.in_(shop_ids), ShopSnapshot.sold_count.is_not(None))
+        .order_by(ShopSnapshot.shop_id, ShopSnapshot.date)
+    ):
+        rows[shop_id].append((d, sold))
+    return {
+        sid: [v for d, v in pts if d > pts[-1][0] - timedelta(days=SPARK_DAYS)] for sid, pts in rows.items()
+    }
 
 
 def _at_least(value: float | None, minimum: float | None) -> bool:
@@ -126,8 +144,10 @@ def list_shops(
     ]
     items = _sorted(items, sort, order)
     latest_date = session.scalar(select(func.max(ShopSnapshot.date)))
+    page = items[offset: offset + limit]
+    sparks = _sparks(session, [m.shop.id for m in page])
     return ShopPage(total=len(items), latest_date=latest_date,
-                    items=[_shop_out(m) for m in items[offset: offset + limit]])
+                    items=[_shop_out(m, sparks.get(m.shop.id)) for m in page])
 
 
 def _metrics_or_404(session: Session, shop_id: int) -> ShopMetrics:

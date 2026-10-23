@@ -209,6 +209,8 @@ class ListingSignal(Base):
     delta_views: Mapped[float | None] = mapped_column(Float)
     delta_saves: Mapped[float | None] = mapped_column(Float)
     dsr: Mapped[float | None] = mapped_column(Float)
+    momentum: Mapped[float | None] = mapped_column(Float, nullable=True)  # spike-penalised saves/day
+    top_share: Mapped[float | None] = mapped_column(Float, nullable=True)  # biggest 1-day share of saves gained
     updated_on: Mapped[date | None] = mapped_column(Date)
 
 
@@ -350,3 +352,24 @@ class SportsTeam(Base):
     full_name: Mapped[str] = mapped_column(String(100))
     nickname: Mapped[str] = mapped_column(String(60))
     updated_on: Mapped[date] = mapped_column(Date)
+
+
+class TopicSnapshot(Base):
+    """A micro-niche ("Ngách mới nổi") on a scan date; a later scan the same day replaces that day's rows."""
+
+    __tablename__ = "topic_snapshots"
+    __table_args__ = (UniqueConstraint("date", "key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    date: Mapped[date] = mapped_column(Date, index=True)
+    key: Mapped[str] = mapped_column(String(200), index=True)
+    rank: Mapped[int] = mapped_column(Integer)  # 1 = best score that day
+    aliases: Mapped[Any] = mapped_column(JSON, default=list)
+    listings: Mapped[int] = mapped_column(Integer)
+    shops: Mapped[int] = mapped_column(Integer)
+    rising: Mapped[int] = mapped_column(Integer)
+    gain_7d: Mapped[float] = mapped_column(Float)
+    prev_gain_7d: Mapped[float | None] = mapped_column(Float, nullable=True)
+    score: Mapped[float] = mapped_column(Float)
+    product_ids: Mapped[Any] = mapped_column(JSON, default=list)  # top listings by gain
+    ip_level: Mapped[str] = mapped_column(String(10), default="green")

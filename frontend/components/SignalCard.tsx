@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import Sparkline from "@/components/Sparkline";
 import WorkStatus from "@/components/WorkStatus";
 import { HalftoneMeter, ImageZoom, StatusBadge } from "@/components/ui";
 import type { SignalItem, SignalStatus } from "@/lib/api";
@@ -141,6 +142,36 @@ export default function SignalCard({ item }: { item: SignalItem }) {
             }
           />
         </div>
+        {(item.spark.length >= 2 || item.momentum !== null) && (
+          <div className="-mt-1 flex items-center justify-between gap-2">
+            {item.spike ? (
+              <span
+                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-yellow/60 bg-yellow/15 px-2 text-[11px] font-medium leading-[18px] text-ink"
+                title={`Phần lớn lượt lưu gần đây đến trong 1 ngày — có thể chỉ là spike. Tăng đều 7 ngày: ${
+                  item.momentum !== null ? item.momentum.toFixed(1) : "—"
+                } lưu/ngày`}
+              >
+                ⚡ Spike 1 ngày
+              </span>
+            ) : (
+              <span
+                className="truncate font-mono text-[11px] leading-4 text-ink-2"
+                title="Lượt lưu/ngày trong 7 ngày, đã trừ phần tăng dồn vào 1 ngày"
+              >
+                {item.momentum !== null ? (
+                  <>
+                    Đều <PerDay delta={item.momentum} />
+                  </>
+                ) : (
+                  "Lưu 14 ngày"
+                )}
+              </span>
+            )}
+            <span title="Lượt lưu 14 ngày gần nhất" className="shrink-0">
+              <Sparkline values={item.spark} width={64} height={18} />
+            </span>
+          </div>
+        )}
         {item.tags.length > 0 && (
           <div className="mt-auto flex flex-wrap gap-1 pt-1">
             {item.tags.slice(0, 4).map((t) =>
