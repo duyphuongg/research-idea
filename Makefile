@@ -36,9 +36,11 @@ down:
 	echo "Đã tắt backend và giao diện."
 
 # Tắt rồi bật lại (build lại giao diện nếu code đổi), không mở trình duyệt — dùng sau khi sửa code
+# (output goes through a log so the servers it starts don't keep the caller's terminal/pipe open)
 restart:
-	@$(MAKE) --no-print-directory down
-	@$(MAKE) --no-print-directory up NO_OPEN=1
+	@mkdir -p backend/data/logs
+	@{ $(MAKE) --no-print-directory down; $(MAKE) --no-print-directory up NO_OPEN=1; } > backend/data/logs/restart.log 2>&1 < /dev/null; \
+	status=$$?; cat backend/data/logs/restart.log; exit $$status
 
 dev-backend:
 	cd backend && .venv/bin/uvicorn --factory app.main:create_app --reload --port $(API_PORT)
