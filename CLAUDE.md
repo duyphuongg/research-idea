@@ -29,7 +29,9 @@ Telegram messages and `backend/config/*.yaml` comments are Vietnamese; code, com
 - Never run `next build` / `npm run build` in `frontend/`: it overwrites `.next`, which the running :3737 server
   serves. `make up` rebuilds when sources changed.
 - A PreToolUse hook (`.claude/hooks/guard-live.sh`) blocks these; don't work around it.
-- Commit only when the user asks; they deploy with `make migrate && make down && make up`.
+- Commit only when the user asks. Deploy (only when asked): `make migrate` if there is a new migration, then
+  `make restart` (down + up, rebuilds the UI when sources changed; allowed in `.claude/settings.local.json`).
+  Afterwards check `curl localhost:3737/<page>` and `localhost:8020/api/...`.
 
 ## Conventions
 - Match the surrounding code: dataclasses for pure results, `Literal` sort keys, small helpers over abstractions.

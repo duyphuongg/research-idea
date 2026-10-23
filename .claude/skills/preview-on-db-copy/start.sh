@@ -37,8 +37,9 @@ if ! lsof -ti tcp:"$UI_PORT" >/dev/null 2>&1; then
     > "$DIR/frontend.log" 2>&1 < /dev/null &)
 fi
 
-for _ in $(seq 1 60); do
-  curl -s -m 2 -o /dev/null "localhost:$API_PORT/api/ping" && curl -s -m 5 -o /dev/null "localhost:$UI_PORT" && break
+# Wait for the API and for next dev to listen (pages compile on first visit, which can take a while).
+for _ in $(seq 1 30); do
+  curl -s -m 2 -o /dev/null "localhost:$API_PORT/api/ping" && lsof -ti tcp:"$UI_PORT" >/dev/null 2>&1 && break
   sleep 1
 done
 echo "Preview: http://localhost:$UI_PORT  (API :$API_PORT, DB $DB, logs in $DIR)"

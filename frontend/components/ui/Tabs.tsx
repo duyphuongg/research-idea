@@ -37,7 +37,7 @@ export default function Tabs<T extends string>({
   }
 
   return (
-    <div className={`overflow-x-auto border-b border-rule ${className}`}>
+    <div className={`overflow-x-auto overflow-y-hidden border-b border-rule ${className}`}>
       <div role="tablist" aria-label={label} className="flex min-w-max gap-5">
         {items.map((item, i) => {
           const active = item.value === value;

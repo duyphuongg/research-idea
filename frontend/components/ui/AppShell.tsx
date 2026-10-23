@@ -2,25 +2,46 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import PressStatus from "./PressStatus";
 import RegistrationMark from "./RegistrationMark";
 import { api } from "@/lib/api";
 
-export const NAV_ITEMS = [
-  { href: "/", label: "Trend Radar" },
-  { href: "/watchlist", label: "Watchlist" },
-  { href: "/topics", label: "Ngách mới nổi" },
-  { href: "/niche", label: "Phân tích ngách" },
-  { href: "/nfl", label: "NFL tuần này" },
-  { href: "/work", label: "Việc của tôi" },
-  { href: "/signals", label: "Listing Signals" },
-  { href: "/shops", label: "Shop" },
-  { href: "/products", label: "Bán chạy" },
-  { href: "/alerts", label: "Tin mới" },
-  { href: "/calendar", label: "Lịch mùa vụ" },
-  { href: "/settings", label: "Cài đặt" },
-] as const;
+/** Grouped by what the user is doing: today's follow-ups, finding ideas, digging into one niche/shop. */
+type NavItem = { href: string; label: string };
+
+export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Hôm nay",
+    items: [
+      { href: "/alerts", label: "Tin mới" },
+      { href: "/work", label: "Việc của tôi" },
+      { href: "/watchlist", label: "Watchlist" },
+    ],
+  },
+  {
+    label: "Tìm ý tưởng",
+    items: [
+      { href: "/", label: "Trend Radar" },
+      { href: "/topics", label: "Ngách mới nổi" },
+      { href: "/signals", label: "Listing Signals" },
+      { href: "/products", label: "Bán chạy" },
+      { href: "/nfl", label: "NFL tuần này" },
+      { href: "/calendar", label: "Lịch mùa vụ" },
+    ],
+  },
+  {
+    label: "Nghiên cứu sâu",
+    items: [
+      { href: "/niche", label: "Phân tích ngách" },
+      { href: "/shops", label: "Shop" },
+    ],
+  },
+];
+
+const SETTINGS_ITEM: NavItem = { href: "/settings", label: "Cài đặt" };
+
+export const NAV_ITEMS = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS_ITEM];
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/" || pathname.startsWith("/trends");
@@ -35,6 +56,45 @@ function Logo({ className = "" }: { className?: string }) {
         POD Trend Radar
       </span>
     </Link>
+  );
+}
+
+function NavLink({
+  item,
+  active,
+  badge,
+  linkRef,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  badge: number;
+  linkRef?: RefObject<HTMLAnchorElement | null>;
+  onNavigate: () => void;
+}) {
+  return (
+    <li>
+      <Link
+        ref={linkRef}
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        onClick={onNavigate}
+        className={`relative flex items-center gap-3 px-5 py-2 text-sm transition-colors ${
+          active ? "bg-white/[0.06] font-semibold text-white" : "text-white/70 hover:bg-white/[0.04] hover:text-white"
+        }`}
+      >
+        <span aria-hidden="true" className={`absolute inset-y-1 left-0 w-[3px] ${active ? "bg-cyan" : "bg-transparent"}`} />
+        {item.label}
+        {badge > 0 && (
+          <>
+            <span className="ml-auto rounded-full bg-cyan px-1.5 font-mono text-[11px] font-medium leading-5 text-ink">
+              {badge > 99 ? "99+" : badge}
+            </span>
+            <span className="sr-only"> chưa đọc</span>
+          </>
+        )}
+      </Link>
+    </li>
   );
 }
 
@@ -122,41 +182,36 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="flex h-14 items-center px-5 lg:h-[72px]">
           <Logo />
         </div>
-        <nav className="flex-1 overflow-y-auto py-2">
-          <ul>
-            {NAV_ITEMS.map((item, i) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <li key={item.href}>
-                  <Link
-                    ref={i === 0 ? firstLink : undefined}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    onClick={() => setOpen(false)}
-                    className={`relative flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
-                      active ? "bg-white/[0.06] font-semibold text-white" : "text-white/70 hover:bg-white/[0.04] hover:text-white"
-                    }`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`absolute inset-y-1.5 left-0 w-[3px] ${active ? "bg-cyan" : "bg-transparent"}`}
-                    />
-                    {item.label}
-                    {item.href === "/alerts" && unread > 0 && (
-                      <>
-                        <span className="ml-auto rounded-full bg-cyan px-1.5 font-mono text-[11px] font-medium leading-5 text-ink">
-                          {unread > 99 ? "99+" : unread}
-                        </span>
-                        <span className="sr-only"> chưa đọc</span>
-                      </>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+        <nav className="flex-1 overflow-y-auto pb-3 [scrollbar-color:rgb(255_255_255/0.2)_transparent] [scrollbar-width:thin]">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label} className={gi > 0 ? "mt-4" : ""}>
+              <p className="eyebrow px-5 pb-1 text-[10px] text-white/40">{group.label}</p>
+              <ul>
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    active={isActive(pathname, item.href)}
+                    badge={item.href === "/alerts" ? unread : 0}
+                    linkRef={item.href === NAV_GROUPS[0].items[0].href ? firstLink : undefined}
+                    onNavigate={() => setOpen(false)}
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
-        <PressStatus />
+        <div className="border-t border-white/10">
+          <PressStatus />
+          <ul className="pb-2">
+            <NavLink
+              item={SETTINGS_ITEM}
+              active={isActive(pathname, SETTINGS_ITEM.href)}
+              badge={0}
+              onNavigate={() => setOpen(false)}
+            />
+          </ul>
+        </div>
       </aside>
 
       <div className="lg:pl-[232px]">

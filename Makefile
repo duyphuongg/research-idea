@@ -1,4 +1,4 @@
-.PHONY: install migrate dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now install-hourly uninstall-hourly hourly-now install-events uninstall-events events-now brief-now
+.PHONY: install migrate restart dev-backend dev-frontend test smoke rescore scan-now backup install-daily uninstall-daily daily-status install-autostart uninstall-autostart up down telegram-setup digest-now install-hourly uninstall-hourly hourly-now install-events uninstall-events events-now brief-now
 
 install:
 	cd backend && uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[dev]"
@@ -34,6 +34,11 @@ down:
 	-@lsof -ti tcp:$(API_PORT) | xargs kill 2>/dev/null; lsof -ti tcp:$(UI_PORT) | xargs kill 2>/dev/null; \
 	for i in $$(seq 1 20); do lsof -ti tcp:$(API_PORT) -sTCP:LISTEN >/dev/null 2>&1 || lsof -ti tcp:$(UI_PORT) -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 0.5; done; \
 	echo "Đã tắt backend và giao diện."
+
+# Tắt rồi bật lại (build lại giao diện nếu code đổi), không mở trình duyệt — dùng sau khi sửa code
+restart:
+	@$(MAKE) --no-print-directory down
+	@$(MAKE) --no-print-directory up NO_OPEN=1
 
 dev-backend:
 	cd backend && .venv/bin/uvicorn --factory app.main:create_app --reload --port $(API_PORT)

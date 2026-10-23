@@ -20,7 +20,9 @@ has no `--reload`: rerun `start.sh` after backend changes. The frontend hot-relo
 - Open `http://localhost:3091/<page>` with the chrome-devtools MCP tools; screenshot desktop (1440×900) and mobile
   (`emulate` viewport `390x844x2,mobile,touch`). Check for horizontal overflow with
   `document.documentElement.scrollWidth`.
-- The first load of a page compiles for a few seconds; if the screenshot is blank, take it again.
+- The first load of a page compiles (can take a minute after other dev servers or a cold cache); warm it with
+  `curl -s -m 120 -o /dev/null localhost:3091/<page>` before screenshotting. If a screenshot is blank, take it again.
+- Run `start.sh` directly, not piped into `tail`/`head`.
 - API directly: `curl -s localhost:8091/api/...`.
 - Scripts on real data: `DATABASE_URL=sqlite:///$TMPDIR/pod-trend-preview/radar-copy.db uv run python <script>`
   from `backend/` (put scripts in the scratchpad, not the repo). Stored derived columns (e.g. new signal fields) stay
